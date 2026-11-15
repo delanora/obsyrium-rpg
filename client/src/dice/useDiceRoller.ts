@@ -359,26 +359,25 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     };
   }, [user.id, applyRemote]);
 
+  const revisaoDoPool = useRef(0);
+
   const addDie = useCallback((sides: number) => {
     if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
+    revisaoDoPool.current += 1;
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
     setPhase('idle');
     setResult(null);
     setPool((prev) => [...prev, { sides, locked: false }]);
   }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
 
-  const removeDie = useCallback((index: number) => {
+  const removeDie = useCallback((index: number | number[]) => {
     if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
+    revisaoDoPool.current += 1;
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
     setPhase('idle');
     setResult(null);
-    setPool((prev) => prev.filter((die, position) => position !== index || die.locked));
-  }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
-
-  /** Limpa o pool mantendo os dados fixos (o d20 da perícia). */
-  const clearPool = useCallback(() => {
-    if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
-    setPhase('idle');
-    setResult(null);
-    setPool((prev) => prev.filter((die) => die.locked));
+    const indices = new Set(Array.isArray(index) ? index : [index]);
+    setPool((prev) => prev.filter((die, position) => !indices.has(position) || die.locked));
   }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
 
   const setAdvantage = useCallback((value: boolean) => {
@@ -397,6 +396,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     const clientId = `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     myClientId.current = clientId;
 
+    const revisaoEnviada = revisaoDoPool.current;
     setPhase('tumbling');
     setResult(null);
     setError(null);
@@ -432,6 +432,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
         ...(selectedEffectModifiers.length > 0 ? { selectedEffectModifiers } : {}),
       });
 
+      if (revisaoEnviada !== revisaoDoPool.current) return;
       setResult(roll);
       // Teste Contra a Morte aplicado pelo SERVIDOR: a tela relê o estado
       // autoritativo em vez de esperar o próximo evento. Nada é recalculado
@@ -571,7 +572,6 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     cancelAutoClose,
     addDie,
     removeDie,
-    clearPool,
     setAdvantage,
     setDisadvantage,
     setPrivate,

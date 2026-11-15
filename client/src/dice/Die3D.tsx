@@ -21,6 +21,7 @@ interface Die3DProps {
   dropped?: boolean;
   locked?: boolean;
   onClick?: () => void;
+  onDoubleClick?: () => void;
   title?: string;
   /**
    * `death-save` troca a pintura das faces pelas artes do Teste contra a Morte
@@ -45,6 +46,7 @@ export function Die3D({
   dropped = false,
   locked = false,
   onClick,
+  onDoubleClick,
   title,
   appearance,
   percentile,
@@ -178,6 +180,7 @@ export function Die3D({
         title={title ?? 'Clique para remover'}
         aria-label={locked ? `d${sides} fixo` : `Remover d${sides} do pool`}
         onClick={onClick}
+        onDoubleClick={onDoubleClick}
       >
         {body}
       </button>

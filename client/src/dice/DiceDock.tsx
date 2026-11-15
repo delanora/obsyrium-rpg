@@ -55,7 +55,6 @@ export function DiceDock({ roller }: DiceDockProps) {
     cancelAutoClose,
     addDie,
     removeDie,
-    clearPool,
     setAdvantage,
     setDisadvantage,
     setPrivate,
@@ -103,7 +102,6 @@ export function DiceDock({ roller }: DiceDockProps) {
 
   const rolling = phase === 'tumbling';
   const settled = phase === 'settled' && result !== null;
-  const hasRemovable = pool.some((die) => !die.locked);
   // TESTE CONTRA A MORTE: a rolagem é UM d20 fixo (pool travado pelo motor) —
   // o jogador não escolhe dados, nem liga vantagem/desvantagem. A bandeja
   // fica só com o botão de rolar.
@@ -309,16 +307,13 @@ export function DiceDock({ roller }: DiceDockProps) {
                       <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4" /></svg> Desvantagem
                     </button>
                   )}
-                  {(isMaster || hasRemovable) && !deathSave ? (
+                  {isMaster && !deathSave ? (
                     <div className="dice-controls-secondary">
                       {isMaster ? (
                         <label className="dice-toggle" title="Privada: só você vê o resultado e a mesa não é avisada. Desmarque para a mesa acompanhar a rolagem.">
                           <input type="checkbox" checked={isPrivate} onChange={(event) => setPrivate(event.target.checked)} />
                           Privada
                         </label>
-                      ) : null}
-                      {hasRemovable ? (
-                        <button type="button" className="btn btn-small" onClick={clearPool}>limpar</button>
                       ) : null}
                     </div>
                   ) : null}
