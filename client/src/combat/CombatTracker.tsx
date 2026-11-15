@@ -1,3 +1,4 @@
+import { actionShortcutSlots } from './actionShortcuts';
 import { cancelCombatTest } from './combatApi';
 import type { RollContext } from '../dice/useDiceRoller';
 import { LegendaryActionsPanel } from './components/LegendaryActionsPanel';
@@ -1157,11 +1158,13 @@ export function CombatTracker({
         personalizeDisabled={busy || hotbarSaving || awaitingInitiative || dockWaiting}
         hotbarFilter={hotbarFilter}
         onToggleHotbarFilter={toggleHotbarFilter}
-        // O MENU DE AÇÃO de sempre: Disparada, Esquivar, Preparar, Levantar e
-        // Estabilizar continuam existindo (nada foi removido da dock).
-        actionMenu={
+        hotbar={
+          dockWaiting ? (
+            <BattleWaitingInline name={current?.name ?? ''} />
+          ) : (
+            // As ações gerais ocupam slots reais mesmo sem arma equipada.
+            // A configuração salva continua sendo a mesma dos ataques.
           <ActionMenu
-            compact
             disabled={busy || !dockAccess.canOpenMenu}
             actionsDisabled={busy || !dockAccess.canUseAction}
             onSelect={(action, extra) => dockEconomyAction({ action, ...extra })}
@@ -1172,17 +1175,10 @@ export function CombatTracker({
               dockEconomyAction({ action: 'stabilize', ...{ targetCombatantId } })
             }
             busy={busy}
-          />
-        }
-        hotbar={
-          dockWaiting ? (
-            <BattleWaitingInline name={current?.name ?? ''} />
-          ) : hotbarEntries.length > 0 || hotbarFilter || hotbarLayout || hotbarEditing ? (
-            // COM FILTRO a Hotbar é montada mesmo sem NENHUMA entrada base: a
-            // categoria vazia é resposta honesta (oito slots + frase curta +
-            // "ver todas"), nunca o aviso legado de "sem ataques".
-            <CombatHotbar
-              slots={hotbarSlots}
+            renderShortcuts={(shortcuts, activate) => {
+              const actions = actionShortcutSlots(hotbarSlots, shortcuts, hotbarFilter);
+              return <CombatHotbar
+              slots={actions.slots}
               // Antes da iniciativa os slots são APRESENTAÇÃO: `busy` os desabilita
               // (o miolo ainda recebe véu/desfoque e fica `inert` na dock).
               busy={busy || awaitingInitiative || dockDeathBlocked}
@@ -1195,6 +1191,7 @@ export function CombatTracker({
               // fecha — sem segundo estado de seleção e sem tocar em nada já
               // enviado ao servidor (a identidade é o `sourceId` do fluxo).
               onSelect={(entry) => {
+                if (entry.sourceId.startsWith('action:')) { activate(entry); return; }
                 if (entry.sourceId === 'context:opportunity') { document.querySelector<HTMLElement>('.reaction-panel')?.focus(); return; }
                 setHotbarPick((prev) => toggleHotbarPick(prev, entry.sourceId));
               }}
@@ -1223,12 +1220,10 @@ export function CombatTracker({
               }
               saving={hotbarSaving}
               error={hotbarError}
-              extraEntries={hotbarExtraEntries}
-            />
-          ) : (
-            <p className="dock-empty">
-              Nenhum ataque disponível — equipe uma arma na mochila.
-            </p>
+              extraEntries={[...hotbarExtraEntries, ...actions.overflow]}
+            />;
+            }}
+          />
           )
         }
         utilities={

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import type { CombatHotbarEntry } from '../hotbar';
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../components/Icon';
 import type { EconomyAction } from '../combatApi';
@@ -10,6 +12,7 @@ export interface StabilizeTarget {
 }
 
 interface ActionMenuProps {
+  renderShortcuts?: (entries: CombatHotbarEntry[], activate: (entry: CombatHotbarEntry) => void) => ReactNode;
   /** Sem NENHUMA opção (fora do turno, sem Ação livre, incapacitado). */
   disabled: boolean;
   /** As ações do catálogo exigem Ação livre; o contexto (levantar) nem sempre. */
@@ -56,6 +59,7 @@ export function ActionMenu({
   onStabilize,
   busy = false,
   compact = false,
+  renderShortcuts,
 }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   // Formulário inline para as ações que exigem texto/escolha.
@@ -69,6 +73,8 @@ export function ActionMenu({
   const canActuallyStand = Boolean(standUp?.available);
   const canStabilize = stabilizeTargets.length > 0 && Boolean(onStabilize);
   const standCost = standUp ? Number(standUp.cost.toFixed(2)) : 0;
+
+  useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
 
   // Fora do turno/menu: recolhe tudo para não deixar estado pendurado.
   useEffect(() => {
@@ -92,8 +98,8 @@ export function ActionMenu({
   }, [open]);
 
   function choose(item: EconomyActionVisual) {
-    if (item.id === 'ready') return setForm('ready');
-    if (item.id === 'improvised') return setForm('improvised');
+    if (item.id === 'ready') { setOpen(true); return setForm('ready'); }
+    if (item.id === 'improvised') { setOpen(true); return setForm('improvised'); }
     onSelect(item.id);
     setOpen(false);
   }
@@ -104,14 +110,37 @@ export function ActionMenu({
       setOpen(false);
       return;
     }
+    setOpen(true);
     setForm('stabilize');
   }
 
   const readyValid = trigger.trim() !== '' && intent.trim() !== '';
   const improvisedValid = description.trim() !== '';
 
+  const icons: Record<string, CombatHotbarEntry['icon']> = { dash: 'wind', disengage: 'boots', dodge: 'shield', hide: 'eye-off', ready: 'flag', help: 'users', search: 'search', 'use-object': 'bag', improvised: 'quill' };
+  const shortcuts: CombatHotbarEntry[] = ECONOMY_ACTION_VISUALS.map(item => ({
+    id: `action:${item.id}`, sourceId: `action:${item.id}`, kind: 'feature', label: item.label,
+    detail: '1 Ação', description: item.description, icon: icons[item.id], cost: 'action',
+    ...((disabled || actionsDisabled || busy) ? { disabledReason: 'Ação indisponível neste momento.' } : {}),
+  }));
+  if (canStand) shortcuts.push({ id: 'action:stand', sourceId: 'action:stand', kind: 'feature', label: 'Levantar-se',
+    detail: `${standCost} m de deslocamento`, description: standUp?.reason ?? 'Custa metade do deslocamento; não gasta Ação.', icon: 'boots', cost: 'other',
+    ...((disabled || busy || !canActuallyStand) ? { disabledReason: standUp?.reason ?? 'Não é possível levantar-se agora.' } : {}) });
+  if (canStabilize) shortcuts.push({ id: 'action:stabilize', sourceId: 'action:stabilize', kind: 'feature', label: 'Estabilizar',
+    detail: '1 Ação · Medicina CD 10', description: 'Escolha um alvo elegível para estabilizar, usando o fluxo existente.', icon: 'flask', cost: 'action',
+    ...((disabled || actionsDisabled || busy) ? { disabledReason: 'Ação indisponível neste momento.' } : {}) });
+  const activate = (entry: CombatHotbarEntry) => {
+    if (entry.disabledReason || disabled || busy) return;
+    if (entry.sourceId === 'action:stand') { onStandUp?.(); return; }
+    if (entry.sourceId === 'action:stabilize') { chooseStabilize(); return; }
+    const item = ECONOMY_ACTION_VISUALS.find(item => entry.sourceId === `action:${item.id}`);
+    if (item && !actionsDisabled) choose(item);
+  };
+
   return (
-    <div className="action-menu-anchor" ref={anchor}>
+    <div className={`action-menu-anchor${renderShortcuts ? ' is-hotbar' : ''}`} ref={anchor}>
+      {renderShortcuts ? renderShortcuts(shortcuts, activate) : <>
+
       <button
         type="button"
         className={
@@ -132,8 +161,10 @@ export function ActionMenu({
         {compact ? null : ' Ação'}
       </button>
 
-      {open ? (
+      </>}
+      {open && (!renderShortcuts || form !== 'none') ? (
         <div className="action-menu" role="menu" aria-label="Ações gerais">
+          {!renderShortcuts ? <>
           <p className="action-menu-head">
             <Icon name="sword" size={13} /> Ação
           </p>
@@ -198,6 +229,7 @@ export function ActionMenu({
             </button>
           ) : null}
 
+          </> : null}
           {form === 'stabilize' && canStabilize ? (
             <div className="action-menu-form">
               <p className="action-menu-form-head">Quem estabilizar?</p>
@@ -207,7 +239,7 @@ export function ActionMenu({
                   type="button"
                   role="menuitem"
                   className="action-menu-item"
-                  disabled={busy}
+                  disabled={disabled || actionsDisabled || busy}
                   onClick={() => {
                     onStabilize?.(target.id);
                     setOpen(false);
@@ -243,7 +275,7 @@ export function ActionMenu({
               <button
                 type="button"
                 className="btn btn-small btn-primary"
-                disabled={!readyValid}
+                disabled={disabled || actionsDisabled || busy || !readyValid}
                 onClick={() => {
                   onSelect('ready', { trigger, intent });
                   setOpen(false);
@@ -268,7 +300,7 @@ export function ActionMenu({
               <button
                 type="button"
                 className="btn btn-small btn-primary"
-                disabled={!improvisedValid}
+                disabled={disabled || actionsDisabled || busy || !improvisedValid}
                 onClick={() => {
                   onSelect('improvised', { description });
                   setOpen(false);

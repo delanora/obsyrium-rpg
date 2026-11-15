@@ -51,7 +51,7 @@ export interface CombatHotbarEntry {
   detail: string;
   /** Texto que já existe na fonte; nada é copiado do PHB para preencher tooltip. */
   description?: string;
-  icon: 'sword' | 'ammo';
+  icon: import('../components/Icon').IconName;
   cost: HotbarCost;
   disabledReason?: string;
   /** Id no fluxo EXISTENTE: o clique só encaminha para ele. */

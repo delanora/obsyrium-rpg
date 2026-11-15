@@ -3282,3 +3282,10 @@
     grid-template-rows: minmax(12rem, 26rem) auto;
   }
 }
+
+/* Ações gerais usam os mesmos slots da hotbar; só escolhas com dados extras abrem formulário. */
+.action-menu-anchor.is-hotbar { display: block; width: 100%; min-width: 0; height: 100%; }
+.action-menu-anchor.is-hotbar .action-menu { left: 0; right: auto; }
+@media (max-width: 760px) {
+  .action-menu-anchor.is-hotbar .action-menu { position: fixed; left: 1rem; right: 1rem; bottom: 10rem; width: auto; box-sizing: border-box; }
+}

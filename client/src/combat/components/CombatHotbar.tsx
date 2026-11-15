@@ -406,7 +406,7 @@ export function CombatHotbar({
                 key={entry.id}
                 type="button"
                 className="hotbar-all-item"
-                disabled={busy}
+                disabled={busy || Boolean(entry.disabledReason)}
                 onClick={() => onSelect(entry)}
               >
                 <span className="hotbar-all-index">{index + 1}</span>

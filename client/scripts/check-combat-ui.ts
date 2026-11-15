@@ -6673,7 +6673,7 @@ check(
       dockSource.includes('dock-resources') &&
       dockSource.includes('{hotbar}') &&
       dockSource.includes('{utilities}') &&
-      dockSource.includes('{actionMenu}') &&
+      !dockSource.includes('{actionMenu}') && trackerSource.includes('renderShortcuts={(shortcuts, activate)') &&
       dockSource.includes('dock-movement-track') &&
       dockSource.includes('dock-movement-fill') &&
       dockSource.includes('role="dialog"') &&
@@ -6713,7 +6713,7 @@ check(
       (trackerSource.match(/<TurnResourceBar/g) ?? []).length === 2 &&
       // O menu de ações gerais não foi removido: a dock recebe o ActionMenu.
       trackerSource.includes('<ActionMenu') &&
-      dockSource.includes('{actionMenu}'),
+      !dockSource.includes('{actionMenu}') && trackerSource.includes('renderShortcuts={(shortcuts, activate)'),
   );
 
   check(
@@ -6773,7 +6773,7 @@ check(
   );
 
   check(
-    'SC96) recursos em coluna vertical com losango/hexágono/estrela, e o ActionMenu preservado',
+    'SC96) recursos em coluna vertical com losango/hexágono/estrela, e as ações nos slots da hotbar',
     workspaceRule('.dock-resources').includes('justify-content: space-around;') &&
       workspaceRule('.dock-pip.is-action').includes('transform: rotate(45deg) scale(0.75);') &&
       workspaceRule('.dock-pip.is-bonus').includes('clip-path: polygon(50% 0, 100% 25%') &&
@@ -6785,7 +6785,7 @@ check(
       trackerSource.includes('<ActionMenu') &&
       trackerSource.includes('compact') &&
       source('src/combat/components/ActionMenu.tsx').includes('compact?: boolean;') &&
-      dockSource.includes('{actionMenu}') &&
+      !dockSource.includes('{actionMenu}') && trackerSource.includes('renderShortcuts={(shortcuts, activate)') &&
       dockSource.includes('dock-resource-label'),
   );
 
@@ -7373,7 +7373,7 @@ check(
       // (o índice do slot é preservado quando a categoria muda).
       trackerSource.includes('const hotbarLayout: HotbarLayout | null = characterHotbar ?? null;') &&
       trackerSource.includes('filterHotbarView(') &&
-      trackerSource.includes('slots={hotbarSlots}') &&
+      trackerSource.includes('slots={actions.slots}') &&
       // O filtro é NAVEGAÇÃO: nada de gasto/reserva no caminho. A economia só
       // é LIDA para escurecer o que já foi gasto (6.6M.6.3.1.2).
       hotbarAdapterSource.includes('export function hotbarSlotSpent') &&
@@ -7433,7 +7433,7 @@ check(
       // O menu de Ação é composto pelo tracker e continua gateado pela MESMA
       // derivação (`canOpenMenu` exige `ownTurn`), então fica desabilitado na espera.
       trackerSource.includes('disabled={busy || !dockAccess.canOpenMenu}') &&
-      dockSource.includes('{actionMenu}') &&
+      !dockSource.includes('{actionMenu}') && trackerSource.includes('renderShortcuts={(shortcuts, activate)') &&
       trackerSource.includes('onSpend={(distance) => dockEconomyAction({ action: \'move\', distance })}') &&
       // Painéis urgentes vivem FORA da Hotbar; nenhum deles é gateado pela dock.
       trackerSource.includes('<ReactionPanel') &&
@@ -7468,12 +7468,8 @@ check(
   check(
     'SC132) categoria vazia NÃO cai no aviso legado (a Hotbar é montada pelo filtro)',
     // A Hotbar é montada quando há filtro, mesmo sem NENHUMA entrada base…
-    trackerSource.includes(
-      'hotbarEntries.length > 0 || hotbarFilter || hotbarLayout || hotbarEditing ? (',
-    ) &&
-      // …e o aviso legado sobrevive só no caso realmente vazio (sem filtro).
-      trackerSource.includes('className="dock-empty"') &&
-      trackerSource.includes('Nenhum ataque disponível — equipe uma arma na mochila.') &&
+    trackerSource.includes('actionShortcutSlots(hotbarSlots, shortcuts, hotbarFilter)') &&
+      !trackerSource.includes('className="dock-empty"') &&
       // A dica permanente abaixo do grid saiu de cena (6.6M.6.2.2): o recorte
       // vazio agora é respondido SÓ pela Hotbar.
       !trackerSource.includes('hotbar-hint') &&

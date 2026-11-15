@@ -33,12 +33,8 @@ interface PlayerCombatDockProps {
   deathLabel?: string | null;
   deathSavePending?: boolean;
   busy?: boolean;
-  /**
-   * AÇÃO GERAL já montada pelo tracker: o `ActionMenu` existente com Disparada,
-   * Esquivar, Preparar, Levantar-se e Estabilizar. A dock NÃO reimplementa nada
-   * disso — só reserva o lugar onde ele sempre esteve.
-   */
-  actionMenu: ReactNode;
+  /** Compatibilidade de chamadas antigas; as ações agora ficam nos slots da hotbar. */
+  actionMenu?: ReactNode;
   /** Slots da Hotbar existente (`CombatHotbar`) ou a espera compacta. */
   hotbar: ReactNode;
   /**
@@ -169,7 +165,6 @@ export function PlayerCombatDock({
   deathLabel = null,
   deathSavePending = false,
   busy = false,
-  actionMenu,
   hotbar,
   waiting = false,
   awaitingInitiative = null,
@@ -514,9 +509,6 @@ export function PlayerCombatDock({
               >
                 {actionTip}
               </span>
-              {/* O MESMO menu de Ação (Disparada, Esquivar, Preparar, Levantar,
-                  Estabilizar): acesso compacto junto ao losango. */}
-              {actionMenu}
             </div>
 
             {/* O `*` continua no título: gema cheia = uso NÃO consumido, não
