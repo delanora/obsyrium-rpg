@@ -517,6 +517,7 @@ export function SheetPage({ user }: { user: SessionUser }) {
           <>
             {combat ? (
               <CombatTracker
+                onRollTest={dice.openSkillRoll}
                 combat={combat}
                 log={log}
                 user={user}

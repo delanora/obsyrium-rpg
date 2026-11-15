@@ -55,6 +55,10 @@ export interface RemoteBoard {
 
 /** Contexto da rolagem aberta (livre ou de perícia/salvaguarda). */
 export interface RollContext {
+  /** Pendência autorizada: o servidor deriva atributo, CD, bônus e modo. */
+  pendingEffectSaveId?: string;
+  visibility?: 'public' | 'private';
+  selectedEffectModifiers?: string[];
   entity?: import('../types').MechanicalEntity;
   ability?: import('../types').AbilityKey;
   kind: DiceRollKind;
@@ -200,10 +204,12 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
       reset();
       autoCloseCancelled.current = false;
       setContext(input);
+      setSelectedEffectModifiers(input.selectedEffectModifiers ?? []);
+      setPrivate(input.visibility === 'private' || (input.visibility === undefined && isMaster));
       setPool([{ sides: 20, locked: true }]);
       setOpen(true);
     },
-    [reset],
+    [reset, isMaster],
   );
 
   // Leitura autorizada do ciclo atual. Nunca adota uma resposta tardia durante o giro.
@@ -354,23 +360,26 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   }, [user.id, applyRemote]);
 
   const addDie = useCallback((sides: number) => {
+    if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
     setPhase('idle');
     setResult(null);
     setPool((prev) => [...prev, { sides, locked: false }]);
-  }, []);
+  }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
 
   const removeDie = useCallback((index: number) => {
+    if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
     setPhase('idle');
     setResult(null);
     setPool((prev) => prev.filter((die, position) => position !== index || die.locked));
-  }, []);
+  }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
 
   /** Limpa o pool mantendo os dados fixos (o d20 da perícia). */
   const clearPool = useCallback(() => {
+    if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
     setPhase('idle');
     setResult(null);
     setPool((prev) => prev.filter((die) => die.locked));
-  }, []);
+  }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
 
   const setAdvantage = useCallback((value: boolean) => {
     setAdvantageValue(value);
@@ -383,7 +392,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   }, []);
 
   const submit = useCallback(async () => {
-    if (phase === 'tumbling' || pool.length === 0) return;
+    if (phase === 'tumbling' || pool.length === 0 || (result && (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId))) return;
 
     const clientId = `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     myClientId.current = clientId;
@@ -401,7 +410,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     // Concentração: o modo da rolagem é derivado no SERVIDOR (Constituição +
     // condições/exaustão). Não mandamos vantagem/desvantagem da bandeja — o
     // servidor as ignoraria de qualquer forma.
-    const sendRollMode = context?.kind !== 'concentration';
+    const sendRollMode = context?.kind !== 'concentration' && !context?.pendingEffectSaveId;
 
     try {
       const roll = await rollTableDice({
@@ -415,6 +424,8 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
         clientId,
         entity: context?.entity,
         ability: context?.ability,
+        ...(context?.pendingEffectSaveId ? { pendingEffectSaveId: context.pendingEffectSaveId } : {}),
+        ...(isMaster ? { visibility: isPrivate ? 'private' as const : 'public' as const } : {}),
         ...(context?.pendingConcentrationSaveId
           ? { pendingConcentrationSaveId: context.pendingConcentrationSaveId }
           : {}),
@@ -449,6 +460,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     }
   }, [
     phase,
+    result,
     pool,
     advantage,
     disadvantage,

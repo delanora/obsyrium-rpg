@@ -3051,6 +3051,7 @@ export interface TableRollActiveRequest {
 
 /** Pedido de rolagem enviado ao servidor. */
 export interface TableRollRequest {
+  pendingEffectSaveId?: string;
   entity?: MechanicalEntity;
   ability?: AbilityKey;
   dice: { sides: number }[];

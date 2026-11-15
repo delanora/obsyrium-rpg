@@ -1,3 +1,4 @@
+import type { RollContext } from '../dice/useDiceRoller';
 import { LegendaryActionsPanel } from './components/LegendaryActionsPanel';
 import type { AreaPreviewRequest } from './grid/areaPreviewGeometry';
 import { ElevationRequests } from './components/ElevationRequests';
@@ -151,6 +152,8 @@ interface CombatTrackerProps {
   onOpenSheet?: () => void;
   /** Atalho aberto no momento (só para marcar o botão correspondente). */
   openSection?: SheetShortcut | null;
+  /** Abre a bandeja existente para uma pendência autorizada do box Testes. */
+  onRollTest?: (context: RollContext) => void;
   /**
    * Jogador: abre a BANDEJA DE DADOS existente para o Teste contra a Morte
    * (o servidor rola e aplica; a bandeja só anima). Sem isso, o botão não aparece.
@@ -205,6 +208,7 @@ export function CombatTracker({
   onOpenSection,
   openSection = null,
   onOpenSheet,
+  onRollTest,
   onRollDeathSave,
   onRollConcentrationSave,
   npcInventory,
@@ -715,6 +719,13 @@ export function CombatTracker({
    * dados e resultado são do servidor.
    */
   async function rollSpellSave(card: CombatResolutionCardDto, selected: string[], visibility: 'public' | 'private' | null): Promise<void> {
+    if (onRollTest && card.reference.pendingId && card.reference.entity && card.ability) {
+      onRollTest({ kind: 'save', label: `${card.title} — ${card.target.name}`,
+        bonus: 0, entity: card.reference.entity, ability: card.ability,
+        pendingEffectSaveId: card.reference.pendingId,
+        selectedEffectModifiers: selected, visibility: visibility ?? 'public' });
+      return;
+    }
     if (resolutionBusyId) return;
     setResolutionBusyId(card.id);
     try {
@@ -758,6 +769,10 @@ export function CombatTracker({
   async function rollDeathSaveCard(card: CombatResolutionCardDto): Promise<void> {
     const entity = card.reference.entity;
     if (!entity) return;
+    if (onRollTest) {
+      onRollTest({ kind: 'death-save', label: `Teste contra a Morte — ${card.target.name}`, bonus: 0, entity });
+      return;
+    }
     if (!isMaster && onRollDeathSave) {
       onRollDeathSave(entity);
       return;
@@ -912,6 +927,11 @@ export function CombatTracker({
     visibility: 'public' | 'private',
   ): Promise<void> {
     if (!concentrationEntity || busy) return;
+    if (onRollTest) {
+      onRollTest({ kind: 'concentration', label: `Concentração — CD ${save.dc}`, bonus: 0,
+        entity: concentrationEntity, ability: 'constitution', pendingConcentrationSaveId: save.id, visibility });
+      return;
+    }
     setBusy(true);
     try {
       await rollConcentrationSaveAsMaster({

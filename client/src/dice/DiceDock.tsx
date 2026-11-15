@@ -229,7 +229,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                     </p>
                   )}
 
-                  {settled && result?.lucky ? (
+                  {settled && result?.lucky && !context?.pendingEffectSaveId && !context?.pendingConcentrationSaveId ? (
                     <button
                       type="button"
                       className="dice-lucky"
@@ -241,7 +241,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                   ) : null}
                 </div>
 
-                {deathSave ? null : (
+                {deathSave || context?.pendingEffectSaveId || context?.pendingConcentrationSaveId ? null : (
                   <div className="dice-picker" role="group" aria-label="Tipos de dado">
                     {DICE_TYPES.map((sides) => (
                       <button
@@ -281,7 +281,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                 ) : null}
 
                 <div className={`dice-controls${deathSave ? '' : ' dice-controls-common'}`}>
-                  {context?.kind === 'concentration' || deathSave ? null : (
+                  {context?.pendingEffectSaveId || context?.kind === 'concentration' || deathSave ? null : (
                     <button
                       type="button"
                       className="dice-mode dice-mode-advantage"
@@ -294,12 +294,12 @@ export function DiceDock({ roller }: DiceDockProps) {
                   <button
                     type="button"
                     className={deathSave ? 'btn btn-primary dice-submit' : 'dice-mode dice-mode-roll dice-submit'}
-                    disabled={rolling || pool.length === 0}
+                    disabled={rolling || pool.length === 0 || Boolean(result && (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId))}
                     onClick={() => void submit()}
                   >
                     <Icon name="die" size={15} /> {rolling ? 'Rolando...' : 'Rolar'}
                   </button>
-                  {context?.kind === 'concentration' || deathSave ? null : (
+                  {context?.pendingEffectSaveId || context?.kind === 'concentration' || deathSave ? null : (
                     <button
                       type="button"
                       className="dice-mode dice-mode-disadvantage"

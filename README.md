@@ -1335,6 +1335,8 @@ A apresentação é **efêmera** (não vai para o banco): vive na memória do se
 
 ## 🎲 Janela de dados
 
+Os botões do bloco **Testes** abrem a bandeja para as salvaguardas pendentes de magias e habilidades. Cada jogador rola pela própria ficha; o Mestre pode rolar pelos alvos autorizados. O servidor aplica os bônus e modificadores suportados e resolve a pendência; a bandeja mostra o resultado e mantém as escolhas de efeitos opcionais.
+
 Um botão flutuante **Dados** (canto inferior esquerdo, espelhando o de Anotações) fica disponível em **qualquer tela** — ficha, combate e painel do mestre. Ao clicar, o fundo escurece (como no lightbox das imagens) e um **ring circular** surge no centro da tela.
 
 O evento `dice:active` é emitido para toda a mesa quando alguém abre ou fecha a janela e quando mexe no pool. A fase de queda (`phase: 'tumbling'`) também vai por aí, mas **anunciada pelo servidor no início da rolagem** — não pelo cliente em um pedido paralelo. Com um pedido só, a ordem queda → resultado fica garantida e nenhum espectador recebe o total antes de o tabuleiro entrar em queda (nem perde o total por causa de um anúncio atrasado).

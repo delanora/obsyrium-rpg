@@ -976,6 +976,7 @@ export function MasterPanel({ user }: { user: SessionUser }) {
             {/* A mesa segue sincronizada nas outras abas; só sua superfície desmonta. */}
             {tab === 'active-combat' && combat ? (
               <CombatTracker
+                onRollTest={dice.openSkillRoll}
                 combat={combat}
                 log={log}
                 user={user}
