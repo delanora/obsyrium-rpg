@@ -118,6 +118,7 @@ export interface DeathSavePresentation {
 }
 
 export interface DiceRollDto {
+  modifierView?: import('../shared/roll-modifier-view.js').RollModifierView;
   deathSaveState?: { before: DeathSavePresentation; after: DeathSavePresentation };
   /** Falha automática de salvaguarda; não houve rolagem. */
   autoFail?: boolean;

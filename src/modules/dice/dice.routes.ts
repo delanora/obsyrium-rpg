@@ -1,3 +1,4 @@
+import { previewRollModifiers } from './roll-modifier-view.js';
 import { Router, type Request } from 'express';
 import { authenticate, requireRole } from '../auth/auth.middleware.js';
 import { activeRollSchema, tableRollSchema } from './dice.schema.js';
@@ -28,7 +29,13 @@ export const diceRouter = Router();
 
 diceRouter.use(authenticate);
 
-/** GET /api/dice/active — quem está com a janela de dados aberta. */
+/** POST /api/dice/preview — explica os modificadores sem resolver a rolagem. */
+diceRouter.post('/preview', async (req, res) => {
+  const parsed = tableRollSchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }); return; }
+  res.json(await previewRollModifiers(actor(req), parsed.data));
+});
+
 diceRouter.get('/active', (_req, res) => {
   res.json({ activeRoll: getActiveRoll(), activeRolls: getActiveRolls() });
 });

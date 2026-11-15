@@ -2962,6 +2962,7 @@ export interface DeathSavePresentation {
 }
 
 export interface DiceRollDto {
+  modifierView?: import('../../src/modules/shared/roll-modifier-view').RollModifierView;
   deathSaveState?: { before: DeathSavePresentation; after: DeathSavePresentation };
   autoFail?: boolean;
   id: string;
@@ -3051,6 +3052,8 @@ export interface TableRollActiveRequest {
 
 /** Pedido de rolagem enviado ao servidor. */
 export interface TableRollRequest {
+  skillKey?: string;
+  toolKey?: string;
   pendingCombatTestId?: string;
   expectedTestVersion?: number;
   pendingEffectSaveId?: string;

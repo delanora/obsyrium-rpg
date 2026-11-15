@@ -18,6 +18,7 @@ import {
   fetchActiveRolls,
   fetchDiceHistory,
   fetchEffectOptions,
+  previewRollModifiers,
   rollTableDice,
 } from './diceApi';
 
@@ -55,6 +56,8 @@ export interface RemoteBoard {
 
 /** Contexto da rolagem aberta (livre ou de perícia/salvaguarda). */
 export interface RollContext {
+  skillKey?: string;
+  toolKey?: string;
   pendingCombatTestId?: string;
   expectedTestVersion?: number;
   /** Pendência autorizada: o servidor deriva atributo, CD, bônus e modo. */
@@ -122,6 +125,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   const [error, setError] = useState<string | null>(null);
   // Modificadores OPCIONAIS (6.5G) oferecidos pelo SERVIDOR para esta rolagem.
   // Default: desmarcado (o PHB diz "pode" — a escolha é real).
+  const [modifierPreview, setModifierPreview] = useState<import('../../../src/modules/shared/roll-modifier-view').RollModifierView | null>(null);
   const [effectOptions, setEffectOptions] = useState<EffectOptionalModifierDto[]>([]);
   const [selectedEffectModifiers, setSelectedEffectModifiers] = useState<string[]>([]);
   const [toasts, setToasts] = useState<DiceToast[]>([]);
@@ -189,6 +193,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     setDisadvantageValue(false);
     setPrivate(isMaster);
     setResult(null);
+    setModifierPreview(null);
     setDeathSaveBefore(null);
     setPhase('idle');
     setError(null);
@@ -258,6 +263,16 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     };
   }, [open, context?.entity, context?.kind, context?.ability]);
 
+  // Consulta sem rolar dados. Respostas de contextos anteriores nunca substituem a bandeja atual.
+  useEffect(() => {
+    if (!open || !context || context.kind === 'death-save' || phase !== 'idle') return;
+    let live = true;
+    previewRollModifiers({ ...context, dice: [{ sides: 20 }], advantage, disadvantage, selectedEffectModifiers })
+      .then(response => { if (live && response.view?.cards) { setModifierPreview(response.view); setEffectOptions(response.options ?? []); } })
+      .catch(() => { if (live) setModifierPreview(null); });
+    return () => { live = false; };
+  }, [open, context, advantage, disadvantage, selectedEffectModifiers, phase]);
+
   const toggleEffectModifier = useCallback((id: string) => {
     setSelectedEffectModifiers((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
@@ -303,11 +318,11 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   const board = useMemo(
     () => ({
       pool: pool.map((die) => ({ sides: die.sides, locked: die.locked })),
-      advantage,
-      disadvantage,
-      bonus: context?.bonus ?? 0,
+      advantage: modifierPreview?.advantage ?? advantage,
+      disadvantage: modifierPreview?.disadvantage ?? disadvantage,
+      bonus: modifierPreview?.bonus ?? context?.bonus ?? 0,
     }),
-    [pool, advantage, disadvantage, context?.bonus],
+    [pool, advantage, disadvantage, context?.bonus, modifierPreview],
   );
 
   // Espelha o tabuleiro para a mesa (abrir/fechar, mexer no pool, trocar de
@@ -426,6 +441,8 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
         clientId,
         entity: context?.entity,
         ability: context?.ability,
+        skillKey: context?.skillKey,
+        toolKey: context?.toolKey,
         ...(context?.pendingCombatTestId ? { pendingCombatTestId: context.pendingCombatTestId, expectedTestVersion: context.expectedTestVersion } : {}),
         ...(context?.pendingEffectSaveId ? { pendingEffectSaveId: context.pendingEffectSaveId } : {}),
         ...(isMaster ? { visibility: isPrivate ? 'private' as const : 'public' as const } : {}),
@@ -492,13 +509,15 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     }
   }, []);
 
+  const modifierView = result?.modifierView ?? modifierPreview;
+
   /** Dados extras da vantagem/desvantagem: cada d20 do pool vira dois. */
   const extraD20 = useMemo(
     () =>
-      advantage || disadvantage
+      (modifierView ? modifierView.advantage || modifierView.disadvantage : advantage || disadvantage)
         ? pool.filter((die) => die.sides === 20).length
         : 0,
-    [pool, advantage, disadvantage],
+    [pool, advantage, disadvantage, modifierView],
   );
 
   const handlers = useMemo<RealtimeHandlers>(
@@ -563,6 +582,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     deathSaveBefore,
     error,
     effectOptions,
+    modifierView,
     selectedEffectModifiers,
     toggleEffectModifier,
     toasts,

@@ -1,3 +1,4 @@
+import { RollModifierCards } from './RollModifierCards';
 import { DiceTrayHelp } from './DiceTrayHelp';
 import { RemoteRollPreview } from './RemoteRollPreview';
 import { DiceTypeIcon } from './DiceTypeIcon';
@@ -48,6 +49,7 @@ export function DiceDock({ roller }: DiceDockProps) {
     deathSaveBefore,
     error,
     effectOptions,
+    modifierView,
     selectedEffectModifiers,
     toggleEffectModifier,
     toasts,
@@ -152,7 +154,7 @@ export function DiceDock({ roller }: DiceDockProps) {
               onClick={close}
             >
               <div className={`dice-workspace${showHistory ? ' has-history' : ''}`} onClick={event => event.stopPropagation()}>
-              <div
+              <div className="dice-tray-column"><div
                 className={`dice-stage${deathSave ? ' is-death-save' : ' is-standard-roll'}`}
                 onClick={(event) => event.stopPropagation()}
                 // Teste contra a Morte: interagir nos 3 s cancela o fechamento
@@ -170,7 +172,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                   {/* No Teste contra a Morte não existe bônus: só o dado decide. */}
                   {context && !deathSave ? (
                     <span className="dice-head-bonus">
-                      bônus {context.bonus >= 0 ? `+${context.bonus}` : context.bonus}
+                      bônus {(modifierView?.bonus ?? context.bonus) >= 0 ? `+${modifierView?.bonus ?? context.bonus}` : modifierView?.bonus ?? context.bonus}
                     </span>
                   ) : null}
                   <div className="dice-head-actions">
@@ -274,7 +276,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                 {/* Modificadores OPCIONAIS reais (6.5G): só aparecem quando o
                     servidor oferece algo para ESTA rolagem. Nascem
                     DESMARCADOS — usar é escolha do ator, não automático. */}
-                {effectOptions.length > 0 ? (
+                {!modifierView && effectOptions.length > 0 ? (
                   <div className="dice-effect-options" role="group" aria-label="Efeitos opcionais">
                     {effectOptions.map((option) => (
                       <label className="dice-toggle" key={option.id}>
@@ -335,6 +337,8 @@ export function DiceDock({ roller }: DiceDockProps) {
 
                 {error ? <p className="dice-error">{error}</p> : null}
 
+              </div>
+              {!deathSave ? <RollModifierCards view={modifierView} disabled={rolling || Boolean(result)} onToggle={toggleEffectModifier} /> : null}
               </div>
               {showHistory ? <aside id={historyId} className="dice-history-panel" aria-label="Histórico de rolagens">
                   <div className="dice-log">

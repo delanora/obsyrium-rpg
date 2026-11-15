@@ -50,6 +50,7 @@ const SKILLS_BY_ABILITY = ABILITY_KEYS.reduce(
 
 /** Abre a janela de dados já com 1d20 e o bônus do teste aplicado. */
 export interface AbilityRollInput {
+  skillKey?: string;
   ability?: AbilityKey;
   entity?: import('../../types').MechanicalEntity;
   kind: 'skill' | 'save';
@@ -208,7 +209,7 @@ export function AbilityCardsSection({ character, update, onRoll }: AbilityCardsS
           const editable = !lockedConstruction;
           const composition = compositionOf(character, ability, raceCatalog);
           const rollAbility = (): void =>
-            onRoll?.({ kind: 'skill', entity: { kind: 'character', id: character.id }, label: `Teste de ${label}`, bonus: modifier });
+            onRoll?.({ kind: 'skill', entity: { kind: 'character', id: character.id }, ability, label: `Teste de ${label}`, bonus: modifier });
 
           return (
             <article className="ability-block" key={ability}>
@@ -376,7 +377,7 @@ export function AbilityCardsSection({ character, update, onRoll }: AbilityCardsS
                           className="prof-roll"
                           aria-label={`Rolar teste de ${skill.label}`}
                           onClick={() =>
-                            onRoll({ kind: 'skill', entity: { kind: 'character', id: character.id }, label: skill.label, bonus: detail?.total ?? 0 })
+                            onRoll({ kind: 'skill', entity: { kind: 'character', id: character.id }, ability: skill.ability, skillKey: skill.key, label: skill.label, bonus: detail?.total ?? 0 })
                           }
                         >
                           <Icon name="die" size={13} />

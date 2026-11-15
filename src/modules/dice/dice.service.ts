@@ -1,3 +1,5 @@
+import { describeRollModifiers } from './roll-modifier-view.js';
+import { dodgeBenefitForSave, tableRollMode } from './roll-mode.js';
 import { resolveCombatTest } from '../combat/requested-tests.service.js';
 import { PublicRollBoards } from './public-roll-boards.js';
 import { deathSavePresentationOf } from './death-save-presentation.js';
@@ -5,12 +7,9 @@ import { entityHasWarCaster } from '../mechanical/war-caster.service.js';
 import {
   deriveConditionEffects,
   deriveSaveEffects,
-  dodgeBenefitAvailable,
-  effectiveSpeed,
   resolveRollMode,
   type MechanicalEntity,
 } from '../shared/conditions.js';
-import { economyOf } from '../shared/action-economy.js';
 import { getMechanicalState } from '../mechanical/mechanical.service.js';
 import {
   appendConcentrationLog,
@@ -406,45 +405,6 @@ async function rollDeathSave(actor: DiceActor, input: TableRollInput): Promise<D
 }
 
 /**
- * Esquiva ATIVA e VÁLIDA do autor da rolagem, para a salvaguarda de Destreza.
- *
- * `dodging` mora no estado de TURNO do combatente (`Combatant.turnEconomy`),
- * não no `MechanicalState` da ficha — por isso a busca acontece aqui, e não
- * dentro de `deriveSaveEffects`. O deslocamento usado é o MESMO do combate —
- * `effectiveSpeed(base, estado, bônus de efeito)` —, nunca o movimento restante:
- * um `speed-flat` que zere a velocidade invalida a Esquiva, e gastar o
- * movimento do turno NÃO invalida.
- *
- * Fora de combate não existe turno: sem combatente ativo, não há Esquiva.
- */
-async function dodgeBenefitForSave(
-  entity: MechanicalEntity | null,
-  /** Soma dos `speed-flat` dos EFEITOS ativos (6.5B) — já resolvida em lote. */
-  effectSpeedBonus = 0,
-): Promise<boolean> {
-  if (!entity || entity.kind === 'creature') return false;
-  const combatant = await prisma.combatant.findFirst({
-    where: {
-      ...(entity.kind === 'combatant' ? { id: entity.id } : { characterId: entity.id }),
-      combat: { status: { in: ['PENDING_INITIATIVE', 'ACTIVE'] } },
-    },
-    include: {
-      character: { select: { speed: true, mechanicalState: true } },
-      creature: { select: { speed: true } },
-    },
-  });
-  if (!combatant) return false;
-  // Personagem usa o estado CANÔNICO da ficha; a instância usa o próprio.
-  const mechanical = combatant.character?.mechanicalState ?? combatant.mechanicalState;
-  const baseSpeed = Math.max(0, combatant.character?.speed ?? combatant.creature?.speed ?? 0);
-  return dodgeBenefitAvailable({
-    dodging: economyOf(combatant.turnEconomy).dodging,
-    mechanicalState: mechanical,
-    effectiveSpeed: effectiveSpeed(baseSpeed, mechanical, effectSpeedBonus),
-  });
-}
-
-/**
  * Publica o estado mecânico/combate depois do teste de concentração.
  *
  * A ficha do jogador recebe `mechanical:updated` (o dono e os Mestres); o
@@ -525,7 +485,8 @@ async function rollConcentrationSave(actor: DiceActor, input: TableRollInput): P
     'save',
     'constitution',
   );
-  const mode = deriveSaveEffects(target.state, 'constitution', pending.damage > 0 && await entityHasWarCaster(entity) ? ['war-caster'] : [], [], {
+  const warCaster = pending.damage > 0 && await entityHasWarCaster(entity);
+  const mode = deriveSaveEffects(target.state, 'constitution', warCaster ? ['war-caster'] : [], [], {
     effects: { advantage: effectMods.advantage, disadvantage: effectMods.disadvantage },
   });
   // OPCIONAIS escolhidos (6.5G): revalidados AQUI e rolados pelo servidor. Um
@@ -580,6 +541,7 @@ async function rollConcentrationSave(actor: DiceActor, input: TableRollInput): P
   }
 
   const roll: DiceRollDto = {
+    modifierView: await describeRollModifiers({ entity, ability: 'constitution', kind: 'concentration', baseBonus, mods: effectMods, mode, state: target.state, selected: input.selectedEffectModifiers, warCaster }),
     id: randomUUID(),
     actorUserId: actor.userId,
     clientId: input.clientId ?? null,
@@ -776,6 +738,7 @@ async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput): P
   });
 
   const roll: DiceRollDto = {
+    modifierView: await describeRollModifiers({ entity: targetEntity, ability, kind: 'save', baseBonus, mods: effectMods, mode, state: loaded.state, selected: input.selectedEffectModifiers, cover: coverBonus, dodge }),
     id: randomUUID(),
     actorUserId: actor.userId,
     clientId: input.clientId ?? null,
@@ -844,7 +807,6 @@ export async function rollTableDice(actor: DiceActor, input: TableRollInput, def
   const mechanical = entity && (kind === 'skill' || kind === 'save')
     ? await getMechanicalState({ userId: actor.userId, username: actor.displayName, role: actor.role }, entity) : null;
   const state = mechanical?.state ?? {};
-  const effects = deriveConditionEffects(state);
   // EFEITOS ATIVOS (6.5B): o servidor resolve os modificadores da entidade.
   // Só salvaguarda e teste de habilidade têm escopo aqui (rolagem livre não).
   const effectRollKind = kind === 'save' ? 'save' : kind === 'skill' ? 'check' : null;
@@ -854,31 +816,8 @@ export async function rollTableDice(actor: DiceActor, input: TableRollInput, def
   const effectMods: EffectRollModifiers = effectSet && effectRollKind
     ? rollModifiersFor(effectSet, effectRollKind, input.ability)
     : { bonus: 0, dice: [], advantage: [], disadvantage: [], sources: [], optional: [] };
-  const advantages = input.advantage ? ['manual'] : [];
-  const disadvantages = input.disadvantage ? ['manual'] : [];
-  // Esquiva: só a salvaguarda de Destreza se beneficia, e só com o benefício
-  // válido (não Incapacitado, deslocamento efetivo > 0).
-  const dodge = kind === 'save'
-    ? await dodgeBenefitForSave(entity, effectSet?.speedBonus ?? 0)
-    : false;
-  const mode = kind === 'save' && input.ability
-    ? deriveSaveEffects(state, input.ability, advantages, disadvantages, {
-        dodge,
-        effects: { advantage: effectMods.advantage, disadvantage: effectMods.disadvantage },
-      })
-    : {
-        autoFail: false,
-        ...resolveRollMode(
-          [...advantages, ...effectMods.advantage],
-          [
-            ...disadvantages,
-            ...effectMods.disadvantage,
-            ...(kind === 'skill' && effects.checkDisadvantage || kind === 'save' && effects.saveDisadvantage
-              ? ['conditions']
-              : []),
-          ],
-        ),
-      };
+  const dodge = kind === 'save' ? await dodgeBenefitForSave(entity, effectSet?.speedBonus ?? 0) : false;
+  const mode = tableRollMode(kind, input.ability, state, effectMods, dodge, input.advantage, input.disadvantage);
   const { advantage, disadvantage } = mode;
 
   // OPCIONAIS (6.5G): só entram os IDs oferecidos pelo servidor para ESTA
@@ -925,6 +864,7 @@ export async function rollTableDice(actor: DiceActor, input: TableRollInput, def
   });
 
   const roll: DiceRollDto = {
+    modifierView: await describeRollModifiers({ entity, ability: input.ability, kind, baseBonus: input.bonus ?? 0, mods: effectMods, mode, state, selected: input.selectedEffectModifiers, skillKey: input.skillKey, toolKey: input.toolKey, dodge, manualAdvantage: input.advantage, manualDisadvantage: input.disadvantage }),
     id: randomUUID(),
     actorUserId: actor.userId,
     clientId: input.clientId ?? null,

@@ -75,3 +75,8 @@ export async function fetchActiveRolls(): Promise<TableRollActivePayload[]> {
   const response = await api<{ activeRoll?: TableRollActivePayload | null; activeRolls?: TableRollActivePayload[] }>('/api/dice/active');
   return (response.activeRolls ?? (response.activeRoll ? [response.activeRoll] : [])).map(board => ({ ...board, active: true }));
 }
+
+/** Explicação autoritativa, sem resolver o teste ou consumir recursos. */
+export function previewRollModifiers(request: TableRollRequest): Promise<{ view: import('../../../src/modules/shared/roll-modifier-view').RollModifierView; options: EffectOptionalModifierDto[] }> {
+  return api('/api/dice/preview', { method: 'POST', body: request });
+}

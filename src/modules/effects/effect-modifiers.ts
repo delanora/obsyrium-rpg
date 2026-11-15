@@ -195,6 +195,8 @@ export interface EffectOptionalModifierDto {
 
 /** Modificadores de UM tipo de rolagem, normalizados para o pipeline. */
 export interface EffectRollModifiers {
+  /** Parcelas já aceitas pelo stacking; apenas apresentação, sem nova aplicação. */
+  contributions?: { id: string; kind: 'roll-flat' | 'roll-dice' | 'roll-advantage' | 'roll-disadvantage'; source: EffectModifierSource; value?: number; count?: number; sides?: number; sign?: 1 | -1 }[];
   /** Soma dos bônus fixos. */
   bonus: number;
   /** Dados extras — rolados pelo servidor, nunca somados ao bônus fixo. */
@@ -403,6 +405,12 @@ function applyRollModifier(
   source: EffectModifierSource,
   id: string,
 ): void {
+  if (modifier.kind === 'ac-flat' || modifier.kind === 'speed-flat' || modifier.kind === 'spell-component-block') return;
+  if (!('optional' in modifier && modifier.optional)) {
+    (target.contributions ??= []).push({ id, kind: modifier.kind, source,
+      ...(modifier.kind === 'roll-flat' ? { value: modifier.value } : {}),
+      ...(modifier.kind === 'roll-dice' ? { count: modifier.count, sides: modifier.sides, sign: modifier.sign } : {}) });
+  }
   if (modifier.kind === 'roll-flat') {
     if (modifier.optional) {
       target.optional.push({

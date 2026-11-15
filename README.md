@@ -1335,6 +1335,8 @@ A apresentação é **efêmera** (não vai para o banco): vive na memória do se
 
 ## 🎲 Janela de dados
 
+A bandeja mostra pequenos cards texturizados abaixo da moldura com os bônus e suas origens: atributo, proficiência, especialização, efeitos e vantagem/desvantagem automática. O servidor explica as parcelas da rolagem; efeitos opcionais podem ser selecionados nos próprios cards e fontes privadas permanecem genéricas.
+
 O histórico do Mestre fica recolhido: o botão de histórico entre **?** e **X** abre uma coluna lateral e permanece pressionado enquanto ela estiver visível. O conjunto fica centralizado; em telas estreitas, a coluna vira um painel lateral sobre a bandeja.
 
 A bandeja usa sons de dados reais extraídos da referência enviada para o projeto, com variações e impactos curtos vinculados aos contatos da trajetória visual, em vez de uma rolagem gravada inteira sobreposta à animação. O efeito também acompanha a prévia dos espectadores e respeita o mudo global.

@@ -76,7 +76,7 @@ export async function resolveCombatTest(
     const privateRoll = actor.role === 'MASTER' && input.visibility === 'private';
     const result = await roll({ ...input, pendingCombatTestId: undefined, pendingEffectSaveId: undefined,
       pendingConcentrationSaveId: undefined, entity, ability: definition.ability,
-      kind: request.kind === 'save' ? 'save' : 'skill', dice: [{ sides: 20 }], bonus,
+      kind: request.kind === 'save' ? 'save' : 'skill', skillKey: request.kind === 'skill' ? request.key : undefined, toolKey: undefined, dice: [{ sides: 20 }], bonus,
       private: privateRoll, label: `${definition.label} — CD ${request.dc}` });
     await db.combatTestRequest.update({ where: { id: request.id }, data: { status: 'resolved', version: { increment: 1 }, resolutionFingerprint: fingerprint, result: result as unknown as Prisma.InputJsonValue } });
     await appendCombatJournal({ combatId: request.combatId, actorName: unit.name,

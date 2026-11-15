@@ -1,0 +1,23 @@
+.dice-tray-column { display: flex; flex-direction: column; min-width: 0; gap: .55rem; max-height: 92dvh; }
+.dice-overlay .dice-tray-column > .dice-stage { width: 100%; min-width: 0; box-sizing: border-box; min-height: 0; flex-shrink: 1; }
+.dice-modifiers { display: flex; gap: .45rem; padding: .2rem .15rem .35rem; overflow-x: auto; flex-shrink: 0; overscroll-behavior: contain; }
+.dice-modifier {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  flex: 0 0 6.5rem; min-height: 5.6rem; box-sizing: border-box; padding: .55rem .4rem;
+  border: 1px solid #96713e; border-radius: 10px; color: #e0d1b7;
+  background: linear-gradient(145deg, #191719bb, #0a0c10dd), url('/dice-tray/fundo.png') center / cover;
+  box-shadow: inset 0 0 0 3px #090b0e99, 0 3px 8px #0007;
+  text-align: center; font: inherit; line-height: 1.25;
+}
+.dice-modifier strong { font-family: var(--font-display, Georgia, serif); color: #efd391; font-size: 1.15rem; margin-bottom: .3rem; }
+.dice-modifier span { font-size: .74rem; overflow-wrap: anywhere; }
+.dice-modifier small { color: #b5a58e; font-size: .62rem; margin-top: .25rem; }
+.dice-modifier.is-advantage strong { color: #a8d5be; font-size: .85rem; }
+.dice-modifier.is-disadvantage strong, .dice-modifier.is-failure strong { color: #e2aaa2; font-size: .85rem; }
+.dice-modifier.is-inactive { opacity: .55; }
+button.dice-modifier { cursor: pointer; }
+button.dice-modifier[aria-pressed='true'] { box-shadow: inset 0 3px 8px #000, inset 0 0 0 2px #c49b5766; transform: translateY(1px); }
+button.dice-modifier:hover:not(:disabled) { border-color: #e4c180; opacity: 1; }
+.dice-modifier:focus-visible { outline: 2px solid #e4c180; outline-offset: 2px; }
+/* Reserva espaço aos cards sem esconder os controles no rodapé da bandeja. */
+.dice-tray-column:has(.dice-modifiers) .dice-stage.is-standard-roll .dice-ring { width: min(100%, 28rem, max(12rem, calc(92dvh - 27rem))); }

@@ -10,6 +10,8 @@ import { z } from 'zod';
  * token (e da ficha do usuário).
  */
 export const tableRollSchema = z.object({
+  skillKey: z.string().min(1).max(40).optional(),
+  toolKey: z.string().min(1).max(100).optional(),
   pendingCombatTestId: z.string().min(1).max(64).optional(),
   expectedTestVersion: z.number().int().nonnegative().optional(),
   entity: entitySchema.optional(),
