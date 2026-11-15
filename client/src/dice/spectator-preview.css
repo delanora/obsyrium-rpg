@@ -54,3 +54,15 @@
 @keyframes spectator-unfold { from { opacity:0; transform:translateY(10px) scale(.82); } to { opacity:1; transform:none; } }
 @keyframes spectator-pulse { 50% { opacity:.3; } }
 @media (prefers-reduced-motion: reduce) { .dice-spectator-preview, .dice-spectator-actor > i.is-rolling { animation:none; } }
+
+/* A pele da morte tem regras próprias mais específicas que a bandeja comum. */
+.dice-spectator-preview .dice-stage.is-death-save .dice-ring {
+  width: min(100%, 250px, 36dvh);
+  max-width: 100%;
+}
+.dice-spectator-preview .dice-stage.is-death-save .dice-watch-head,
+.dice-spectator-preview .dice-stage.is-death-save .death-save-title { display: none; }
+.dice-spectator-preview .dice-stage.is-death-save .death-save-flight .ddie {
+  --ddie-scale: var(--death-preview-scale, .36);
+  --ddie-box: var(--death-preview-box, 4.6rem);
+}

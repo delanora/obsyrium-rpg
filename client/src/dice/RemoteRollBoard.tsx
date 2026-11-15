@@ -3,7 +3,7 @@ import './common-tray.css';
 import { DeathFateHeader } from './DeathFateHeader';
 import { DeathSaveTitle } from './DeathSaveTitle';
 import { DeathSaveRoll } from './DeathSaveRoll';
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../components/Icon';
 import { Portrait } from '../components/Portrait';
@@ -36,6 +36,26 @@ export function RemoteRollBoard({ board, onClose, presentation = 'dialog' }: Rem
   // Rolagem de VIDA OU MORTE: quem assiste vê o MESMO quadro sombrio do autor
   // (a pele é a de `death-save.css`, aplicada pelas classes abaixo).
   const deathSave = board.kind === 'death-save';
+  const stage = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (presentation !== 'preview' || !deathSave) return;
+    const arena = stage.current?.querySelector<HTMLElement>('.death-save-roll');
+    if (!arena) return;
+    const resize = () => {
+      // Mesma proporção da bandeja grande na largura atual, sem medir a
+      // transformação temporária da animação de abertura do pop-up.
+      const rem = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+      const referencia = Math.min(25 * rem, .76 * window.innerWidth) * .77;
+      const escala = referencia <= 160 ? .27 : referencia <= 200 ? .35 : referencia <= 250 ? .44 : .58;
+      const caixa = referencia <= 160 ? 4 : referencia <= 200 ? 5 : referencia <= 250 ? 6 : 7.4;
+      const proporcao = arena.clientWidth / referencia;
+      arena.style.setProperty('--death-preview-scale', String(escala * proporcao));
+      arena.style.setProperty('--death-preview-box', `${caixa * rem * proporcao}px`);
+    };
+    resize(); const observer = new ResizeObserver(resize); observer.observe(arena);
+    window.addEventListener('resize', resize);
+    return () => { observer.disconnect(); window.removeEventListener('resize', resize); };
+  }, [presentation, deathSave]);
 
   // Esc fecha e o fundo não rola enquanto o tabuleiro está aberto.
   useEffect(() => {
@@ -56,6 +76,7 @@ export function RemoteRollBoard({ board, onClose, presentation = 'dialog' }: Rem
 
   const content = (
       <div
+        ref={stage}
         className={`dice-stage${deathSave ? ' is-death-save' : ' is-standard-roll'}`}
         onClick={(event) => event.stopPropagation()}
       >

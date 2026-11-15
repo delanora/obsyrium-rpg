@@ -62,6 +62,11 @@ try{
  await emitActive(active('b','Guerreiro de Ferro'));await emitRoll(roll('b',8));await click(button('Rolar meus dados'));
  assert.equal(document.querySelector('.dice-spectator-preview'),null);assert.ok(document.querySelector('[role="dialog"]'));assert.equal(roller.open,true);
  await click(document.querySelector('[aria-label="Fechar a janela de dados"]'));assert.equal(document.querySelector('.dice-spectator-preview'),null);
+ await emitActive({...active('d','Umbrae da Lua'),kind:'death-save'});await emitRoll({...roll('d',10),actorName:'Umbrae da Lua',kind:'death-save'});
+ assert.ok(document.querySelector('.dice-spectator-preview .dice-stage.is-death-save'));
+ assert.equal(document.querySelector('.dice-spectator-preview .dice-common-frame'),null);
+ await click(button('Expandir visualização'));assert.ok(document.querySelector('.dice-overlay.is-death-save'));
+ await click(document.querySelector('[aria-label="Fechar o tabuleiro"]'));
  await act(async()=>root.unmount());
  // Reconexão: duas bandejas retornam juntas; a duração restante não reinicia.
  now+=20000;const a=active('a','Umbrae da Lua'),b=active('b','Guerreiro de Ferro');a.lastRoll=roll('a',4);b.lastRoll=roll('b',6);
