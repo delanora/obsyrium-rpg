@@ -1,6 +1,6 @@
 import { useRemoteRolls } from './useRemoteRolls';
 import { fetchDeath } from '../deathApi';
-import { rollAnimationMs } from './rollAnimation';
+import { rollAnimationMs, COMMON_THROW_MS } from './rollAnimation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { playCrit, playDice } from '../sound';
 import type {
@@ -441,7 +441,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
       // autoritativo em vez de esperar o próximo evento. Nada é recalculado
       // aqui — o resultado dos dados continua sendo só apresentação.
       if (context?.kind === 'death-save') deathSaveHook.current?.(roll);
-      playDice();
+      if (!roll.autoFail) playDice({ durationMs: rollAnimationMs(roll.kind), contactDelayMs: roll.kind === 'death-save' ? 0 : COMMON_THROW_MS, diceCount: roll.dice.length });
       if (roll.crit) playCrit();
 
       if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);

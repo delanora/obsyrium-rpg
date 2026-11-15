@@ -1,14 +1,16 @@
+import { playRecordedDice, prepareDiceSound, stopDiceSound, type DiceSoundOptions } from './dice/diceSound';
 /**
  * Efeitos sonoros da mesa.
  *
- * Tudo é sintetizado com a Web Audio API — sem arquivos de áudio para versionar,
- * sem licenciamento e funciona offline. O navegador só libera o áudio depois de
+ * Os dados usam recortes da referência enviada pelo usuário; os demais efeitos
+ * são sintetizados com Web Audio. O navegador só libera o áudio depois de
  * uma interação do usuário, então o contexto é retomado sob demanda.
  */
 
 const MUTE_KEY = 'grimorio.muted';
 
 let context: AudioContext | null = null;
+let muteVersion = 0;
 let muted = typeof localStorage !== 'undefined' && localStorage.getItem(MUTE_KEY) === 'true';
 
 type AudioContextCtor = typeof AudioContext;
@@ -35,7 +37,10 @@ export function isMuted(): boolean {
 
 export function setMuted(value: boolean): void {
   muted = value;
+  muteVersion += 1;
   localStorage.setItem(MUTE_KEY, String(value));
+  if (value) stopDiceSound();
+  else { const audio = getContext(); if (audio) void prepareDiceSound(audio).catch(() => {}); }
 }
 
 /** Retorna o novo estado (útil para atualizar o botão). */
@@ -97,17 +102,23 @@ function playClick(audio: AudioContext, at: number, duration: number, peak: numb
   source.start(at);
 }
 
-/** Som de dados rolando (usado em qualquer rolagem). */
-export function playDice(): void {
+/** Som gravado de dados na bandeja; conserva uma alternativa sintetizada sem rede. */
+export function playDice(options: DiceSoundOptions = {}): void {
+  if (muted) return;
   const audio = getContext();
-  if (!audio || muted) return;
-
-  const now = audio.currentTime;
-  for (let i = 0; i < 6; i += 1) {
-    playClick(audio, now + i * 0.045 + Math.random() * 0.02, 0.04, 0.05);
-  }
-  // Baque final, como o dado assentando.
-  playTone(audio, 180, now + 0.28, 0.12, { type: 'triangle', gain: 0.05, sweepTo: 90 });
+  if (!audio) return;
+  const requestedAt = audio.currentTime;
+  const version = muteVersion;
+  void playRecordedDice(audio, options, () => muted).catch(() => {
+    if (muted || version !== muteVersion || audio.state !== 'running') return;
+    const end = requestedAt + (options.durationMs ?? 550) / 1000;
+    const now = Math.max(audio.currentTime, requestedAt + (options.contactDelayMs ?? 0) / 1000);
+    if (now + .12 > end) return;
+    for (let i = 0; i < 6; i += 1) {
+      const at = now + i * .045 + Math.random() * .02;
+      if (at + .04 <= end) playClick(audio, at, .04, .05);
+    }
+  });
 }
 
 /** Fanfarra curta para um 20 natural. */
@@ -168,7 +179,8 @@ export function unlockAudioOnFirstGesture(): void {
   if (typeof document === 'undefined') return;
 
   const unlock = (): void => {
-    getContext();
+    const audio = getContext();
+    if (audio && !muted) void prepareDiceSound(audio).catch(() => {});
     document.removeEventListener('click', unlock);
     document.removeEventListener('keydown', unlock);
   };
