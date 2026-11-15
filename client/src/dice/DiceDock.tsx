@@ -6,13 +6,14 @@ import './common-tray.css';
 import { DeathFateHeader } from './DeathFateHeader';
 import { DeathSaveTitle } from './DeathSaveTitle';
 import { DeathSaveRoll } from './DeathSaveRoll';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../components/Icon';
 import { CommonDicePool } from './CommonDicePool';
 import { announcement, resultBreakdown } from './format';
 import { RemoteRollBoard } from './RemoteRollBoard';
 import './death-save.css';
+import './history-drawer.css';
 import { RollLogList } from './RollLogList';
 import { DICE_TYPES, type DiceRollerState, type RemoteBoard } from './useDiceRoller';
 
@@ -65,6 +66,10 @@ export function DiceDock({ roller }: DiceDockProps) {
   } = roller;
 
   const fab = useRef<HTMLButtonElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const historyId = useId();
+  const showHistory = isMaster && historyOpen;
+  useEffect(() => { if (!open) setHistoryOpen(false); }, [open]);
   const remoteBoards = roller.remoteBoards ?? (remote ? [remote] : []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<RemoteBoard | null>(null);
@@ -88,7 +93,7 @@ export function DiceDock({ roller }: DiceDockProps) {
     if (!open) return;
 
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') close();
+      if (event.key === 'Escape') { if (historyOpen) setHistoryOpen(false); else close(); }
     };
 
     const previousOverflow = document.body.style.overflow;
@@ -99,7 +104,7 @@ export function DiceDock({ roller }: DiceDockProps) {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKey);
     };
-  }, [open, close]);
+  }, [open, close, historyOpen]);
 
   const rolling = phase === 'tumbling';
   const settled = phase === 'settled' && result !== null;
@@ -146,6 +151,7 @@ export function DiceDock({ roller }: DiceDockProps) {
               aria-modal="true"
               onClick={close}
             >
+              <div className={`dice-workspace${showHistory ? ' has-history' : ''}`} onClick={event => event.stopPropagation()}>
               <div
                 className={`dice-stage${deathSave ? ' is-death-save' : ' is-standard-roll'}`}
                 onClick={(event) => event.stopPropagation()}
@@ -169,6 +175,10 @@ export function DiceDock({ roller }: DiceDockProps) {
                   ) : null}
                   <div className="dice-head-actions">
                     <DiceTrayHelp deathSave={deathSave} />
+                    {isMaster ? <button type="button" className="dice-head-close dice-history-toggle"
+                      aria-label="Histórico de rolagens" title={showHistory ? 'Ocultar histórico' : 'Mostrar histórico'}
+                      aria-controls={historyId} aria-expanded={showHistory} aria-pressed={showHistory}
+                      onClick={() => setHistoryOpen(value => !value)}><Icon name="scroll" size={15} /></button> : null}
                   <button
                     type="button"
                     className="dice-head-close"
@@ -325,8 +335,8 @@ export function DiceDock({ roller }: DiceDockProps) {
 
                 {error ? <p className="dice-error">{error}</p> : null}
 
-                {/* Log do mestre, abaixo dos dados. */}
-                {isMaster ? (
+              </div>
+              {showHistory ? <aside id={historyId} className="dice-history-panel" aria-label="Histórico de rolagens">
                   <div className="dice-log">
                     <div className="dice-log-head">
                       <h3>
@@ -345,7 +355,7 @@ export function DiceDock({ roller }: DiceDockProps) {
 
                     <RollLogList history={history} />
                   </div>
-                ) : null}
+              </aside> : null}
               </div>
             </div>,
             document.body,

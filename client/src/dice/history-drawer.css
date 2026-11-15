@@ -1,0 +1,38 @@
+.dice-workspace {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: min(34rem, 100%);
+  gap: .8rem;
+  justify-self: center;
+}
+.dice-workspace.has-history { width: min(55rem, 100%); grid-template-columns: minmax(0, 34rem) minmax(16rem, 1fr); }
+.dice-overlay .dice-workspace > .dice-stage { width: 100%; box-sizing: border-box; min-width: 0; }
+.dice-history-toggle[aria-pressed='true'] {
+  color: var(--gold-bright); border-color: var(--gold);
+  background: rgb(15 13 11 / 90%); box-shadow: inset 0 2px 5px #000, inset 0 0 0 1px rgb(199 157 88 / 25%);
+  transform: translateY(1px);
+}
+.dice-history-panel {
+  --ink: #f1e5cf; --ink-soft: #d6c7af; --ink-faint: #b4a58e;
+  --line: rgb(199 157 88 / 24%); --line-strong: rgb(199 157 88 / 48%);
+  --surface: #15161a; --gold-deep: #bd9555; --gold-bright: #edce8e;
+  --surface-2: #242025; --surface-3: #30282a; --gold: #c8a15d;
+  position: relative; min-width: 0; min-height: 16rem; overflow: hidden;
+  background: url('/dice-tray/fundo.png') center / cover no-repeat, #0b0d11;
+  color: var(--ink); border: 1px solid var(--line-strong); border-radius: 14px;
+  box-shadow: 0 12px 35px -15px #000, inset 0 0 0 4px rgb(8 9 12 / 70%);
+  animation: dice-history-appear .2s ease-out;
+}
+.dice-history-panel > .dice-log { position: absolute; inset: 0; margin: 0; padding: 1rem; border: 0; max-height: none; overflow: hidden; }
+.dice-history-panel .dice-log-head { flex-shrink: 0; padding-bottom: .65rem; border-bottom: 1px solid var(--line); }
+.dice-history-panel .dice-log-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.dice-history-panel .dice-log-list li { flex-wrap: wrap; padding: .65rem 0; }
+.dice-history-panel .dice-log-text { overflow-wrap: anywhere; }
+.dice-history-panel .dice-log-side { margin-left: auto; }
+@keyframes dice-history-appear { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@media (max-width: 900px) {
+  .dice-workspace.has-history { width: min(34rem, 100%); grid-template-columns: minmax(0, 1fr); }
+  .dice-history-panel { position: absolute; z-index: 6; inset: 3.8rem .7rem .7rem auto; width: min(20rem, calc(100% - 1.4rem)); min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .dice-history-panel { animation: none; } }
