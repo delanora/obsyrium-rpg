@@ -4,7 +4,8 @@ import { Icon } from '../../components/Icon';
 type Panel = 'actions' | 'adjustments';
 
 /** Apresentação do Mestre; preserva os mesmos formulários, callbacks e permissões. */
-export function CombatMasterDock({ action, masterTools, tools, resourceBar, inventory, turnKey, adjustmentsLabel = 'Ajustes' }: {
+export function CombatMasterDock({ gridToolbarRef, action, masterTools, tools, resourceBar, inventory, turnKey, adjustmentsLabel = 'Ajustes' }: {
+  gridToolbarRef?: (node: HTMLDivElement | null) => void;
   adjustmentsLabel?: string;
   action: ReactNode; masterTools?: ReactNode; tools?: ReactNode;
   resourceBar?: ReactNode; inventory?: ReactNode; turnKey?: string;
@@ -60,7 +61,7 @@ export function CombatMasterDock({ action, masterTools, tools, resourceBar, inve
         <Icon name="gear" size={14} /> {adjustmentsLabel}
       </button>
       {inventory ? <div className="combat-master-inventory">{inventory}</div> : null}
-      <span className="combat-master-hint">Botão direito no token: ajustes · Alt + clique: ping</span>
+      <div className="combat-master-grid-tools" ref={gridToolbarRef} />
     </div>
     {/* Mantidos montados: fechar a superfície não perde escolhas nem interrompe requisições. */}
     <div ref={surface} className="combat-master-panel" hidden={!panel}>

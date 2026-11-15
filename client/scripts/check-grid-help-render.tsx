@@ -1,0 +1,25 @@
+/** Ajuda do grid com React real; nenhuma chamada HTTP ou dado da mesa. */
+import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
+const dom = new JSDOM('<div id="root"></div>');
+Object.assign(globalThis, { window: dom.window, document: dom.window.document, Node: dom.window.Node, IS_REACT_ACT_ENVIRONMENT: true });
+const { act, createElement: h } = await import('react');
+const { createRoot } = await import('react-dom/client');
+const { GridHelp } = await import('../src/combat/grid/GridHelp');
+const root = createRoot(document.getElementById('root')!);
+const render = (isMaster: boolean) => act(async () => root.render(h(GridHelp, { isMaster, hint: 'Contexto da operação atual.' })));
+const click = () => act(async () => document.querySelector('button')!.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })));
+await render(true);
+assert.equal(document.querySelector('[role="tooltip"]'), null);
+await click();
+assert.ok(document.body.textContent?.includes('Ajustar um token'));
+assert.ok(document.body.textContent?.includes('Contexto da operação atual.'));
+await act(async () => document.querySelector('button')!.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+assert.equal(document.querySelector('[role="tooltip"]'), null);
+await render(false);await click();
+assert.ok(!document.body.textContent?.includes('Ajustar um token'));
+assert.ok(document.body.textContent?.includes('Sinalizar'));
+await act(async () => document.body.dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true })));
+assert.equal(document.querySelector('[role="tooltip"]'), null);
+await act(async () => root.unmount());
+console.log('Ajuda: recolhida por padrão, clique, Escape, clique externo, contexto e permissões verificados.');

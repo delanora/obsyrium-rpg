@@ -1,3 +1,5 @@
+import { GridToolbarSlot } from '../components/GridToolbarSlot';
+import { GridHelp } from './GridHelp';
 import { GridSharedAreas } from './GridSharedAreas';
 import type { AreaReading } from './areaQueryApi';
 import { GridElevations } from './GridElevations';
@@ -2046,14 +2048,14 @@ export function CombatGrid({
       data-grid-phase={gridPhase}
     >
       {isMaster ? (
-        <details className="grid-master-settings" onKeyDown={(event) => {
+        <GridToolbarSlot><details className="grid-master-settings" onKeyDown={(event) => {
           if (event.key === 'Escape') {
             event.preventDefault(); event.stopPropagation();
             event.currentTarget.open = false;
             event.currentTarget.querySelector('summary')?.focus();
           }
         }}>
-          <summary><Icon name="gear" size={14} /> Cena e posicionamento{mode === 'placement' ? ' · Posicionando' : ''}</summary>
+          <summary className="btn btn-small"><Icon name="gear" size={14} /> Cena e posicionamento{mode === 'placement' ? ' · Posicionando' : ''}</summary>
           <div className="grid-master-settings-content">
       {/*
         TOOLBAR — SÓ ADMINISTRAÇÃO (6.6M.6.1.5). A câmera saiu daqui: virou
@@ -2124,7 +2126,7 @@ export function CombatGrid({
       ) : null}
 
           </div>
-        </details>
+        </details></GridToolbarSlot>
       ) : null}
 
       {/* Erro da cena do MESTRE fica no fluxo (contexto administrativo). O do
@@ -2137,6 +2139,7 @@ export function CombatGrid({
 
       {riskPrompt ? <MovementRiskDialog onAnswer={answerRisk} /> : null}
       <div className="grid-stage">
+        <GridHelp isMaster={isMaster} hint={hint} />
         {/*
           JOGADOR: o palco NÃO exibe turno nem dimensões (6.6M.6.1.5.1). O
           Obsyrium já informa o turno fora do mapa e as dimensões são
@@ -2324,7 +2327,7 @@ export function CombatGrid({
             onArea={shape => { setAreaRequest({ id: ++areaRequestId.current, shape, origin: radial.origin, scope: areaSceneKey }); setRadial(null); }}
           /> : null}
           <GridPings pings={ping.pings} camera={camera} geometry={geometry} />
-          <span className="grid-ping-hint">Alt + clique: sinalizar ponto</span>
+
 
           {/* TRAÇO do movimento: reta tracejada origem→destino, em TELA. */}
           {draft && draft.path.length > 0 && draftTraceFrom && draftTraceTo ? (
@@ -2412,7 +2415,7 @@ export function CombatGrid({
             />
           ) : null}
 
-          <p className="grid-hint">{hint}</p>
+
         </div>
 
         {/*

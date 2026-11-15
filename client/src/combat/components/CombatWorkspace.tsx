@@ -1,3 +1,5 @@
+import { GridToolbarContext } from './GridToolbarSlot';
+import { useState } from 'react';
 import { CombatMasterDock } from './CombatMasterDock';
 import { Fragment, isValidElement, type ReactNode } from 'react';
 
@@ -70,7 +72,7 @@ interface CombatWorkspaceProps {
  * COMPOSIÇÃO do combate (6.6M.5.2): iniciativa · centro tático (ação + cena) ·
  * registro, com as faixas de ferramentas e a barra persistente embaixo.
  *
- * Este componente NÃO tem estado, efeito nem regra: ele só distribui `children`
+ * Este componente distribui `children` e oferece um destino para os controles do grid
  * nas regiões do layout. Quem orquestra continua sendo o `CombatTracker`, e
  * cada painel continua sendo o MESMO componente de antes — reorganizar a tela
  * não concede autoridade nenhuma a ninguém.
@@ -91,8 +93,9 @@ export function CombatWorkspace({
   masterTools,
   resourceBar,
 }: CombatWorkspaceProps) {
+  const [gridToolbar, setGridToolbar] = useState<HTMLDivElement | null>(null);
   return (
-    <section
+    <GridToolbarContext.Provider value={gridToolbar}><section
       // A dock só existe para o jogador: a classe marca a superfície para ela
       // reservar a faixa dos botões flutuantes sem tocar na tela do Mestre.
       className={dock ? 'combat-workspace has-player-dock' : 'combat-workspace'}
@@ -128,7 +131,7 @@ export function CombatWorkspace({
       </div>
 
       {isMaster ? (
-        <CombatMasterDock action={action} masterTools={masterTools} tools={tools}
+        <CombatMasterDock gridToolbarRef={setGridToolbar} action={action} masterTools={masterTools} tools={tools}
           adjustmentsLabel={masterToolsLabel} resourceBar={resourceBar} inventory={masterInventory} turnKey={turnKey} />
       ) : (
         <>
@@ -138,6 +141,6 @@ export function CombatWorkspace({
           {resourceBar ? <div className="combat-workspace-resource">{resourceBar}</div> : null}
         </>
       )}
-    </section>
+    </section></GridToolbarContext.Provider>
   );
 }

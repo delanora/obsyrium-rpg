@@ -2835,7 +2835,7 @@ check(
       onCombatChange: () => undefined,
       onError: () => undefined,
     })
-  ).includes('Posicionar coloca unidades') &&
+  ).includes('Cena e posicionamento') &&
     renderToStaticMarkup(
       createElement(UnplacedCombatantsTray, {
         combatants: [unitOf('fora', 'large', { position: null })],
@@ -6150,8 +6150,8 @@ check(
   };
 
   check(
-    'SC56) CombatWorkspace é SÓ layout (sem estado/efeito): iniciativa · centro tático (cena acima da TRAY) · registro · ferramentas · barra',
-    !/useState|useEffect|useReducer|useRef/.test(workspaceLayout) &&
+    'SC56) CombatWorkspace mantém só layout e destino dos controles do grid: iniciativa · centro tático (cena acima da TRAY) · registro · ferramentas · barra',
+    !/useEffect|useReducer|useRef/.test(workspaceLayout) && workspaceLayout.includes('const [gridToolbar, setGridToolbar]') &&
       workspaceLayout.includes('combat-workspace-initiative">{initiative}') &&
       workspaceLayout.includes('combat-tactical-action') &&
       workspaceLayout.includes('combat-tactical-scene">{scene}') &&
@@ -6409,7 +6409,7 @@ check(
 
   check(
     'SC72) estado de ataque não é duplicado: seleção/prévia vivem só no CombatActionPanel',
-    !/useState|useEffect|useReducer/.test(workspaceLayout) &&
+    !/useEffect|useReducer/.test(workspaceLayout) &&
       !/attackId|targetId|rollMode|ammoId|selectedEffects|rangePreview/.test(workspaceLayout) &&
       actionPanelSource.includes("const [attackId, setAttackId] = useState('');") &&
       // 6.6M.6.4: o alvo pode ser CONTROLADO de fora, então o estado local tem
@@ -7099,7 +7099,7 @@ check(
 
   const stageAt = gridSource.indexOf('<div className="grid-stage">');
   const viewportAt = gridSource.indexOf('ref={viewportRef}');
-  const hintAt = gridSource.indexOf('<p className="grid-hint">{hint}</p>');
+  const hintAt = gridSource.indexOf('          {/* RÉGUA em coordenadas');
   const cameraAt = gridSource.indexOf("'grid-camera-overlay is-lifted'");
   const cameraBlock = cameraAt < 0 ? '' : gridSource.slice(cameraAt, cameraAt + 1500);
 

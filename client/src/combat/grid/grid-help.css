@@ -1,0 +1,14 @@
+.grid-help { position: absolute; top: .55rem; right: .55rem; z-index: 45; }
+.grid-help-button { width: 1.85rem; height: 1.85rem; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--gold-deep); background: var(--surface); color: var(--gold-bright); font: bold 1rem Georgia, serif; cursor: pointer; box-shadow: 0 2px 6px #0008; }
+.grid-help-button:hover, .grid-help-button[aria-expanded='true'] { border-color: var(--gold-bright); background: var(--surface-2); }
+.grid-help-button:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
+.grid-help-panel { position: absolute; right: 0; top: calc(100% + .4rem); width: min(21rem, calc(100vw - 3rem)); box-sizing: border-box; max-height: min(32rem, 65dvh); overflow-y: auto; padding: .85rem; background: var(--surface); color: var(--ink); border: 1px solid var(--gold-deep); border-radius: var(--radius); box-shadow: var(--shadow-deep); font-size: .78rem; line-height: 1.4; text-align: left; animation: grid-help-appear .16s ease-out; }
+.grid-help-panel strong { color: var(--gold-bright); font-family: var(--font-display); }
+.grid-help-panel dl { margin: .65rem 0 0; }
+.grid-help-panel dt { color: var(--ink-soft); font-weight: bold; margin-top: .6rem; }
+.grid-help-panel dd { margin: .15rem 0 0; }
+.grid-help-context { margin: .7rem 0 0; padding-top: .6rem; border-top: 1px solid var(--line-strong); color: var(--ink-faint); }
+.combat-master-toolbar .grid-master-settings > summary { font-size: inherit; color: var(--ink-soft); }
+.combat-master-toolbar .grid-master-settings-content { top: auto; bottom: calc(100% + .4rem); right: 0; }
+@keyframes grid-help-appear { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .grid-help-panel { animation: none; } }
