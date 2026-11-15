@@ -133,8 +133,8 @@ export function Die3D({
                     />
                   ) : null}
                   {resina && sides === 4 ? face.polygon.map((canto, i) => {
-                    const x = face.center[0] + (canto[0] - face.center[0]) * .58;
-                    const y = face.center[1] + (canto[1] - face.center[1]) * .58;
+                    const x = face.center[0] + (canto[0] - face.center[0]) * .45;
+                    const y = face.center[1] + (canto[1] - face.center[1]) * .45;
                     const angulo = Math.atan2(canto[0] - face.center[0], -(canto[1] - face.center[1]));
                     return <span key={i} className="ddie-num ddie-corner-num" data-vertex-value={face.cornerValues?.[i]} style={{ left: x, top: y, fontSize: face.valueSize * .68, transform: `translate(-50%, -50%) rotate(${angulo}rad)` }}>{face.cornerValues?.[i]}</span>;
                   }) : !textura && (reveal || resina) && face.value !== null ? (
