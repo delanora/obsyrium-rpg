@@ -38,9 +38,9 @@ export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: 
           const trajeto = simulacao.quadros.map((quadro, k) => ({ offset: contato + (1 - contato) * k / (simulacao.quadros.length - 1), transform: deslocamento(quadro[i]) }));
           animacoes.push(slot.animate([
             { offset: 0, transform: deslocamento(inicial) },
-            { offset: contato * .15, transform: `${deslocamento({ ...inicial, y: inicial.y - elevacao * .4 })} scale(1.03)` },
-            { offset: contato * .46, transform: `${deslocamento({ ...inicial, y: inicial.y - elevacao })} scale(1.1)` },
-            { offset: contato * .7, transform: `${deslocamento({ ...inicial, y: inicial.y - elevacao * .78 })} scale(1.07)` },
+            { offset: contato * .15, transform: `${deslocamento({ ...inicial, y: inicial.y - elevacao * .4 })} scale(1.08)` },
+            { offset: contato * .46, transform: `${deslocamento({ ...inicial, y: inicial.y - elevacao })} scale(1.24)` },
+            { offset: contato * .7, transform: `${deslocamento({ ...inicial, y: inicial.y - elevacao * .78 })} scale(1.16)` },
             ...trajeto,
           ], { duration: duracao, easing: 'linear' }));
           const sombra = sombras[i];
