@@ -59,3 +59,31 @@
   .wizard-substep-link { margin: 0; padding: .35rem 0; font-size: .6rem; text-align: center; border-left: 0; }
   .wizard-substep-link strong { display: none; }
 }
+/* Apenas os fundos ficam translúcidos; texto, arte e controles conservam a nitidez. */
+.wizard-overlay .wizard {
+  --surface: #221811e6;
+  --surface-2: #2b1f16e6;
+  --surface-3: #35261be6;
+  --surface-4: #402d20e6;
+}
+.wizard-overlay .wizard.is-race-step .wizard-body {
+  background: radial-gradient(ellipse at 50% 0, #8d542314, transparent 55%), linear-gradient(#100c09e0, #100c09e0);
+}
+.wizard-overlay .wizard.is-race-step .wizard-body > h2 {
+  background: radial-gradient(ellipse at 50% 100%, #bd7e3529, transparent 55%), linear-gradient(120deg, #1a100ae6, #22180f80, #0d0a08e6);
+}
+.wizard-overlay .race-selection .race-card {
+  background: radial-gradient(circle at 42% 28%, #49332266, transparent 65%), linear-gradient(145deg, #261c14e0, #130f0ce0 75%);
+}
+.wizard-overlay .race-selection .race-detail {
+  background: linear-gradient(135deg, #2c1d10d9, #17110ce0);
+}
+.wizard-overlay .race-selection .race-detail > h3 {
+  background: linear-gradient(#50351ce6, #22170fe6 50%, #362416e6);
+}
+.wizard-overlay .race-selection .race-bonus {
+  background: linear-gradient(110deg, #61401f44, #1e160fe0, #7a4d2044);
+}
+.wizard-overlay .wizard-roll-stage {
+  background: radial-gradient(ellipse 70% 90% at 50% 6%, #e0b83f2e, transparent 72%), linear-gradient(180deg, #241809e6, #140d06e6);
+}
