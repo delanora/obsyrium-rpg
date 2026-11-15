@@ -2,10 +2,11 @@ import type { ReactNode } from 'react';
 import type { RaceOption } from '../types';
 
 /**
- * Silhuetas de ROSTO das raças e sub-raças, no mesmo traço de "tinta"
+ * Fallbacks vetoriais das raças e sub-raças, no mesmo traço de "tinta"
  * desenhado à mão dos ícones de `Icon.tsx` (viewBox 24×24, `currentColor`,
  * pontas arredondadas). Substituem a inicial estilizada nos cards do passo 3 do
- * assistente de criação.
+ * assistente de criação. As raças PHB usam as artes fornecidas pelo usuário,
+ * mapeadas ao final deste arquivo.
  *
  * Todas partem do MESMO rosto humanoide genérico (contorno, olhos, nariz e
  * boca) e ganham os traços que caracterizam cada raça. As sub-raças reusam o
@@ -282,13 +283,26 @@ const GENERIC_FACE: ReactNode = FACE;
 
 interface RaceFaceIconProps {
   /** Opção da raça/sub-raça (só os ids importam). */
-  option: Pick<RaceOption, 'raceId' | 'subraceId'>;
+  option: Pick<RaceOption, 'raceId' | 'subraceId'> & Partial<Pick<RaceOption, 'customRaceId'>>;
   size?: number;
   className?: string;
 }
 
-/** Silhueta de rosto da raça/sub-raça, no traço de tinta dos ícones do sistema. */
+/** Artes fornecidas pelo usuário; os IDs permanecem os mesmos do catálogo PHB. */
+export const RACE_ICON_ASSETS: Readonly<Record<string, string>> = {
+  dragonborn: 'draconato', elf: 'elfo', dwarf: 'anao', human: 'humano', halfling: 'halfling',
+  gnome: 'gnomo', 'half-elf': 'meio_elfo', 'half-orc': 'meio_orc', tiefling: 'tiefling',
+  'hill-dwarf': 'anao_colina', 'mountain-dwarf': 'anao_montanha',
+  'high-elf': 'elfo_alto', 'wood-elf': 'elfo_floresta', 'drow-elf': 'elfo_drow',
+  'forest-gnome': 'gnomo_floresta', 'rock-gnome': 'gnomo_rochas',
+  'lightfoot-halfling': 'halfling_pes_leves', 'stout-halfling': 'halfling_robusto',
+};
+
+/** Arte da raça/sub-raça; personalizadas e IDs desconhecidos conservam o fallback. */
 export function RaceFaceIcon({ option, size = 30, className }: RaceFaceIconProps) {
+  const asset = !option.customRaceId ? RACE_ICON_ASSETS[option.subraceId ?? option.raceId] : undefined;
+  if (asset) return <img className={`race-face race-face-asset${className ? ` ${className}` : ''}`}
+    src={`/race-icons/${asset}.webp`} width={size} height={size} alt="" aria-hidden="true" decoding="async" draggable={false} />;
   // A sub-raça tem prioridade; sem id conhecido, cai no rosto genérico.
   const node = FACES[option.subraceId ?? option.raceId] ?? GENERIC_FACE;
   return (

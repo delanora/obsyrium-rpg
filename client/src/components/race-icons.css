@@ -1,0 +1,5 @@
+/* As artes já incluem o próprio aro; não adicionar uma segunda moldura sobre elas. */
+.race-portrait:has(.race-face-asset) {
+  width: 64px; height: 64px; border: 0; background: none; box-shadow: none;
+}
+.race-portrait .race-face-asset { display: block; width: 100%; height: 100%; object-fit: contain; }
