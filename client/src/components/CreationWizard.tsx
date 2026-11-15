@@ -2,6 +2,7 @@ import { useWizardMusic } from '../music/useWizardMusic';
 import './wizard-ambience.css';
 import './race-icons.css';
 import './wizard-layout.css';
+import './wizard-theme.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fileToImagePayload, uploadAvatar } from '../api';
 import { fetchCompendium } from '../gameApi';
@@ -35,7 +36,7 @@ import type {
 } from '../types';
 import { AbilityStep } from './creation/AbilityStep';
 import { FeatureChoiceField } from './FeatureChoiceField';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { LevelUpDialog } from './LevelUpDialog';
 import { Portrait } from './Portrait';
 import { RaceFaceIcon } from './RaceFace';
@@ -55,6 +56,12 @@ const STEP_LABELS = [
 ];
 
 const LAST_STEP = STEP_LABELS.length;
+/** Símbolos provisórios, substituíveis pelas artes definitivas sem mudar a seleção. */
+const CLASS_ICONS: Record<string, IconName> = {
+  barbarian: 'flame', bard: 'music', cleric: 'sun', druid: 'earth', fighter: 'sword',
+  monk: 'wind', paladin: 'shield', ranger: 'ammo', rogue: 'eye', sorcerer: 'bolt',
+  warlock: 'moon', wizard: 'book',
+};
 
 /** Nome padrão da ficha recém-criada: enquanto for este, o passo 2 está vazio. */
 const DEFAULT_NAME = 'novo personagem';
@@ -175,6 +182,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
   const [backgroundLanguageChoices, setBackgroundLanguageChoices] = useState<string[]>([]);
   const [classKey, setClassKey] = useState('');
   const [subclass, setSubclass] = useState('');
+  const [classSubStep, setClassSubStep] = useState<'class' | 'subclass'>('class');
   /** Escolhas de característica do passo 5 (Estilo de Luta, Inimigo Favorito). */
   const [choicePicks, setChoicePicks] = useState<Record<string, string[]>>({});
   const [assigned, setAssigned] = useState<Partial<Record<AbilityKey, number>>>({});
@@ -724,6 +732,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
     setError(null);
     setStep(destination);
     if (destination === 3) setRaceSubStep('race');
+    if (destination === 5) setClassSubStep('class');
   }
 
   const stepSummaries = [
@@ -808,7 +817,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                 <button type="button" className="wizard-step-link" disabled={busy || uploading || !available}
                   aria-current={number === step ? 'step' : undefined}
                   title={`${label}${stepSummaries[index] ? `: ${stepSummaries[index]}` : ''}`}
-                  onClick={() => { if (number === 3 && step === 3) setRaceSubStep('race'); else void navigateTo(number); }}>
+                  onClick={() => { if (number === 3 && step === 3) setRaceSubStep('race'); else if (number === 5 && step === 5) setClassSubStep('class'); else void navigateTo(number); }}>
                   <span className="wizard-step-number" aria-hidden="true">{number < step ? '✓' : number}</span>
                   <span className="wizard-step-copy"><span className="wizard-step-label">{label}</span>
                     {stepSummaries[index] ? <span className="wizard-step-summary">{stepSummaries[index]}</span> : null}
@@ -820,6 +829,14 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                     aria-current={step === 3 && raceSubStep === 'subrace' ? 'step' : undefined}
                     onClick={() => { setStep(3); setRaceSubStep('subrace'); setError(null); }}>
                     <span>Sub-raça</span><strong>{selectedRace?.subraceId ? subraceName(selectedRace) : 'Selecionar'}</strong>
+                  </button>
+                ) : null}
+                {number === 5 && classNeedsSubclass ? (
+                  <button type="button" className={`wizard-substep-link${step === 5 && classSubStep === 'subclass' ? ' current' : ''}`}
+                    disabled={busy || uploading || step < 5}
+                    aria-current={step === 5 && classSubStep === 'subclass' ? 'step' : undefined}
+                    onClick={() => { setStep(5); setClassSubStep('subclass'); setError(null); }}>
+                    <span>Subclasse</span><strong>{subclass || 'Selecionar'}</strong>
                   </button>
                 ) : null}
               </li>
@@ -1366,64 +1383,42 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                 atributos — é lá que o assistente avisa se algum atributo ainda está abaixo do
                 mínimo (13) da classe escolhida.
               </p>
-              <ul className="modal-list wizard-classes">
-                {(character?.classOptions ?? []).map((option) => (
-                  <li key={option.key}>
-                    <label className="check-row levelup-choice">
-                      <input
-                        type="radio"
-                        name="creation-class"
-                        checked={classKey === option.key}
-                        onChange={() => {
-                          // Trocar de classe descarta o que era da anterior: a
-                          // subclasse, as escolhas e as PERÍCIAS que a nova
-                          // lista não aceita (o servidor poda do mesmo jeito).
-                          if (option.key !== classKey) {
-                            setPicks((current) =>
-                              pruneSkillPicksToClass(current, option.skillChoice?.from ?? []),
-                            );
-                          }
-                          setClassKey(option.key);
-                          setSubclass('');
-                          setChoicePicks({});
-                        }}
-                      />
-                      <span className="check-name">
-                        {option.name}
-                        <span className="muted">
-                          {' '}
-                          · d{option.hitDie} · subclasse no nível {option.subclassLevel}
-                        </span>
-                        {/* Com os atributos já definidos, o motivo do bloqueio
-                            ajuda; antes disso ele seria enganoso. */}
-                        {abilitiesReady && !option.eligible && option.missing ? (
-                          <span className="levelup-blocked"> — {option.missing}</span>
-                        ) : null}
-                      </span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
+              {classSubStep === 'class' ? <>
+                <h3 className="wizard-selection-title">Selecionar classe</h3>
+                <div className="wizard-class-grid" role="group" aria-label="Classe inicial">
+                  {[...(character?.classOptions ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((option) => (
+                    <button type="button" key={option.key} aria-pressed={classKey === option.key}
+                      className={`wizard-class-card${classKey === option.key ? ' is-selected' : ''}`}
+                      disabled={busy} onClick={() => {
+                        if (option.key === classKey) return;
+                        setPicks((current) => pruneSkillPicksToClass(current, option.skillChoice?.from ?? []));
+                        setClassKey(option.key); setSubclass(''); setChoicePicks({});
+                      }}>
+                      <span className="wizard-class-emblem"><Icon name={CLASS_ICONS[option.key] ?? 'star'} size={64} /></span>
+                      <span>{option.name}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedClass ? <div className="wizard-class-detail">
+                  <h3>{selectedClass.name}</h3>
+                  <p>Dado de vida: d{selectedClass.hitDie} · Subclasse no nível {selectedClass.subclassLevel}</p>
+                  {classNeedsSubclass ? <p className="section-note">Escolha a subclasse pela trilha lateral antes de avançar.</p> : null}
+                  {abilitiesReady && !selectedClass.eligible && selectedClass.missing ? <p className="levelup-blocked">{selectedClass.missing}</p> : null}
+                </div> : null}
+              </> : null}
 
               {/* Clérigo, Feiticeiro e Bruxo escolhem a subclasse já no nível 1. */}
-              {classNeedsSubclass && selectedClass ? (
+              {classSubStep === 'subclass' && classNeedsSubclass && selectedClass ? (
                 <div className="wizard-subclass">
                   <h3 className="subsection-title">Subclasse de {selectedClass.name}</h3>
-                  <label className="field">
-                    <span>Subclasse</span>
-                    <select
-                      value={subclass}
-                      disabled={busy}
-                      onChange={(event) => setSubclass(event.target.value)}
-                    >
-                      <option value="">— escolha —</option>
-                      {selectedClass.subclassNames.map((name) => (
-                        <option key={name} value={name}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div className="wizard-subclass-options" role="group" aria-label="Subclasse">
+                    {selectedClass.subclassNames.map((name) => (
+                      <button type="button" key={name} className={`wizard-subclass-card${subclass === name ? ' is-selected' : ''}`}
+                        aria-pressed={subclass === name} disabled={busy} onClick={() => setSubclass(name)}>
+                        <Icon name={CLASS_ICONS[classKey] ?? 'star'} size={28} /><span>{name}</span>
+                      </button>
+                    ))}
+                  </div>
                   <p className="section-note">
                     {selectedClass.name} escolhe a subclasse já no nível 1: ela entra na ficha junto
                     da classe.
