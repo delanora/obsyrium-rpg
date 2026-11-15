@@ -27,6 +27,7 @@ interface Die3DProps {
    * (obsidiana, símbolo esculpido e borda de latão). A geometria e o valor continuam os mesmos;
    * a bandeja de morte tem movimento próprio e alinhamento suave da face.
    */
+  percentile?: 'tens' | 'units';
   appearance?: 'death-save' | 'ivory';
 }
 
@@ -46,16 +47,16 @@ export function Die3D({
   onClick,
   title,
   appearance,
+  percentile,
 }: Die3DProps) {
   const marfim = appearance === 'ivory';
-  // O percentual usa uma peça de dez faces como representação do valor 1–100.
-  const geometria = marfim && sides === 100 ? 10 : sides;
+  const geometria = sides;
   const faces = useMemo(() => dieFaces(geometria), [geometria]);
   const paints = paintsValues(sides);
   const temaMorte = appearance === 'death-save';
   // A pose de espera é ilustrativa: não preenche nem antecipa o resultado.
   const valorVisual = marfim ? (value ?? sides) : value;
-  const faceVisual = marfim && sides === 100 ? Math.ceil((valorVisual ?? 100) / 10) : valorVisual;
+  const faceVisual = valorVisual;
   const settle = marfim
     ? `rotateX(-10deg) rotateY(12deg) ${settleTransform(geometria, faceVisual ?? geometria)}`
     : temaMorte && !reveal && !tumbling
@@ -90,6 +91,15 @@ export function Die3D({
               const saturation = dropped ? 8 : 46;
               const base = (dropped ? 50 : 64) + Math.round(shade * (dropped ? 16 : 26));
 
+              // A base da inscrição acompanha uma aresta da própria face,
+              // sem correção para a câmera ou mudança ao girar o poliedro.
+              const [a, b] = face.polygon;
+              let anguloNumero = Math.atan2(b[1] - a[1], b[0] - a[0]);
+              const paraCentro = [face.center[0] - (a[0] + b[0]) / 2, face.center[1] - (a[1] + b[1]) / 2];
+              if (Math.sin(anguloNumero) * paraCentro[0] - Math.cos(anguloNumero) * paraCentro[1] < 0) anguloNumero += Math.PI;
+              const inscricao = face.value === null ? '' : percentile === 'tens'
+                ? String((face.value % 10) * 10).padStart(2, '0')
+                : percentile === 'units' ? face.value % 10 : face.value;
               return (
                 <span
                   key={face.key}
@@ -131,11 +141,11 @@ export function Die3D({
                       style={{
                         left: `${face.valueX}%`,
                         top: `${face.valueY}%`,
-                        fontSize: `${face.valueSize * (marfim && sides === 100 ? 0.72 : 1)}px`,
-                        ...(marfim ? { transform: `translate(-50%, -50%) rotate(${face.upAngle}rad)` } : {}),
+                        fontSize: `${face.valueSize * (percentile === 'tens' ? 0.8 : 1)}px`,
+                        ...(marfim ? { transform: `translate(-50%, -50%) rotate(${anguloNumero}rad)` } : {}),
                       }}
                     >
-                      {marfim && sides === 100 ? (face.value === faceVisual ? valorVisual : face.value * 10) : face.value}
+                      {inscricao}
                     </span>
                   ) : null}
                 </span>
@@ -158,6 +168,7 @@ export function Die3D({
       <button
         type="button"
         className={className}
+        data-percentile={percentile}
         title={title ?? 'Clique para remover'}
         aria-label={locked ? `d${sides} fixo` : `Remover d${sides} do pool`}
         onClick={onClick}
@@ -168,7 +179,7 @@ export function Die3D({
   }
 
   return (
-    <span className={className} title={title ?? `d${sides}`} aria-hidden={!reveal}>
+    <span className={className} data-percentile={percentile} title={title ?? `d${sides}`} aria-hidden={!reveal}>
       {body}
     </span>
   );

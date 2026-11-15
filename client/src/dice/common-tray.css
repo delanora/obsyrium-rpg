@@ -244,8 +244,8 @@
 .common-die-slot { display: contents; }
 .dice-stage.is-standard-roll .ddie.is-ivory {
   animation: none;
-  transition: filter 180ms ease;
-  filter: drop-shadow(0 7px 3px #0009);
+
+
 }
 .ddie.is-ivory .ddie-face {
   color: #302315;
@@ -261,16 +261,26 @@
   animation: common-die-spin var(--common-roll-duration) linear both;
   animation-delay: 0s;
 }
-.dice-stage.is-standard-roll .ddie.is-ivory.is-dropped { filter: grayscale(.8) brightness(.65) drop-shadow(0 5px 3px #0008); }
+.dice-stage.is-standard-roll .ddie.is-ivory.is-dropped .ddie-face { opacity: .55; }
+/* A sombra fica fora do contexto 3D: filtros no dado achatam suas faces. */
+.dice-stage.is-standard-roll .dice-ring-inner { container-type: inline-size; }
+.dice-stage.is-standard-roll .ddie.is-ivory::before {
+  content: '';
+  position: absolute;
+  inset: 68% 8% 2%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #000a, transparent 70%);
+  pointer-events: none;
+}
 @keyframes common-die-flight {
   0% { transform: translate(0, 0); }
-  14% { transform: translate(calc(-18% * var(--common-roll-direction)), -26%) scale(1.06); filter: drop-shadow(0 22px 7px #0005); }
-  33% { transform: translate(calc(20% * var(--common-roll-direction)), 6%) scale(.97); filter: drop-shadow(0 4px 2px #000a); }
-  49% { transform: translate(calc(12% * var(--common-roll-direction)), -16%) scale(1.03); }
-  65% { transform: translate(calc(-10% * var(--common-roll-direction)), 3%) scale(.99); }
-  78% { transform: translate(calc(-4% * var(--common-roll-direction)), -6%); }
-  89% { transform: translate(calc(2% * var(--common-roll-direction)), 1%); }
-  96% { transform: translate(0, -1%); }
+  14% { transform: translate(calc(-1 * var(--common-roll-travel) * var(--common-roll-direction)), calc(-1.1 * var(--common-roll-travel))) scale(1.08); }
+  33% { transform: translate(calc(var(--common-roll-travel) * var(--common-roll-direction)), calc(.5 * var(--common-roll-travel))) scale(.96); }
+  49% { transform: translate(calc(.7 * var(--common-roll-travel) * var(--common-roll-direction)), calc(-.7 * var(--common-roll-travel))) scale(1.03); }
+  65% { transform: translate(calc(-.65 * var(--common-roll-travel) * var(--common-roll-direction)), calc(.3 * var(--common-roll-travel))) scale(.99); }
+  78% { transform: translate(calc(-.25 * var(--common-roll-travel) * var(--common-roll-direction)), calc(-.3 * var(--common-roll-travel))); }
+  89% { transform: translate(calc(.12 * var(--common-roll-travel) * var(--common-roll-direction)), calc(.1 * var(--common-roll-travel))); }
+  96% { transform: translate(0, -.5cqw); }
   100% { transform: translate(0, 0); }
 }
 @keyframes common-die-spin {

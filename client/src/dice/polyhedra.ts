@@ -311,6 +311,23 @@ function buildDodecahedron(): Polyhedron {
   return { vertices, faces };
 }
 
+/** D10 de mesa: trapezoedro pentagonal com dez faces em pipa, coplanares. */
+function buildD10(): Polyhedron {
+  const raio = 1;
+  const polo = 1.1;
+  const c = Math.cos(Math.PI / 5);
+  const alturaAnel = polo * (1 - c) / (1 + c);
+  const vertices: V3[] = [[0, polo, 0], [0, -polo, 0]];
+  for (let i = 0; i < 10; i += 1) {
+    const angulo = i * Math.PI / 5;
+    vertices.push([raio * Math.cos(angulo), i % 2 ? alturaAnel : -alturaAnel, raio * Math.sin(angulo)]);
+  }
+  const faces = Array.from({ length: 10 }, (_, i) => [
+    i % 2 ? 1 : 0, 2 + (i + 9) % 10, 2 + i, 2 + (i + 1) % 10,
+  ]);
+  return { vertices: onSphere(vertices), faces };
+}
+
 const cache = new Map<number, Polyhedron>();
 
 function polyhedronFor(sides: number): Polyhedron {
@@ -329,7 +346,7 @@ function polyhedronFor(sides: number): Polyhedron {
       polyhedron = OCTA;
       break;
     case 10:
-      polyhedron = buildBipyramid(5);
+      polyhedron = buildD10();
       break;
     case 12:
       polyhedron = buildDodecahedron();
