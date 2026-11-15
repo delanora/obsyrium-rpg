@@ -10,6 +10,17 @@ for (const n of [1,2,3,8,20,50,100]) {
  }
  assert.ok(menor> -0.000005,`sobreposição ${n}: ${menor}`);assert.ok(excesso<1e-7);
  assert.ok(plano.impactos>0);assert.ok(plano.quadros.at(-1)!.every(p=>['rx','ry','rz'].every(k=>Math.abs(p[k as 'rx']%360)<1e-6)));
+ // O pouso não congela nem inverte o giro para alcançar a face final.
+ const inicioPouso=Math.floor((plano.quadros.length-1)*.85);
+ for(let i=0;i<n;i++)for(const eixo of ['rx','ry','rz'] as const){
+  const sentido=Math.sign(plano.quadros[inicioPouso][i][eixo]-plano.quadros[inicioPouso-1][i][eixo]);
+  for(let k=inicioPouso+1;k<plano.quadros.length;k++)assert.ok((plano.quadros[k][i][eixo]-plano.quadros[k-1][i][eixo])*sentido>=-1e-7);
+  const antes=plano.quadros[inicioPouso][i][eixo]-plano.quadros[inicioPouso-1][i][eixo];
+  const depois=plano.quadros[inicioPouso+1][i][eixo]-plano.quadros[inicioPouso][i][eixo];
+  assert.ok(Math.abs(depois-antes)<Math.abs(antes)*.1+.01);
+  const fim=plano.quadros.at(-1)![i][eixo]-plano.quadros.at(-2)![i][eixo];
+  assert.ok(Math.abs(fim)<.15);
+ }
  console.log(n,'peças:',plano.impactos,'impactos;',Math.round(performance.now()-inicio),'ms; separação mínima',menor);
  if(n===8)assert.deepEqual(simularBandeja(poses,raio,2250),plano);
 }

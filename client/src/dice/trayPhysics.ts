@@ -94,26 +94,32 @@ export function simularBandeja(inicio: PoseDado[], raio: number, duracaoMs: numb
   const passos = Math.ceil(duracaoMs / 1000 * 120);
   const dt = duracaoMs / 1000 / passos / 4;
   let impactos = 0;
-  let alinhamento: PoseDado[] | null = null;
   for (let quadro = 1; quadro <= passos; quadro += 1) {
     const progresso = quadro / passos;
     for (let subpasso = 0; subpasso < 4; subpasso += 1) {
       impactos += avancarCorpos(corpos, raio, dt, progresso < .45 ? .6 : 12);
     }
-    if (progresso >= .76 && !alinhamento) alinhamento = corpos.map(c => ({ ...c }));
-    const t = Math.max(0, (progresso - .76) / .24);
-    const suavidade = t * t * (3 - 2 * t);
-    quadros.push(corpos.map((c, i) => {
-      const pose = { x: c.x, y: c.y, rx: c.rx, ry: c.ry, rz: c.rz };
-      if (alinhamento) {
-        for (const eixo of ['rx', 'ry', 'rz'] as const) {
-          const de = alinhamento[i][eixo];
-          const para = Math.round(de / 360) * 360;
-          pose[eixo] = de + (para - de) * suavidade;
-        }
+    quadros.push(corpos.map(c => ({ x: c.x, y: c.y, rx: c.rx, ry: c.ry, rz: c.rz })));
+  }
+  // A desaceleração entra na velocidade de TODO o percurso; não existe
+  // uma fase final que puxa a orientação para o resultado. Distribuir a
+  // volta residual desde o primeiro quadro preserva os choques e permite
+  // terminar com velocidade zero e rotação equivalente à identidade.
+  for (let i = 0; i < corpos.length; i += 1) {
+    for (const eixo of ['rx', 'ry', 'rz'] as const) {
+      const acumulados = [0];
+      for (let k = 1; k <= passos; k += 1) {
+        const progresso = (k - .5) / passos;
+        const restante = Math.min(1, (1 - progresso) / .6);
+        const freio = restante * restante * (3 - 2 * restante);
+        acumulados.push(acumulados[k - 1] + (quadros[k][i][eixo] - quadros[k - 1][i][eixo]) * freio);
       }
-      return pose;
-    }));
+      const total = acumulados[passos];
+      const voltas = Math.round(total / 360) * 360;
+      const proporcao = Math.abs(total) > 1e-9 ? voltas / total : 0;
+      for (let k = 0; k <= passos; k += 1) quadros[k][i][eixo] = acumulados[k] * proporcao;
+      quadros[passos][i][eixo] = voltas;
+    }
   }
   return { quadros, impactos };
 }
