@@ -479,3 +479,10 @@
   display: block;
   filter: brightness(1.1) saturate(.85);
 }
+
+/* Abrir/expandir uma prévia acompanha o ponto atual da mesma rolagem. */
+.death-save-roll.is-tumbling .death-save-flight,
+.death-save-roll.is-tumbling .death-save-shadow,
+.dice-stage.is-death-save .death-save-roll.is-tumbling .ddie-spin {
+  animation-delay: var(--death-roll-delay, 0ms);
+}

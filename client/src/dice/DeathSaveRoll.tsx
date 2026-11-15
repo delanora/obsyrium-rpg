@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { Die3D } from './Die3D';
 import { rollAnimationMs } from './rollAnimation';
 
@@ -7,16 +7,20 @@ export function DeathSaveRoll({
   value,
   rolling,
   settled,
+  startedAt,
 }: {
   value: number | null;
   rolling: boolean;
   settled: boolean;
+  startedAt?: number;
 }) {
+  const delay = useMemo(() => startedAt && rolling ? -Math.max(0, Date.now() - startedAt) : 0, [startedAt, rolling]);
   return (
     <div
       className={`death-save-roll${rolling ? ' is-tumbling' : ''}${settled ? ' is-settled' : ''}`}
       style={
         {
+          '--death-roll-delay': `${delay}ms`,
           '--death-roll-duration': `${rollAnimationMs('death-save')}ms`,
         } as CSSProperties
       }

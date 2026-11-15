@@ -4,6 +4,7 @@ import { activeRollSchema, tableRollSchema } from './dice.schema.js';
 import {
   clearDiceHistory,
   getActiveRoll,
+  getActiveRolls,
   getDiceHistory,
   optionalEffectModifiersFor,
   rollTableDice,
@@ -29,7 +30,7 @@ diceRouter.use(authenticate);
 
 /** GET /api/dice/active — quem está com a janela de dados aberta. */
 diceRouter.get('/active', (_req, res) => {
-  res.json({ activeRoll: getActiveRoll() });
+  res.json({ activeRoll: getActiveRoll(), activeRolls: getActiveRolls() });
 });
 
 /**

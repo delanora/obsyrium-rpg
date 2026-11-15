@@ -1,3 +1,4 @@
+import { PublicRollBoards } from './public-roll-boards.js';
 import { deathSavePresentationOf } from './death-save-presentation.js';
 import { entityHasWarCaster } from '../mechanical/war-caster.service.js';
 import {
@@ -155,12 +156,15 @@ export interface DiceActor {
  * Como a apresentação de imagens, é um estado efêmero da sessão: guardá-lo em
  * memória é o que permite reenviar a faixa a quem conectar no meio da rolagem.
  */
-let activeRoll: ActiveRollDto | null = null;
+const activeRolls = new PublicRollBoards();
 
 /** Quem está com a janela de dados aberta (ou `null`). */
 export function getActiveRoll(): ActiveRollDto | null {
-  return activeRoll;
+  return activeRolls.latest();
 }
+
+/** Todas as bandejas públicas, uma por participante. */
+export function getActiveRolls(): ActiveRollDto[] { return activeRolls.all(); }
 
 /** Divulga a faixa de "está rolando" para a mesa. */
 function publishActive(payload: TableRollActivePayload): void {
@@ -209,11 +213,8 @@ export async function setActiveRoll(
   const active = input.active && !isPrivate;
 
   if (!active) {
-    // Quem não está anunciando não derruba a faixa de outra pessoa.
-    if (!activeRoll || activeRoll.userId !== actor.userId) return activeRoll;
-
-    const previous = activeRoll;
-    activeRoll = null;
+    const previous = activeRolls.remove(actor.userId);
+    if (!previous) return null;
     publishActive(activePayload(false, previous));
 
     return null;
@@ -245,7 +246,8 @@ export async function setActiveRoll(
     lastRoll: null,
   };
 
-  activeRoll = { ...who, at: new Date().toISOString() };
+  const activeRoll = { ...who, at: new Date().toISOString() };
+  activeRolls.put(activeRoll);
   publishActive(activePayload(true, who));
 
   return activeRoll;
@@ -266,24 +268,24 @@ export async function setActiveRoll(
  * recebe o total antes de o próprio tabuleiro entrar em queda.
  */
 export function markRollTumbling(actor: DiceActor): void {
-  if (!activeRoll || activeRoll.userId !== actor.userId) return;
+  const previous = activeRolls.get(actor.userId);
+  if (!previous) return;
 
-  activeRoll = {
-    ...activeRoll,
-    board: { ...activeRoll.board, phase: 'tumbling' },
+  const activeRoll = {
+    ...previous,
+    board: { ...previous.board, phase: 'tumbling' as const },
     // A rolagem nova ainda não existe: o resultado guardado é o antigo.
     lastRoll: null,
     at: new Date().toISOString(),
   };
 
+  activeRolls.put(activeRoll);
   publishActive(activePayload(true, activeRoll));
 }
 
 export function clearActiveRollFrom(userId: string): void {
-  if (activeRoll?.userId !== userId) return;
-
-  const previous = activeRoll;
-  activeRoll = null;
+  const previous = activeRolls.remove(userId);
+  if (!previous) return;
   publishActive(activePayload(false, previous));
 }
 
@@ -306,6 +308,7 @@ function rollGroup(sides: number, advantage: boolean, disadvantage: boolean): Ro
 }
 
 function publish(roll: DiceRollDto, actor: { userId: string }): void {
+  activeRolls.remember(roll);
   try {
     const broadcaster = getBroadcaster();
     const payload = { roll };
@@ -395,9 +398,6 @@ async function rollDeathSave(actor: DiceActor, input: TableRollInput): Promise<D
     at: new Date().toISOString(),
   };
 
-  if (activeRoll?.userId === actor.userId) {
-    activeRoll = { ...activeRoll, lastRoll: roll };
-  }
   history = [roll, ...history].slice(0, HISTORY_LIMIT);
   publish(roll, actor);
 
@@ -956,9 +956,6 @@ export async function rollTableDice(actor: DiceActor, input: TableRollInput): Pr
 
   // Guarda o resultado no tabuleiro anunciado: quem chegar depois (recarga da
   // página, reconexão) vê o mesmo total, e não o dado parado sem resultado.
-  if (activeRoll?.userId === actor.userId) {
-    activeRoll = { ...activeRoll, lastRoll: roll };
-  }
 
   history = [roll, ...history].slice(0, HISTORY_LIMIT);
   publish(roll, actor);

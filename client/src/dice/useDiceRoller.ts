@@ -1,3 +1,4 @@
+import { useRemoteRolls } from './useRemoteRolls';
 import { fetchDeath } from '../deathApi';
 import { rollAnimationMs } from './rollAnimation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -9,13 +10,12 @@ import type {
   EffectOptionalModifierDto,
   RollBoardDie,
   SessionUser,
-  TableRollActivePayload,
 } from '../types';
 import type { RealtimeHandlers } from '../useRealtime';
 import {
   announceActiveRoll,
   clearDiceHistory as clearDiceHistoryRequest,
-  fetchActiveRoll,
+  fetchActiveRolls,
   fetchDiceHistory,
   fetchEffectOptions,
   rollTableDice,
@@ -37,6 +37,8 @@ export interface DicePoolDie {
  * `dice:roll` com o resultado. Só o autor interage: aqui é tudo leitura.
  */
 export interface RemoteBoard {
+  startedAt?: number;
+  updatedAt?: number;
   deathSave?: DeathSavePresentation;
   userId: string;
   actorName: string;
@@ -75,9 +77,6 @@ export interface DiceToast {
 }
 
 let toastSequence = 0;
-
-/** Duração da animação de queda dos dados, em milissegundos. */
-const TUMBLE_MS = rollAnimationMs();
 
 /** Os avisos públicos somem sozinhos depois de 3 segundos. */
 const TOAST_MS = 3000;
@@ -122,22 +121,16 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   const [toasts, setToasts] = useState<DiceToast[]>([]);
   const [history, setHistory] = useState<DiceRollDto[]>([]);
   // Tabuleiro de outra pessoa da mesa, espelhado aqui (só para assistir).
-  const [remote, setRemote] = useState<RemoteBoard | null>(null);
+  const { boards: remoteBoards, onActive: applyRemote, onRoll: applyRemoteRoll } = useRemoteRolls(user.id);
+  const remote = remoteBoards[0] ?? null;
 
   // Reconhece a própria rolagem no tempo real (para não repetir o aviso).
   const myClientId = useRef<string | null>(null);
   const settleTimer = useRef<number | null>(null);
-  const remoteSettleTimer = useRef<number | null>(null);
   const toastTimers = useRef<number[]>([]);
   // Auto-fechamento da bandeja do Teste contra a Morte (só esse fluxo).
   const autoCloseTimer = useRef<number | null>(null);
   const autoCloseCancelled = useRef(false);
-  // Quando os dados de outra pessoa começaram a cair (o aviso do resultado sai
-  // quando eles pousam, nunca antes de quem rolou ver o resultado).
-  const remoteTumbleAt = useRef<number | null>(null);
-  // Dono do tabuleiro que está na tela (para casar a rolagem com ele sem
-  // depender do estado, que muda a cada evento).
-  const remoteUserId = useRef<string | null>(null);
   // Gancho de reconciliação sempre atualizado (o pai pode passar um closure
   // novo a cada render sem recriar `submit` nem reexecutar efeitos).
   const deathSaveHook = useRef(options.onDeathSaveApplied);
@@ -164,7 +157,6 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   useEffect(
     () => () => {
       if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
-      if (remoteSettleTimer.current !== null) window.clearTimeout(remoteSettleTimer.current);
       if (autoCloseTimer.current !== null) window.clearTimeout(autoCloseTimer.current);
       toastTimers.current.forEach((timer) => window.clearTimeout(timer));
     },
@@ -181,98 +173,6 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     window.clearTimeout(autoCloseTimer.current);
     autoCloseTimer.current = null;
   }, []);
-
-  /** O tabuleiro assistido sai da tela quando a janela do autor fecha. */
-  const clearRemote = useCallback(() => {
-    if (remoteSettleTimer.current !== null) window.clearTimeout(remoteSettleTimer.current);
-    remoteSettleTimer.current = null;
-    remoteUserId.current = null;
-    setRemote(null);
-  }, []);
-
-  /**
-   * Os dados assistidos assentam junto com os do autor (mesma animação).
-   *
-   * `delay` é o que resta da queda: quem entra no meio só espera o restante.
-   */
-  const settleRemote = useCallback((delay: number = TUMBLE_MS) => {
-    if (remoteSettleTimer.current !== null) window.clearTimeout(remoteSettleTimer.current);
-    remoteSettleTimer.current = window.setTimeout(
-      () => setRemote((current) => (current ? { ...current, phase: 'settled' } : current)),
-      Math.max(0, delay),
-    );
-  }, []);
-
-  /**
-   * Coloca (ou atualiza) o tabuleiro de outra pessoa na tela.
-   *
-   * Quem manda no estado é o servidor: a fase diz se os dados estão caindo, o
-   * `at` diz desde quando e o `lastRoll` traz o resultado já guardado. Assim,
-   * quem entra no meio da rolagem assiste só o resto da queda e quem entra
-   * depois vê o mesmo total de quem rolou — nunca fica o dado parado na tela
-   * sem resultado.
-   */
-  const applyRemote = useCallback(
-    (payload: TableRollActivePayload) => {
-      const parsed = Date.parse(payload.at);
-      // Data ausente ou inválida: trata como queda já terminada.
-      const duration = rollAnimationMs(payload.kind);
-      const elapsed = Number.isFinite(parsed) ? Date.now() - parsed : duration;
-      const remaining = Math.max(0, duration - elapsed);
-      const tumbling = payload.board.phase === 'tumbling';
-
-      if (remoteSettleTimer.current !== null) {
-        window.clearTimeout(remoteSettleTimer.current);
-        remoteSettleTimer.current = null;
-      }
-
-      remoteUserId.current = payload.userId;
-
-      const board = {
-        userId: payload.userId,
-        actorName: payload.actorName,
-        avatarUrl: payload.avatarUrl,
-        kind: payload.kind,
-        deathSave: payload.deathSave,
-        label: payload.label,
-        bonus: payload.board.bonus,
-        pool: payload.board.pool,
-        advantage: payload.board.advantage,
-        disadvantage: payload.board.disadvantage,
-      };
-
-      if (payload.lastRoll?.autoFail) {
-        setRemote({ ...board, phase: 'settled', result: payload.lastRoll });
-        return;
-      }
-      if (!tumbling) {
-        setRemote({ ...board, phase: 'idle', result: null });
-        return;
-      }
-
-      // Referência do aviso de resultado: o instante em que a queda começou.
-      remoteTumbleAt.current = Date.now() - elapsed;
-
-      if (remaining > 0) {
-        // A queda começou a pouco tempo (o d20 do tabuleiro). O resultado
-        // guardado viaja junto — quem entra no meio de uma rolagem já sabe o
-        // total quando os dados pousarem —, mas só aparece depois da queda,
-        // como para quem rolou.
-        setRemote({ ...board, phase: 'tumbling', result: payload.lastRoll });
-        settleRemote(remaining);
-        return;
-      }
-
-      // A queda já passou: mostra o resultado guardado — ou volta para o pool,
-      // quando a rolagem não chegou a acontecer (falha, por exemplo).
-      setRemote(
-        payload.lastRoll
-          ? { ...board, phase: 'settled', result: payload.lastRoll }
-          : { ...board, phase: 'idle', result: null },
-      );
-    },
-    [settleRemote],
-  );
 
   const reset = useCallback(() => {
     setContext(null);
@@ -437,12 +337,12 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   useEffect(() => {
     let active = true;
 
-    fetchActiveRoll()
-      .then((state) => {
-        if (!active || !state || state.userId === user.id) return;
+    fetchActiveRolls()
+      .then((states) => {
+        if (!active) return;
         // Mesmo caminho do evento: o tabuleiro pode chegar no meio da queda
         // (assiste o restante) ou depois dela (já com o resultado).
-        applyRemote(state);
+        states.forEach(applyRemote);
       })
       .catch(() => {
         // Sem estado: nenhum tabuleiro para assistir.
@@ -589,15 +489,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   const handlers = useMemo<RealtimeHandlers>(
     () => ({
       // O tabuleiro de outra pessoa da mesa (para assistir a rolagem).
-      onDiceActive: (payload) => {
-        if (!payload.active || payload.userId === user.id) {
-          // Fechou — ou o tabuleiro é o meu (eu já vejo a janela de verdade).
-          clearRemote();
-          return;
-        }
-
-        applyRemote(payload);
-      },
+      onDiceActive: applyRemote,
 
       onDiceRoll: (payload) => {
         const { roll } = payload;
@@ -611,34 +503,14 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
         // não vira aviso para ninguém — ela já aparece dentro do assistente.
         if (roll.kind === 'creation') return;
 
-        // A rolagem entra no tabuleiro espelhado de quem está assistindo.
-        setRemote((current) =>
-          current && current.userId === roll.actorUserId
-            ? {
-                ...current,
-                result: roll,
-                phase: current.phase === 'tumbling' ? 'tumbling' : 'settled',
-              }
-            : current,
-        );
-
-        // A resposta da rolagem chega a quem rolou no mesmo instante em que o
-        // evento chega a quem assiste (os dois são uma perna de rede a partir
-        // do servidor). Então a queda de quem assiste conta a partir daqui, e
-        // não do anúncio de "rolando" — que sai meio round-trip mais cedo e
-        // fazia os dados pousarem antes dos de quem rolou.
-        if (roll.actorUserId === remoteUserId.current) settleRemote(rollAnimationMs(roll.kind));
+        applyRemoteRoll(roll);
 
         // A própria rolagem já aparece na janela: não vira aviso para o autor.
         if (roll.clientId && roll.clientId === myClientId.current) return;
 
         // O aviso só entra quando os dados de quem rolou terminam de cair — sem
         // isso o resultado apareceria na mesa antes de aparecer para quem rolou.
-        const tumbleAt = remoteTumbleAt.current;
-        remoteTumbleAt.current = null;
-        const duration = rollAnimationMs(roll.kind);
-        const remaining = tumbleAt === null ? duration : Date.now() - tumbleAt;
-        const delay = Math.max(0, duration - remaining);
+        const delay = rollAnimationMs(roll.kind);
 
         toastSequence += 1;
         const id = `dice-toast-${toastSequence}`;
@@ -657,7 +529,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
         );
       },
     }),
-    [isMaster, user.id, clearRemote, settleRemote, applyRemote],
+    [isMaster, applyRemote, applyRemoteRoll],
   );
 
   return {
@@ -667,6 +539,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     pool,
     extraD20,
     remote,
+    remoteBoards,
     advantage,
     disadvantage,
     isPrivate,

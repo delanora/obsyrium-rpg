@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { corsOrigins } from '../config/env.js';
-import { clearActiveRollFrom, getActiveRoll } from '../modules/dice/dice.service.js';
+import { clearActiveRollFrom, getActiveRolls } from '../modules/dice/dice.service.js';
 import { getState as getMusicState } from '../modules/music/music.service.js';
 import { getCurrentPresentation } from '../modules/presentation/presentation.service.js';
 import type { AppServer, AppSocket } from '../types/socket.js';
@@ -74,8 +74,7 @@ export function createRealtimeServer(httpServer: HttpServer): AppServer {
 
     // Idem para a janela de dados: quem chega durante uma rolagem já recebe a
     // faixa de "está rolando" no topo do tabuleiro.
-    const activeRoll = getActiveRoll();
-    if (activeRoll) {
+    for (const activeRoll of getActiveRolls()) {
       socket.emit(ServerEvents.DICE_ACTIVE, { active: true, ...activeRoll });
     }
 

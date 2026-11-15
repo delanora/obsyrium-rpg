@@ -5,12 +5,13 @@ import { Die3D } from './Die3D';
 import type { DicePoolDie } from './useDiceRoller';
 
 /** Mantém as mesmas peças entre espera, arremesso e resultado do servidor. */
-export function CommonDicePool({ pool, result, rolling, settled, extraD20, removeDie }: {
+export function CommonDicePool({ pool, result, rolling, settled, extraD20, removeDie, startedAt }: {
   pool: DicePoolDie[];
   result: DiceRollDto | null;
   rolling: boolean;
   settled: boolean;
   extraD20: number;
+  startedAt?: number;
   removeDie?: (index: number) => void;
 }) {
   const dados = result?.dice ?? [
@@ -26,7 +27,7 @@ export function CommonDicePool({ pool, result, rolling, settled, extraD20, remov
       { ...base, sides: 10, value: percentual % 10 || 10, percentile: 'units' as const },
     ];
   });
-  const arena = useTrayPhysics(pecas.length, rolling && result !== null, result?.id);
+  const arena = useTrayPhysics(pecas.length, rolling && result !== null, result?.id, startedAt);
   return <div className="common-dice-pool" ref={arena}>{pecas.length === 0 ? <p className="dice-ring-hint">Escolha os dados abaixo</p> : pecas.map((die, index) => (
     <Fragment key={index}>
     <span className="common-die-shadow" aria-hidden="true" />

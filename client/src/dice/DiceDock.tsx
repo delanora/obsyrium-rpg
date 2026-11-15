@@ -1,19 +1,19 @@
+import { RemoteRollPreview } from './RemoteRollPreview';
 import { DiceTypeIcon } from './DiceTypeIcon';
 import { CommonTrayFrame } from './CommonTrayFrame';
 import './common-tray.css';
 import { DeathFateHeader } from './DeathFateHeader';
 import { DeathSaveTitle } from './DeathSaveTitle';
 import { DeathSaveRoll } from './DeathSaveRoll';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../components/Icon';
-import { Portrait } from '../components/Portrait';
 import { CommonDicePool } from './CommonDicePool';
 import { announcement, resultBreakdown } from './format';
 import { RemoteRollBoard } from './RemoteRollBoard';
 import './death-save.css';
 import { RollLogList } from './RollLogList';
-import { DICE_TYPES, type DiceRollerState } from './useDiceRoller';
+import { DICE_TYPES, type DiceRollerState, type RemoteBoard } from './useDiceRoller';
 
 interface DiceDockProps {
   roller: DiceRollerState;
@@ -64,13 +64,23 @@ export function DiceDock({ roller }: DiceDockProps) {
     clearHistory,
   } = roller;
 
-  // Tabuleiro de outra pessoa, aberto por escolha de quem assiste.
-  const [watching, setWatching] = useState(false);
-
-  // Fechou a janela de quem rolava: o tabuleiro assistido sai da tela.
+  const fab = useRef<HTMLButtonElement>(null);
+  const remoteBoards = roller.remoteBoards ?? (remote ? [remote] : []);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<RemoteBoard | null>(null);
+  const [dismissed, setDismissed] = useState('');
+  const newest = remoteBoards[0];
+  const generation = newest ? `${newest.userId}:${newest.startedAt ?? newest.updatedAt ?? newest.result?.id ?? ''}` : '';
+  const selected = remoteBoards.find(b => b.userId === selectedId) ?? newest;
+  useEffect(() => { if (newest) setSelectedId(newest.userId); }, [generation]);
   useEffect(() => {
-    if (!remote) setWatching(false);
-  }, [remote]);
+    if (!expanded) return;
+    const next = remoteBoards.find(b => b.userId === expanded.userId);
+    if (next && next !== expanded) setExpanded(next);
+  }, [remoteBoards, expanded]);
+  const preview = Boolean(selected && !open && !expanded && dismissed !== generation);
+  const ownRoll = () => { setDismissed(generation); setExpanded(null); openFree(); };
+  const visibleToasts = toasts.filter(t => !remoteBoards.some(b => b.userId === t.roll.actorUserId));
 
   // Esc fecha e o fundo não rola enquanto o ring está aberto.
   useEffect(() => {
@@ -100,9 +110,9 @@ export function DiceDock({ roller }: DiceDockProps) {
 
   return (
     <>
-      {toasts.length > 0 ? (
+      {visibleToasts.length > 0 ? (
         <div className="dice-toasts" aria-live="polite">
-          {toasts.map((toast) => (
+          {visibleToasts.map((toast) => (
             <div className="dice-toast" key={toast.id} role="status">
               <div className="dice-toast-text">
                 <strong>{announcement(toast.roll)}</strong>
@@ -123,40 +133,10 @@ export function DiceDock({ roller }: DiceDockProps) {
         </div>
       ) : null}
 
-      {/* Alguém da mesa está rolando: a faixa no topo; clicar abre o tabuleiro
-          de quem rola, só para assistir. */}
-      {remote ? (
-        <button
-          type="button"
-          className="dice-live"
-          title={`Ver o tabuleiro de ${remote.actorName} (somente leitura)`}
-          onClick={() => setWatching(true)}
-        >
-          <Portrait
-            src={remote.avatarUrl}
-            alt={remote.actorName}
-            size="sm"
-            icon="users"
-            zoomable={false}
-          />
-          <span className="dice-live-text">
-            <strong>{remote.actorName}</strong>
-            {remote.label
-              ? ` está realizando um teste de ${remote.label}`
-              : ' está realizando um teste'}
-          </span>
-          <span className="dice-live-dots" aria-hidden>
-            <i />
-            <i />
-            <i />
-          </span>
-          <span className="dice-live-hint">assistir</span>
-        </button>
-      ) : null}
-
-      {watching && remote ? (
-        <RemoteRollBoard board={remote} onClose={() => setWatching(false)} />
-      ) : null}
+      {preview && selected ? <RemoteRollPreview boards={remoteBoards} selected={selected} anchor={fab}
+        onSelect={setSelectedId} onExpand={() => setExpanded(selected)} onRoll={ownRoll}
+        onClose={() => setDismissed(generation)} /> : null}
+      {expanded ? <RemoteRollBoard board={expanded} onClose={() => setExpanded(null)} /> : null}
 
       {open
         ? createPortal(
@@ -377,9 +357,10 @@ export function DiceDock({ roller }: DiceDockProps) {
       <button
         type="button"
         className={isMaster ? `dice-fab is-master${open ? ' active' : ''}` : open ? 'dice-fab active' : 'dice-fab'}
-        aria-expanded={open}
+        ref={fab}
+        aria-expanded={open || preview}
         title={open ? 'Fechar a janela de dados' : 'Abrir a janela de dados'}
-        onClick={() => (open ? close() : openFree())}
+        onClick={() => (open ? close() : ownRoll())}
       >
         <Icon name="die" size={18} />
         <span className="dice-fab-label">Dados</span>

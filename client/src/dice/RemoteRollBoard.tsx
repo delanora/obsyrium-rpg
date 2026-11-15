@@ -14,6 +14,7 @@ import type { RemoteBoard } from './useDiceRoller';
 interface RemoteRollBoardProps {
   board: RemoteBoard;
   onClose: () => void;
+  presentation?: 'dialog' | 'preview';
 }
 
 /**
@@ -24,7 +25,7 @@ interface RemoteRollBoardProps {
  * instante, e o mesmo resultado. É só leitura: não tem picker, controles nem
  * botão de rolar.
  */
-export function RemoteRollBoard({ board, onClose }: RemoteRollBoardProps) {
+export function RemoteRollBoard({ board, onClose, presentation = 'dialog' }: RemoteRollBoardProps) {
   const rolling = board.phase === 'tumbling';
   const result = board.result;
   const settled = board.phase === 'settled' && result !== null;
@@ -38,6 +39,7 @@ export function RemoteRollBoard({ board, onClose }: RemoteRollBoardProps) {
 
   // Esc fecha e o fundo não rola enquanto o tabuleiro está aberto.
   useEffect(() => {
+    if (presentation === 'preview') return;
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') onClose();
     };
@@ -50,15 +52,9 @@ export function RemoteRollBoard({ board, onClose }: RemoteRollBoardProps) {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKey);
     };
-  }, [onClose]);
+  }, [onClose, presentation]);
 
-  return createPortal(
-    <div
-      className={`dice-overlay${deathSave ? ' is-death-save' : ' is-standard-roll'}`}
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-    >
+  const content = (
       <div
         className={`dice-stage${deathSave ? ' is-death-save' : ' is-standard-roll'}`}
         onClick={(event) => event.stopPropagation()}
@@ -96,9 +92,9 @@ export function RemoteRollBoard({ board, onClose }: RemoteRollBoardProps) {
           <div className="dice-ring-inner">
             <div className="dice-ring-floor">
               {deathSave ? (
-                <DeathSaveRoll value={result?.dice[0]?.value ?? null} rolling={rolling} settled={settled} />
+                <DeathSaveRoll value={result?.dice[0]?.value ?? null} rolling={rolling} settled={settled} startedAt={board.startedAt} />
               ) : (
-                <CommonDicePool pool={board.pool} result={result} rolling={rolling} settled={settled} extraD20={extraD20} />
+                <CommonDicePool pool={board.pool} result={result} rolling={rolling} settled={settled} extraD20={extraD20} startedAt={board.startedAt} />
               )}
             </div>
           </div>
@@ -125,7 +121,7 @@ export function RemoteRollBoard({ board, onClose }: RemoteRollBoardProps) {
           )}
         </div>
       </div>
-    </div>,
-    document.body,
   );
+  if (presentation === 'preview') return content;
+  return createPortal(<div className={`dice-overlay${deathSave ? ' is-death-save' : ' is-standard-roll'}`} role="dialog" aria-modal="true" onClick={onClose}>{content}</div>, document.body);
 }

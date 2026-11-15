@@ -69,3 +69,9 @@ export async function fetchDiceHistory(): Promise<DiceRollDto[]> {
 export async function clearDiceHistory(): Promise<void> {
   await api('/api/dice/history', { method: 'DELETE' });
 }
+
+/** Snapshot completo; o campo singular mantém compatibilidade com servidores anteriores. */
+export async function fetchActiveRolls(): Promise<TableRollActivePayload[]> {
+  const response = await api<{ activeRoll?: TableRollActivePayload | null; activeRolls?: TableRollActivePayload[] }>('/api/dice/active');
+  return (response.activeRolls ?? (response.activeRoll ? [response.activeRoll] : [])).map(board => ({ ...board, active: true }));
+}

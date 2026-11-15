@@ -6,7 +6,7 @@ import { rollAnimationMs, COMMON_THROW_MS } from './rollAnimation';
 const deslocamento = (p: PoseDado) => `translate(calc(-50% + ${p.x * 50}cqw), calc(-50% + ${p.y * 50}cqw))`;
 
 /** A simulação move apenas apresentação; não interfere no dado já rolado. */
-export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: string) {
+export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: string, startedAt?: number) {
   const elemento = useRef<HTMLDivElement>(null);
   const posesDeEspera = useRef<string[]>([]);
   const preparacao = useMemo(() => prepararBandeja(quantidade), [quantidade]);
@@ -62,6 +62,7 @@ export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: 
         });
       }
     }
+    if (startedAt && animar) animacoes.forEach(a => { a.currentTime = Math.max(0, Date.now() - startedAt); });
     // A posição final fica como base da animação; ao terminar não há retorno
     // ao lugar de partida nem travessia de outra peça para "encaixar" o dado.
     slots.forEach((slot, i) => {
@@ -72,6 +73,6 @@ export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: 
       if (!animar) posesDeEspera.current[i] = slot.querySelector<HTMLElement>('.ddie-orient')?.style.transform ?? '';
     });
     return () => { observador.disconnect(); animacoes.forEach(a => a.cancel()); };
-  }, [preparacao, simulacao, rolamento, animar]);
+  }, [preparacao, simulacao, rolamento, animar, startedAt]);
   return elemento;
 }

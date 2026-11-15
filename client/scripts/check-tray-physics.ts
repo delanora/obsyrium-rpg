@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { avancarCorpos, prepararBandeja, simularBandeja } from '../src/dice/trayPhysics.ts';
-import { prepararRolamento, rotacaoDoPercurso, multiplicarRotacoes, inversaRotacao, type Quaternion } from '../src/dice/trayRolling.ts';
+import { avancarCorpos, prepararBandeja, simularBandeja } from '../src/dice/trayPhysics.js';
+import { prepararRolamento, rotacaoDoPercurso, multiplicarRotacoes, inversaRotacao, type Quaternion } from '../src/dice/trayRolling.js';
 const mesmaRotacao=(a:Quaternion,b:Quaternion)=>Math.abs(a.reduce((s,n,i)=>s+n*b[i],0))>1-1e-9;
 for (const n of [1,2,3,8,20,50,100]) {
  const {raio,poses}=prepararBandeja(n);
@@ -30,7 +30,7 @@ assert.ok(direita[1]>0&&Math.abs(direita[0])<1e-12);
 assert.ok(Math.abs(2*Math.acos(direita[3])-1)<1e-12,'Percorrer um raio exige um radiano de giro.');
 console.log('✔ Eixo, sentido, distância, colisões e face final preservados.');
 
-const { dieFaces, d4SettleTransform } = await import('../src/dice/polyhedra.ts');
+const { dieFaces, d4SettleTransform } = await import('../src/dice/polyhedra.js');
 const facesD4=dieFaces(4);
 for(let valor=1;valor<=4;valor++){
  const adjacentes=facesD4.filter(f=>f.cornerValues?.includes(valor));
