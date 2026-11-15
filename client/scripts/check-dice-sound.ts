@@ -4,7 +4,7 @@ const storage = new Map<string, string>();
 const sources: { starts: number[]; stops: (number | undefined)[]; playbackRate: { value: number }; buffer: unknown }[] = [];
 let loads = 0;
 let unavailable = true;
-const parameter = () => ({ value: 1, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
+const parameter = () => ({ value: 1, cancelScheduledValues() {}, setTargetAtTime() {}, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} });
 class FakeAudioContext {
   currentTime = 10;
   state = 'running';

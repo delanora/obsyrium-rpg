@@ -1,3 +1,4 @@
+import { pageAudioDestination } from '../pageAudio';
 /** Recortes da referência enviada pelo usuário; o áudio não interfere no resultado. */
 export interface DiceSoundCue { atMs: number; strength: number }
 
@@ -67,7 +68,7 @@ export async function playRecordedDice(audio: AudioContext, options: DiceSoundOp
     gain.gain.linearRampToValueAtTime(peak * volume, at + .002);
     gain.gain.setValueAtTime(peak * volume, at + Math.max(.002, remaining - .012));
     gain.gain.linearRampToValueAtTime(0, at + remaining);
-    source.connect(gain).connect(audio.destination);
+    source.connect(gain).connect(pageAudioDestination(audio));
     trackDiceSource(source, () => { source.disconnect(); gain.disconnect(); });
     source.start(at, offset);
     source.stop(at + remaining);

@@ -1,3 +1,4 @@
+import { pageAudioDestination } from '../pageAudio';
 /** Ambientação local do assistente; não usa o canal de música compartilhada da mesa. */
 export const WIZARD_MUSIC_VOLUME = .07;
 export const WIZARD_MUSIC_CROSSFADE = 6;
@@ -48,7 +49,7 @@ export class WizardMusicLoop {
   private window: { start: number; duration: number };
   private overlap: number;
   constructor(private audio: AudioContext, private buffer: AudioBuffer, muted: boolean) {
-    this.output = audio.createGain(); this.output.gain.value = 0; this.output.connect(audio.destination);
+    this.output = audio.createGain(); this.output.gain.value = 0; this.output.connect(pageAudioDestination(audio));
     this.window = musicLoopWindow(buffer); this.overlap = Math.min(WIZARD_MUSIC_CROSSFADE, this.window.duration / 4);
     this.nextAt = audio.currentTime + .05;
     this.fill(); this.timer = setInterval(() => this.fill(), 1000); this.setMuted(muted);

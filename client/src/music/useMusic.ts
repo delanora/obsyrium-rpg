@@ -1,3 +1,4 @@
+import { getPageAudioSettings, subscribePageAudio } from '../pageAudio';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MusicStateDto, MusicStatePayload, MusicTrackDto, MusicTracksPayload } from '../types';
 import {
@@ -109,9 +110,10 @@ export function useMusic({ isMaster }: { isMaster: boolean }): MusicController {
       const element = audio();
       const url = next.track?.url ?? null;
 
-      // O volume é da MESA e vem no mesmo estado: aplicamos sempre, então quem
-      // entra no meio da música já ouve no volume que o mestre definiu.
-      element.volume = clampVolume(next.volume);
+      // O volume da mesa é preservado; a preferência local regula apenas esta escuta.
+      const local = getPageAudioSettings();
+      element.volume = clampVolume(next.volume) * local.volume;
+      element.muted = local.muted;
       if (next.volume > 0) lastVolumeRef.current = clampVolume(next.volume);
 
       if (url !== loadedUrlRef.current) {
@@ -143,6 +145,10 @@ export function useMusic({ isMaster }: { isMaster: boolean }): MusicController {
   // Relógio da barra e duração real do arquivo carregado.
   useEffect(() => {
     const element = audio();
+    const unsubscribeVolume = subscribePageAudio(local => {
+      element.volume = clampVolume(stateRef.current?.volume ?? 1) * local.volume;
+      element.muted = local.muted;
+    });
     const onTime = () => setPosition(element.currentTime || 0);
     const onDuration = () => setDuration(Number.isFinite(element.duration) ? element.duration : 0);
 
@@ -151,6 +157,7 @@ export function useMusic({ isMaster }: { isMaster: boolean }): MusicController {
     element.addEventListener('loadedmetadata', onDuration);
 
     return () => {
+      unsubscribeVolume();
       element.removeEventListener('timeupdate', onTime);
       element.removeEventListener('durationchange', onDuration);
       element.removeEventListener('loadedmetadata', onDuration);

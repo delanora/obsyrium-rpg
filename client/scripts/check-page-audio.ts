@@ -1,0 +1,20 @@
+/** Preferências e ganho mestre locais, sem rede, som real ou dados da mesa. */
+import assert from 'node:assert/strict';
+const saved = new Map<string, string>();
+Object.assign(globalThis, { localStorage: { getItem: (key: string) => saved.get(key) ?? null, setItem: (key: string, value: string) => saved.set(key, value) } });
+const { getPageAudioSettings, pageAudioDestination, setPageMuted, setPageVolume, subscribePageAudio } = await import('../src/pageAudio');
+const parameter = { value: 1, cancelScheduledValues() {}, setTargetAtTime(value: number) { this.value = value; } };
+let created = 0;
+const context = { currentTime: 12, state: 'running', destination: {}, createGain() { created++; return { gain: parameter, connect() {} }; } } as unknown as BaseAudioContext;
+const output = pageAudioDestination(context);
+assert.equal(pageAudioDestination(context), output);assert.equal(created, 1, 'Um ganho mestre por contexto.');
+let notifications = 0;const unsubscribe = subscribePageAudio(() => notifications++);
+setPageVolume(.25);assert.equal(parameter.value, .25);assert.equal(saved.get('grimorio.volume'), '0.25');
+setPageMuted(true);assert.equal(parameter.value, 0);assert.equal(getPageAudioSettings().volume, .25);
+setPageMuted(false);assert.equal(parameter.value, .25);
+setPageVolume(9);assert.equal(getPageAudioSettings().volume, 1);
+setPageVolume(-1);assert.equal(getPageAudioSettings().volume, 0);
+setPageVolume(NaN);assert.equal(getPageAudioSettings().volume, 0);
+unsubscribe();const before = notifications;setPageVolume(.6);assert.equal(notifications, before);
+const copy = getPageAudioSettings();copy.volume = 0;assert.equal(getPageAudioSettings().volume, .6);
+console.log('Volume: persistência, limites, mudo, atualização do áudio em curso, assinatura e ganho único verificados.');

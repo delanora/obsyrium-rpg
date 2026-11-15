@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../auth';
-import { isMuted, toggleMuted } from '../sound';
+import { PageVolumeControl } from './PageVolumeControl';
 import { getTheme, toggleTheme, type Theme } from '../theme';
 import type { SessionUser } from '../types';
 import type { ConnectionState } from '../useRealtime';
@@ -29,7 +29,6 @@ interface AppHeaderProps {
  */
 export function AppHeader({ connection, lastEventAt, user }: AppHeaderProps) {
   const { logout } = useAuth();
-  const [muted, setMuted] = useState(isMuted());
   const [theme, setTheme] = useState<Theme>(getTheme());
 
   return (
@@ -66,15 +65,7 @@ export function AppHeader({ connection, lastEventAt, user }: AppHeaderProps) {
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
           </button>
 
-          <button
-            type="button"
-            className="btn btn-small"
-            title={muted ? 'Ativar sons' : 'Silenciar sons'}
-            aria-label={muted ? 'Ativar sons' : 'Silenciar sons'}
-            onClick={() => setMuted(toggleMuted())}
-          >
-            <Icon name={muted ? 'mute' : 'volume'} size={15} />
-          </button>
+          <PageVolumeControl />
 
           <button type="button" className="btn btn-small" onClick={logout}>
             sair

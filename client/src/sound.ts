@@ -1,3 +1,4 @@
+import { getPageAudioSettings, pageAudioDestination, setPageMuted, subscribePageAudio } from './pageAudio';
 import { playRecordedDice, prepareDiceSound, stopDiceSound, audioTimeForPerformance, trackDiceSource, type DiceSoundOptions } from './dice/diceSound';
 /**
  * Efeitos sonoros da mesa.
@@ -7,19 +8,17 @@ import { playRecordedDice, prepareDiceSound, stopDiceSound, audioTimeForPerforma
  * uma interação do usuário, então o contexto é retomado sob demanda.
  */
 
-const MUTE_KEY = 'grimorio.muted';
 
 let context: AudioContext | null = null;
 let muteVersion = 0;
 const playedDiceRolls = new Set<string>();
-let muted = typeof localStorage !== 'undefined' && localStorage.getItem(MUTE_KEY) === 'true';
+let muted = getPageAudioSettings().muted;
+subscribePageAudio(value => { muted = value.muted; });
 
-const muteListeners = new Set<(value: boolean) => void>();
-
-/** Assinatura local para ambientações que respeitam o mesmo botão de som. */
+/** Assinatura local do mesmo controle de som, sem notificar mudanças só de volume. */
 export function subscribeMuted(listener: (value: boolean) => void): () => void {
-  muteListeners.add(listener);
-  return () => { muteListeners.delete(listener); };
+  let previous = muted;
+  return subscribePageAudio(value => { if (value.muted !== previous) { previous = value.muted; listener(value.muted); } });
 }
 
 type AudioContextCtor = typeof AudioContext;
@@ -47,8 +46,7 @@ export function isMuted(): boolean {
 export function setMuted(value: boolean): void {
   muted = value;
   muteVersion += 1;
-  localStorage.setItem(MUTE_KEY, String(value));
-  for (const listener of muteListeners) listener(value);
+  setPageMuted(value);
   if (value) stopDiceSound();
   else { const audio = getContext(); if (audio) void prepareDiceSound(audio).catch(() => {}); }
 }
@@ -82,7 +80,7 @@ function playTone(
   gain.gain.exponentialRampToValueAtTime(peak, at + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
 
-  oscillator.connect(gain).connect(audio.destination);
+  oscillator.connect(gain).connect(pageAudioDestination(audio));
   oscillator.start(at);
   oscillator.stop(at + duration + 0.02);
 }
@@ -108,7 +106,7 @@ function playClick(audio: AudioContext, at: number, duration: number, peak: numb
   const gain = audio.createGain();
   gain.gain.setValueAtTime(peak, at);
 
-  source.connect(filter).connect(gain).connect(audio.destination);
+  source.connect(filter).connect(gain).connect(pageAudioDestination(audio));
   if (tracked) trackDiceSource(source, () => { source.disconnect(); filter.disconnect(); gain.disconnect(); });
   source.start(at);
 }
