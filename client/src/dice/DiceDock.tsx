@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '../components/Icon';
 import { Portrait } from '../components/Portrait';
-import { Die3D } from './Die3D';
+import { CommonDicePool } from './CommonDicePool';
 import { announcement, resultBreakdown } from './format';
 import { RemoteRollBoard } from './RemoteRollBoard';
 import './death-save.css';
@@ -205,49 +205,8 @@ export function DiceDock({ roller }: DiceDockProps) {
                     <div className="dice-ring-floor">
                       {deathSave ? (
                         <DeathSaveRoll value={result?.dice[0]?.value ?? null} rolling={rolling} settled={settled} />
-                      ) : settled && result ? (
-                        result.dice.map((die, index) => (
-                          <Die3D
-                            appearance={deathSave ? 'death-save' : undefined}
-                            key={`r-${index}`}
-                            sides={die.sides}
-                            value={die.value}
-                            reveal
-                            dropped={die.dropped}
-                          />
-                        ))
-                      ) : pool.length === 0 ? (
-                        <p className="dice-ring-hint">Escolha os dados abaixo</p>
                       ) : (
-                        <>
-                          {pool.map((die, index) => (
-                            <Die3D
-                              appearance={deathSave ? 'death-save' : undefined}
-                              key={`p-${index}`}
-                              sides={die.sides}
-                              value={null}
-                              reveal={false}
-                              tumbling={rolling}
-                              locked={die.locked}
-                              onClick={rolling || die.locked ? undefined : () => removeDie(index)}
-                            />
-                          ))}
-
-                          {/* Vantagem/desvantagem: o d20 rola duas vezes, então o segundo
-                              dado já entra no ring junto com o primeiro. */}
-                          {rolling
-                            ? Array.from({ length: extraD20 }, (_, index) => (
-                                <Die3D
-                                  appearance={deathSave ? 'death-save' : undefined}
-                                  key={`x-${index}`}
-                                  sides={20}
-                                  value={null}
-                                  reveal={false}
-                                  tumbling
-                                />
-                              ))
-                            : null}
-                        </>
+                        <CommonDicePool pool={pool} result={result} rolling={rolling} settled={settled} extraD20={extraD20} removeDie={removeDie} />
                       )}
                     </div>
                   </div>

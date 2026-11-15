@@ -118,17 +118,17 @@
 }
 
 /* Pools maiores continuam dentro do aro, sem alterar a geometria dos dados. */
-.dice-stage.is-standard-roll .dice-ring-floor:has(.ddie:nth-child(4)) {
+.dice-stage.is-standard-roll .dice-ring-floor:has(.common-die-slot:nth-child(4)) {
   --tray-die-box: clamp(2rem, 8vw, 4rem);
   --tray-die-scale: 0.28;
   gap: 0.25rem;
 }
-.dice-stage.is-standard-roll .dice-ring-floor:has(.ddie:nth-child(13)) {
+.dice-stage.is-standard-roll .dice-ring-floor:has(.common-die-slot:nth-child(13)) {
   --tray-die-box: clamp(1.3rem, 5vw, 2.6rem);
   --tray-die-scale: 0.18;
   gap: 0.15rem;
 }
-.dice-stage.is-standard-roll .dice-ring-floor:has(.ddie:nth-child(25)) {
+.dice-stage.is-standard-roll .dice-ring-floor:has(.common-die-slot:nth-child(25)) {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   align-content: center;
@@ -239,3 +239,49 @@
   .dice-controls-common .dice-submit { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .dice-mode { transition: none; } }
+
+/* Marfim envelhecido: números gravados, sombra no chão e pouso contínuo. */
+.common-die-slot { display: contents; }
+.dice-stage.is-standard-roll .ddie.is-ivory {
+  animation: none;
+  transition: filter 180ms ease;
+  filter: drop-shadow(0 7px 3px #0009);
+}
+.ddie.is-ivory .ddie-face {
+  color: #302315;
+  box-shadow: inset 0 0 12px #6b482c88;
+  border: 1px solid #80613e66;
+}
+.ddie.is-ivory .ddie-num { text-shadow: 0 1px 0 #fff5dd99, 0 -1px 1px #2b1c1844; }
+.ddie.is-ivory .ddie-orient { transition: transform 400ms cubic-bezier(.2,.7,.25,1); }
+.dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling {
+  animation: common-die-flight var(--common-roll-duration) linear both;
+}
+.dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling .ddie-spin {
+  animation: common-die-spin var(--common-roll-duration) linear both;
+  animation-delay: 0s;
+}
+.dice-stage.is-standard-roll .ddie.is-ivory.is-dropped { filter: grayscale(.8) brightness(.65) drop-shadow(0 5px 3px #0008); }
+@keyframes common-die-flight {
+  0% { transform: translate(0, 0); }
+  14% { transform: translate(calc(-18% * var(--common-roll-direction)), -26%) scale(1.06); filter: drop-shadow(0 22px 7px #0005); }
+  33% { transform: translate(calc(20% * var(--common-roll-direction)), 6%) scale(.97); filter: drop-shadow(0 4px 2px #000a); }
+  49% { transform: translate(calc(12% * var(--common-roll-direction)), -16%) scale(1.03); }
+  65% { transform: translate(calc(-10% * var(--common-roll-direction)), 3%) scale(.99); }
+  78% { transform: translate(calc(-4% * var(--common-roll-direction)), -6%); }
+  89% { transform: translate(calc(2% * var(--common-roll-direction)), 1%); }
+  96% { transform: translate(0, -1%); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes common-die-spin {
+  0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  33% { transform: rotateX(620deg) rotateY(-450deg) rotateZ(300deg); }
+  65% { transform: rotateX(970deg) rotateY(-650deg) rotateZ(340deg); }
+  89% { transform: rotateX(1074deg) rotateY(-716deg) rotateZ(359deg); }
+  100% { transform: rotateX(1080deg) rotateY(-720deg) rotateZ(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling,
+  .dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling .ddie-spin { animation: none; }
+  .ddie.is-ivory .ddie-orient { transition: none; }
+}

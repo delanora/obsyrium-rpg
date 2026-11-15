@@ -27,7 +27,7 @@ interface Die3DProps {
    * (obsidiana, símbolo esculpido e borda de latão). A geometria e o valor continuam os mesmos;
    * a bandeja de morte tem movimento próprio e alinhamento suave da face.
    */
-  appearance?: 'death-save';
+  appearance?: 'death-save' | 'ivory';
 }
 
 /**
@@ -47,11 +47,18 @@ export function Die3D({
   title,
   appearance,
 }: Die3DProps) {
-  const faces = useMemo(() => dieFaces(sides), [sides]);
+  const marfim = appearance === 'ivory';
+  // O percentual usa uma peça de dez faces como representação do valor 1–100.
+  const geometria = marfim && sides === 100 ? 10 : sides;
+  const faces = useMemo(() => dieFaces(geometria), [geometria]);
   const paints = paintsValues(sides);
   const temaMorte = appearance === 'death-save';
-  // A oração é só a pose de espera; não preenche nem antecipa o resultado.
-  const settle = temaMorte && !reveal && !tumbling
+  // A pose de espera é ilustrativa: não preenche nem antecipa o resultado.
+  const valorVisual = marfim ? (value ?? sides) : value;
+  const faceVisual = marfim && sides === 100 ? Math.ceil((valorVisual ?? 100) / 10) : valorVisual;
+  const settle = marfim
+    ? `rotateX(-10deg) rotateY(12deg) ${settleTransform(geometria, faceVisual ?? geometria)}`
+    : temaMorte && !reveal && !tumbling
     ? poseInicialDeOracao()
     : value !== null && (reveal || (temaMorte && tumbling))
       ? settleTransform(sides, value)
@@ -61,6 +68,7 @@ export function Die3D({
     'ddie',
     `ddie-s${sides}`,
     temaMorte ? 'is-death-save' : '',
+    marfim ? 'is-ivory' : '',
     tumbling ? 'is-tumbling' : '',
     reveal ? 'is-revealed' : '',
     dropped ? 'is-dropped' : '',
@@ -93,7 +101,9 @@ export function Die3D({
                     transform: face.transform,
                     background: textura
                       ? OBSIDIANA
-                      : `linear-gradient(150deg, hsl(38 ${saturation}% ${Math.min(92, base + 8)}%), hsl(33 ${saturation - 4}% ${Math.max(30, base - 12)}%))`,
+                      : marfim
+                        ? `radial-gradient(ellipse at 30% 20%, hsl(43 39% ${Math.min(91, 74 + shade * 17)}%), transparent 65%), linear-gradient(145deg, #d8c69e, #a88d60)`
+                        : `linear-gradient(150deg, hsl(38 ${saturation}% ${Math.min(92, base + 8)}%), hsl(33 ${saturation - 4}% ${Math.max(30, base - 12)}%))`,
                   }}
                 >
                   {textura ? (
@@ -111,7 +121,7 @@ export function Die3D({
                       }}
                     />
                   ) : null}
-                  {!textura && reveal && face.value !== null ? (
+                  {!textura && (reveal || marfim) && face.value !== null ? (
                     // O número fica no centroide da face (não no centro da
                     // caixa) e cresce junto com a face. É um `font-size` no
                     // espaço do modelo, então o `.ddie-model` o escala na
@@ -121,10 +131,11 @@ export function Die3D({
                       style={{
                         left: `${face.valueX}%`,
                         top: `${face.valueY}%`,
-                        fontSize: `${face.valueSize}px`,
+                        fontSize: `${face.valueSize * (marfim && sides === 100 ? 0.72 : 1)}px`,
+                        ...(marfim ? { transform: `translate(-50%, -50%) rotate(${face.upAngle}rad)` } : {}),
                       }}
                     >
-                      {face.value}
+                      {marfim && sides === 100 ? (face.value === faceVisual ? valorVisual : face.value * 10) : face.value}
                     </span>
                   ) : null}
                 </span>
@@ -134,7 +145,7 @@ export function Die3D({
         </span>
       </span>
 
-      {!temaMorte && (!reveal || !paints) ? (
+      {!temaMorte && !marfim && (!reveal || !paints) ? (
         <span className="ddie-badge">
           {reveal && value !== null && !paints ? value : `d${sides}`}
         </span>
