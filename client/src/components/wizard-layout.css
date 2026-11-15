@@ -23,3 +23,37 @@
 }
 .wizard-overlay .wizard-step-body { min-width: 0; grid-template-columns: minmax(0, 1fr); }
 .wizard-overlay .race-grid, .wizard-overlay .race-card { min-width: 0; }
+/* Trilha independente: círculos ligados por um fio de bronze e escolhas vivas. */
+.wizard-overlay .wizard-track { gap: .2rem; padding-right: .4rem; }
+.wizard-overlay .wizard-step-chip,
+.wizard-overlay .wizard-step-chip.current,
+.wizard-overlay .wizard-step-chip.done {
+  position: relative; display: block; padding: 0; min-height: 0;
+  border: 0; border-radius: 0; background: none; box-shadow: none;
+}
+.wizard-overlay .wizard-step-chip:not(:last-child)::after {
+  content: ''; position: absolute; z-index: -1; left: 1rem; top: 2rem; bottom: -.6rem;
+  width: 1px; background: linear-gradient(#b38a4b99, #71502d66);
+}
+.wizard-step-link { display: flex; align-items: center; gap: .65rem; width: 100%; min-height: 3.6rem; padding: .5rem 0; border: 0; background: none; color: var(--ink-soft); text-align: left; cursor: pointer; }
+.wizard-step-copy { display: grid; gap: .2rem; min-width: 0; }
+.wizard-overlay .wizard-step-label { font-size: .8rem; letter-spacing: .03em; }
+.wizard-step-summary { font-family: var(--font-body); font-size: .85rem; color: #ddb77b; overflow-wrap: anywhere; }
+.wizard-overlay .wizard-step-number { width: 2rem; height: 2rem; background: #14100bd9; border: 1px solid #ad7c40; box-shadow: inset 0 0 0 3px #0c0908, inset 0 0 0 4px #71502d88; }
+.wizard-overlay .current .wizard-step-number { color: #ffe0a0; background: #51341bd9; border-color: #efc174; box-shadow: 0 0 12px #d5963b55, inset 0 0 0 3px #1e130c; }
+.wizard-overlay .done .wizard-step-number { color: #ebcb88; background: #211b11; }
+.wizard-step-link:disabled { opacity: .45; cursor: default; }
+.wizard-step-link:hover:not(:disabled) .wizard-step-copy, .current .wizard-step-copy { color: #ffe2a6; }
+.wizard-step-link:focus-visible, .wizard-substep-link:focus-visible { outline: 1px solid var(--gold); outline-offset: 3px; border-radius: 3px; }
+.wizard-substep-link { display: grid; gap: .2rem; margin: 0 0 .6rem 2.65rem; padding: .3rem 0 .3rem .5rem; border: 0; border-left: 1px solid #99703d; background: none; text-align: left; color: var(--ink-soft); cursor: pointer; font-family: var(--font-display); font-size: .75rem; }
+.wizard-substep-link strong { font-weight: normal; color: #ddb77b; }
+.wizard-substep-link.current { border-color: #efc174; color: #ffe2a6; }
+.wizard-substep-link:disabled { opacity: .45; cursor: default; }
+.wizard-overlay .wizard-actions { justify-content: flex-end; }
+@media (max-width: 760px) {
+  .wizard-step-link { justify-content: center; gap: 0; }
+  .wizard-step-copy { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .wizard-overlay .wizard-step-chip:not(:last-child)::after { left: 50%; }
+  .wizard-substep-link { margin: 0; padding: .35rem 0; font-size: .6rem; text-align: center; border-left: 0; }
+  .wizard-substep-link strong { display: none; }
+}

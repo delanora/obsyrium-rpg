@@ -149,6 +149,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
   const [state, setState] = useState<CreationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
+  const [furthestStep, setFurthestStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -213,6 +214,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
     setAssigned(saved.baseAbilities);
     setPicks(saved.skillPicks);
     setStep(saved.step);
+    setFurthestStep(saved.step);
   }, []);
 
   useEffect(() => {
@@ -259,6 +261,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
         // escolha que agora vem marcada e travada.
         if (step === 3) setPicks(response.creation.skillPicks);
         setStep((current) => Math.min(LAST_STEP, current + 1));
+        setFurthestStep((current) => Math.max(current, Math.min(LAST_STEP, step + 1)));
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Falha ao salvar este passo.');
@@ -709,16 +712,31 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
     }
   }
 
-  async function next(): Promise<void> {
-    if (busy) return;
-    // Passo 3 com sub-raça: o "Próximo" da 3a abre a sub-etapa 3b (sem salvar).
-    if (step === 3 && raceNeedsSubrace && raceSubStep === 'race') {
-      setRaceSubStep('subrace');
-      return;
+  // Voltar mantém o rascunho local; avançar valida e grava pelo mesmo contrato do servidor.
+  const navigationReady = canAdvance && (step !== 3 ||
+    ((!raceNeedsSubrace || selectedRace !== null) && raceChoicesReady));
+  async function navigateTo(destination: number): Promise<void> {
+    if (busy || uploading || destination === step) return;
+    if (destination > step) {
+      if (!navigationReady || destination > Math.max(furthestStep, step + 1)) return;
+      if (!(await saveStep(stepBody()))) return;
     }
-    if (!canAdvance) return;
-    await saveStep(stepBody());
+    setError(null);
+    setStep(destination);
+    if (destination === 3) setRaceSubStep('race');
   }
+
+  const stepSummaries = [
+    mode === 'new' ? 'Personagem novo' : mode === 'existing' ? 'Personagem existente' : '',
+    name.trim(),
+    raceBaseOption?.name ?? '',
+    selectedBackground?.name ?? background,
+    selectedClass ? [selectedClass.name, subclass].filter(Boolean).join(' · ') : '',
+    assignedCount ? `${assignedCount}/6 definidos` : '',
+    effectivePicks.length ? `${effectivePicks.length}/${skillCount} escolhidas` : '',
+    level ? `Nível ${level}` : '',
+    'Conferir personagem',
+  ];
 
   async function finish(): Promise<void> {
     setBusy(true);
@@ -784,10 +802,26 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
           {STEP_LABELS.map((label, index) => {
             const number = index + 1;
             const state_ = number === step ? 'current' : number < step ? 'done' : 'todo';
+            const available = number <= step || (navigationReady && number <= Math.max(furthestStep, step + 1));
             return (
-              <li key={label} className={`wizard-step-chip ${state_}`} aria-current={number === step ? 'step' : undefined} title={label}>
-                <span className="wizard-step-number">{number}</span>
-                <span className="wizard-step-label">{label}</span>
+              <li key={label} className={`wizard-step-chip ${state_}`}>
+                <button type="button" className="wizard-step-link" disabled={busy || uploading || !available}
+                  aria-current={number === step ? 'step' : undefined}
+                  title={`${label}${stepSummaries[index] ? `: ${stepSummaries[index]}` : ''}`}
+                  onClick={() => { if (number === 3 && step === 3) setRaceSubStep('race'); else void navigateTo(number); }}>
+                  <span className="wizard-step-number" aria-hidden="true">{number < step ? '✓' : number}</span>
+                  <span className="wizard-step-copy"><span className="wizard-step-label">{label}</span>
+                    {stepSummaries[index] ? <span className="wizard-step-summary">{stepSummaries[index]}</span> : null}
+                  </span>
+                </button>
+                {number === 3 && raceNeedsSubrace ? (
+                  <button type="button" className={`wizard-substep-link${step === 3 && raceSubStep === 'subrace' ? ' current' : ''}`}
+                    disabled={busy || uploading || step < 3}
+                    aria-current={step === 3 && raceSubStep === 'subrace' ? 'step' : undefined}
+                    onClick={() => { setStep(3); setRaceSubStep('subrace'); setError(null); }}>
+                    <span>Sub-raça</span><strong>{selectedRace?.subraceId ? subraceName(selectedRace) : 'Selecionar'}</strong>
+                  </button>
+                ) : null}
               </li>
             );
           })}
@@ -1662,49 +1696,11 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
           {error ? <p className="form-error">{error}</p> : null}
         </div>
 
-        <footer className="wizard-actions">
-          <button
-            type="button"
-            className="btn"
-            disabled={step <= 1 || busy}
-            onClick={() => {
-              setError(null);
-              // Sub-raça volta para a grade da raça; voltar do passo 4 cai na 3a.
-              if (step === 3 && raceSubStep === 'subrace') {
-                setRaceSubStep('race');
-                return;
-              }
-              if (step === 4) setRaceSubStep('race');
-              setStep((current) => Math.max(1, current - 1));
-            }}
-          >
-            Voltar
+        {step === LAST_STEP ? <footer className="wizard-actions">
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void finish()}>
+            <Icon name="scroll" size={15} /> {busy ? 'finalizando...' : 'Finalizar criação'}
           </button>
-
-          <span className="wizard-progress">
-            passo {step} de {LAST_STEP}
-          </span>
-
-          {step < LAST_STEP ? (
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={!canAdvance || busy}
-              onClick={() => void next()}
-            >
-              {busy ? 'salvando...' : 'Próximo'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={busy}
-              onClick={() => void finish()}
-            >
-              <Icon name="scroll" size={15} /> {busy ? 'finalizando...' : 'Finalizar criação'}
-            </button>
-          )}
-        </footer>
+        </footer> : null}
       </div>
     </div>
   );
