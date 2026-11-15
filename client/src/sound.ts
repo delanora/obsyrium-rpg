@@ -14,6 +14,14 @@ let muteVersion = 0;
 const playedDiceRolls = new Set<string>();
 let muted = typeof localStorage !== 'undefined' && localStorage.getItem(MUTE_KEY) === 'true';
 
+const muteListeners = new Set<(value: boolean) => void>();
+
+/** Assinatura local para ambientações que respeitam o mesmo botão de som. */
+export function subscribeMuted(listener: (value: boolean) => void): () => void {
+  muteListeners.add(listener);
+  return () => { muteListeners.delete(listener); };
+}
+
 type AudioContextCtor = typeof AudioContext;
 
 function getContext(): AudioContext | null {
@@ -40,6 +48,7 @@ export function setMuted(value: boolean): void {
   muted = value;
   muteVersion += 1;
   localStorage.setItem(MUTE_KEY, String(value));
+  for (const listener of muteListeners) listener(value);
   if (value) stopDiceSound();
   else { const audio = getContext(); if (audio) void prepareDiceSound(audio).catch(() => {}); }
 }

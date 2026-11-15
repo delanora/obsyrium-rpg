@@ -89,6 +89,8 @@ O contrato de ataque aceita `multiattackId` para um golpe da composição ativa;
 
 **Recarga das habilidades:** no bestiário, selecione uma faixa em 1d6 (por exemplo, **Recarga 5–6**). A habilidade passa a ter um único uso, independente por cópia. Depois do uso, o servidor tenta recarregar no início de cada turno real da criatura/NPC, inclusive no primeiro turno e em turnos antecipados pelo Mestre. Sucesso restaura o uso; falha mantém indisponível. A tentativa e seu resultado aparecem somente no Registro do Mestre. Habilidades disponíveis, sem recarga ou sem turno não geram tentativas; leituras e retries não rolam de novo. Restaurar usos continua disponível para decisões do Mestre e descansos assistidos. Cadastros antigos não recebem recarga por inferência do nome ou descrição. Referência: [Regras Básicas de 2014 — uso limitado](https://www.dndbeyond.com/sources/dnd/basic-rules-2014/monsters#LimitedUsage).
 
+O assistente de criação tem música ambiente local em volume baixo, com transição suave entre passagens. Ela respeita o botão de som, permanece durante as etapas e encerra gradualmente ao sair do assistente.
+
 A hotbar do jogador inclui atalhos padrão para Disparada, Desengajar, Esquivar, Esconder-se, Preparar, Ajudar, Procurar, Usar um Objeto e Outra ação. Levantar-se e Estabilizar aparecem somente no contexto apropriado. As opções usam os mesmos fluxos do servidor, sem o menu da espada junto ao recurso Ação.
 
 Os controles de **Cena e posicionamento** ficam na barra inferior do Mestre. O **?** no canto superior direito do grid reúne as instruções de movimento, câmera, zoom, régua, ping e menu radial; abre por hover, foco ou clique e mostra as ferramentas específicas de cada papel.

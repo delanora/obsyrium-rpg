@@ -1,3 +1,4 @@
+import { useWizardMusic } from '../music/useWizardMusic';
 import './wizard-ambience.css';
 import './race-icons.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -143,6 +144,7 @@ interface CreationWizardProps {
  * perícias e níveis iniciais) — aqui só existe a condução dos passos.
  */
 export function CreationWizard({ user, onCharacter, onFinished }: CreationWizardProps) {
+  useWizardMusic();
   const [state, setState] = useState<CreationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
