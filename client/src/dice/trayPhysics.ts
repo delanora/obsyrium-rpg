@@ -97,22 +97,22 @@ export function simularBandeja(inicio: PoseDado[], raio: number, duracaoMs: numb
   for (let quadro = 1; quadro <= passos; quadro += 1) {
     const progresso = quadro / passos;
     for (let subpasso = 0; subpasso < 4; subpasso += 1) {
-      impactos += avancarCorpos(corpos, raio, dt, progresso < .45 ? .6 : 12);
+      impactos += avancarCorpos(corpos, raio, dt, progresso < .45 ? .6 : 6.5);
     }
     quadros.push(corpos.map(c => ({ x: c.x, y: c.y, rx: c.rx, ry: c.ry, rz: c.rz })));
   }
-  // A desaceleração entra na velocidade de TODO o percurso; não existe
-  // uma fase final que puxa a orientação para o resultado. Distribuir a
-  // volta residual desde o primeiro quadro preserva os choques e permite
+  // O giro acompanha a distância percorrida sobre a superfície. Distribuir
+  // a volta residual desde o primeiro quadro preserva os choques e permite
   // terminar com velocidade zero e rotação equivalente à identidade.
   for (let i = 0; i < corpos.length; i += 1) {
     for (const eixo of ['rx', 'ry', 'rz'] as const) {
       const acumulados = [0];
       for (let k = 1; k <= passos; k += 1) {
-        const progresso = (k - .5) / passos;
-        const restante = Math.min(1, (1 - progresso) / .6);
-        const freio = restante * restante * (3 - 2 * restante);
-        acumulados.push(acumulados[k - 1] + (quadros[k][i][eixo] - quadros[k - 1][i][eixo]) * freio);
+        const atual = quadros[k][i], anterior = quadros[k - 1][i];
+        const distancia = Math.hypot(atual.x - anterior.x, atual.y - anterior.y);
+        const passoInicial = 3.8 * duracaoMs / 1000 / passos;
+        const contato = distancia < 1e-5 ? 0 : Math.min(1, distancia / passoInicial);
+        acumulados.push(acumulados[k - 1] + (atual[eixo] - anterior[eixo]) * contato);
       }
       const total = acumulados[passos];
       const voltas = Math.round(total / 360) * 360;
