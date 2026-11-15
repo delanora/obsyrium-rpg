@@ -20,7 +20,7 @@ interface CombatLogProps {
   }[];
   /**
    * 6.6I — SOLICITAÇÕES ATIVAS (cards interativos). Vêm do read-model do
-   * servidor, no bloco Testes: decisão pendente não pode se perder entre
+   * servidor, no bloco Rolagens: decisão pendente não pode se perder entre
    * linhas antigas do registro.
    */
   requests?: CombatResolutionCardDto[];
@@ -406,9 +406,9 @@ export function CombatLog({
           </ol>
         )}
       </section>
-      <section className="combat-block combat-tests-panel" aria-label="Testes">
+      <section className="combat-block combat-tests-panel" aria-label="Rolagens">
         <h3>
-          <Icon name="die" size={15} /> Testes
+          <Icon name="die" size={15} /> Rolagens
         </h3>
 
         <div className="combat-resolution-list" aria-label="Decisões pendentes">
@@ -425,9 +425,6 @@ export function CombatLog({
           ))}
         </div>
 
-        {requests.length === 0 && !testsContent ? (
-          <p className="empty-hint">Nenhum teste pendente.</p>
-        ) : null}
       </section>
     </div>
   );

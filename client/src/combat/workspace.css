@@ -544,7 +544,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   REGISTRO E TESTES (direita) — dois blocos com rolagem independente.
+   REGISTRO E ROLAGENS (direita) — dois blocos com rolagem independente.
    -------------------------------------------------------------------------- */
 .combat-workspace-log {
   display: grid;
@@ -561,11 +561,11 @@
   overflow: hidden;
 }
 
-/* A reserva não muda quando um teste chega ou termina. Um card de morte
-   cabe inteiro; solicitações adicionais rolam dentro do mesmo bloco. */
+/* Vazio, Rolagens mostra só o cabeçalho. Pendências usam sua altura natural,
+   até 55% da coluna; o Registro conserva o restante e cada lista tem scroll. */
 .combat-log-and-tests {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 17rem;
+  grid-template-rows: minmax(0, 1fr) fit-content(55%);
   gap: 0.7rem;
   min-width: 0;
   min-height: 0;

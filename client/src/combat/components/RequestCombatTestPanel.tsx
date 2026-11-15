@@ -38,6 +38,6 @@ export function RequestCombatTestPanel({ combat, combatant, busy, onRun }: {
         </div>)}
     </div>
     {sent ? <p role="status">{sent}</p> : null}
-    <p className="section-note">O participante recebe o pedido no bloco Testes e rola na própria bandeja. O sistema usa os bônus atuais da ficha. O Mestre também pode rolar ou cancelar pelo bloco Testes.</p>
+    <p className="section-note">O participante recebe o pedido no bloco Rolagens e rola na própria bandeja. O sistema usa os bônus atuais da ficha. O Mestre também pode rolar ou cancelar pelo bloco Rolagens.</p>
   </section>;
 }

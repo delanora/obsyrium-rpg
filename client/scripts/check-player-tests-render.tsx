@@ -53,7 +53,7 @@ const click=async(selector:string)=>{const button=document.querySelector<HTMLBut
 const {notifyResolutionRequestsChanged}=await import('../src/combat/resolutionApi');
 try {
  await act(async()=>root.render(h(Harness)));
- check('bloco Testes começa vazio',!document.querySelector('.combat-tests-panel .resolution-card'));
+ check('bloco Rolagens começa só com o título',!document.querySelector('.combat-tests-panel .resolution-card') && document.querySelector('.combat-tests-panel')?.getAttribute('aria-label') === 'Rolagens' && !document.querySelector('.combat-tests-panel .empty-hint'));
  const normalFetch=globals.fetch as typeof fetch;
  let releaseOld:((response:Response)=>void)|undefined;
  let hold=true;

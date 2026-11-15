@@ -6210,7 +6210,7 @@ check(
       workspaceRule('.combat-workspace-log .log-card-summary').includes('flex: 1 1 auto;') &&
       workspaceRule('.combat-workspace-log .combat-log > li').includes('display: flex;') &&
       workspaceRule('.combat-tests-panel .combat-resolution-list').includes('overflow-y: auto;') &&
-      workspaceRule('.combat-log-and-tests').includes('grid-template-rows: minmax(0, 1fr) 17rem;') &&
+      workspaceRule('.combat-log-and-tests').includes('grid-template-rows: minmax(0, 1fr) fit-content(55%);') &&
       logPanelSource.indexOf('<ol className="combat-log">') <
         logPanelSource.indexOf('className="combat-block combat-tests-panel"'),
   );
@@ -7058,7 +7058,7 @@ check(
     !trackerSource.includes('<PendingEffectSavePanel') &&
       !trackerSource.includes('urgent={') &&
       trackerSource.includes('requests={logRequests}') &&
-      source('src/combat/components/CombatLog.tsx').includes('aria-label="Testes"') &&
+      source('src/combat/components/CombatLog.tsx').includes('aria-label="Rolagens"') &&
       mechSource.includes("const pendingControls = variant !== 'dock'") &&
       pendingSource.includes('rollPendingEffectSave'),
   );
