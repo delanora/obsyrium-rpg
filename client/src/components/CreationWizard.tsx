@@ -35,6 +35,7 @@ import type {
   RaceOption,
   SessionUser,
 } from '../types';
+import { ClassInformation } from './creation/ClassInformation';
 import { AbilityStep } from './creation/AbilityStep';
 import { FeatureChoiceField } from './FeatureChoiceField';
 import { Icon, type IconName } from './Icon';
@@ -741,7 +742,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
     name.trim(),
     raceBaseOption?.name ?? '',
     selectedBackground?.name ?? background,
-    selectedClass ? [selectedClass.name, subclass].filter(Boolean).join(' · ') : '',
+    selectedClass?.name ?? '',
     assignedCount ? `${assignedCount}/6 definidos` : '',
     effectivePicks.length ? `${effectivePicks.length}/${skillCount} escolhidas` : '',
     level ? `Nível ${level}` : '',
@@ -1387,12 +1388,10 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                     </button>
                   ))}
                 </div>
-                {selectedClass ? <div className="wizard-class-detail">
-                  <h3>{selectedClass.name}</h3>
-                  <p>Dado de vida: d{selectedClass.hitDie} · Subclasse no nível {selectedClass.subclassLevel}</p>
-                  {classNeedsSubclass ? <p className="section-note">Escolha a subclasse pela trilha lateral antes de avançar.</p> : null}
+                {selectedClass ? <>
                   {abilitiesReady && !selectedClass.eligible && selectedClass.missing ? <p className="levelup-blocked">{selectedClass.missing}</p> : null}
-                </div> : null}
+                  <ClassInformation option={selectedClass} />
+                </> : null}
               </> : null}
 
               {/* Clérigo, Feiticeiro e Bruxo escolhem a subclasse já no nível 1. */}
@@ -1407,12 +1406,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                       </button>
                     ))}
                   </div>
-                  {subclass ? <section className="wizard-option-detail" aria-label="Detalhes da subclasse">
-                    <h3>{subclass}</h3>
-                    <div className="wizard-detail-highlight"><strong>Classe</strong><span>{selectedClass.name}</span></div>
-                    <div className="wizard-detail-highlight"><strong>Disponível</strong><span>Nível {selectedClass.subclassLevel}</span></div>
-                    <p className="wizard-option-description">Esta escolha entra na ficha junto da classe. As escolhas de características disponíveis aparecem abaixo.</p>
-                  </section> : null}
+                  {subclass ? <ClassInformation option={selectedClass} subclass={subclass} /> : null}
                 </div>
               ) : null}
 

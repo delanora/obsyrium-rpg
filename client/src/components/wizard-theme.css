@@ -61,3 +61,8 @@
 .wizard-detail-resource h4::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #a8794077, transparent); }
 .wizard-detail-resource p { white-space: pre-line; line-height: 1.6; color: #eadcc5; }
 @media (max-width: 760px) { .wizard-option-detail { padding: 1rem; } .wizard-option-detail > h3 { margin-top: -2.4rem; font-size: 1rem; padding-inline: 1rem; } }
+.wizard-information-heading { padding-block: .7rem; margin: .5rem 0 0; border-block: 1px solid #a8794055; color: #edbd73; font: 1rem var(--font-display); letter-spacing: .07em; }
+.wizard-information-list { margin: .5rem 0; padding-left: 1.2rem; color: #eadcc5; line-height: 1.65; }
+.wizard-information-list li { padding-block: .25rem; }
+.wizard-information-list li::marker { color: #c6954d; }
+.wizard-detail-resource h4 small { flex: none; font-size: .75rem; font-weight: normal; color: #c8aa7a; }
