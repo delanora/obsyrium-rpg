@@ -1,3 +1,4 @@
+import { DiceTypeIcon } from './DiceTypeIcon';
 import { CommonTrayFrame } from './CommonTrayFrame';
 import './common-tray.css';
 import { DeathFateHeader } from './DeathFateHeader';
@@ -311,7 +312,8 @@ export function DiceDock({ roller }: DiceDockProps) {
                         onClick={() => addDie(sides)}
                         aria-label={`Adicionar d${sides}`}
                       >
-                        d{sides}
+                        <DiceTypeIcon sides={sides} />
+                        <span>d{sides}</span>
                       </button>
                     ))}
                   </div>
@@ -338,59 +340,48 @@ export function DiceDock({ roller }: DiceDockProps) {
                   </div>
                 ) : null}
 
-                <div className="dice-controls">
-                  {/* No teste de concentração o modo é do SERVIDOR (Constituição
-                      + condições/exaustão): os toggles não teriam efeito. */}
+                <div className={`dice-controls${deathSave ? '' : ' dice-controls-common'}`}>
                   {context?.kind === 'concentration' || deathSave ? null : (
-                    <>
-                      <label className="dice-toggle">
-                        <input
-                          type="checkbox"
-                          checked={advantage}
-                          onChange={(event) => setAdvantage(event.target.checked)}
-                        />
-                        Vantagem
-                      </label>
-                      <label className="dice-toggle">
-                        <input
-                          type="checkbox"
-                          checked={disadvantage}
-                          onChange={(event) => setDisadvantage(event.target.checked)}
-                        />
-                        Desvantagem
-                      </label>
-                    </>
-                  )}
-                  {isMaster ? (
-                    <label
-                      className="dice-toggle"
-                      title="Privada: só você vê o resultado e a mesa não é avisada. Desmarque para a mesa acompanhar a rolagem."
+                    <button
+                      type="button"
+                      className="dice-mode dice-mode-advantage"
+                      aria-pressed={advantage}
+                      onClick={() => setAdvantage(!advantage)}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isPrivate}
-                        onChange={(event) => setPrivate(event.target.checked)}
-                      />
-                      Privada
-                    </label>
-                  ) : null}
-
-                  <span className="dice-controls-spacer" />
-
-                  {hasRemovable ? (
-                    <button type="button" className="btn btn-small" onClick={clearPool}>
-                      limpar
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m2 8 4-4 4 4" /></svg> Vantagem
                     </button>
-                  ) : null}
-
+                  )}
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary dice-submit"
                     disabled={rolling || pool.length === 0}
                     onClick={() => void submit()}
                   >
                     <Icon name="die" size={15} /> {rolling ? 'Rolando...' : 'Rolar'}
                   </button>
+                  {context?.kind === 'concentration' || deathSave ? null : (
+                    <button
+                      type="button"
+                      className="dice-mode dice-mode-disadvantage"
+                      aria-pressed={disadvantage}
+                      onClick={() => setDisadvantage(!disadvantage)}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m2 4 4 4 4-4" /></svg> Desvantagem
+                    </button>
+                  )}
+                  {(isMaster || hasRemovable) && !deathSave ? (
+                    <div className="dice-controls-secondary">
+                      {isMaster ? (
+                        <label className="dice-toggle" title="Privada: só você vê o resultado e a mesa não é avisada. Desmarque para a mesa acompanhar a rolagem.">
+                          <input type="checkbox" checked={isPrivate} onChange={(event) => setPrivate(event.target.checked)} />
+                          Privada
+                        </label>
+                      ) : null}
+                      {hasRemovable ? (
+                        <button type="button" className="btn btn-small" onClick={clearPool}>limpar</button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 {error ? <p className="dice-error">{error}</p> : null}
