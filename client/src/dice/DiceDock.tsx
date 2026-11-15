@@ -1,3 +1,4 @@
+import { CommonTrayFrame } from './CommonTrayFrame';
 import './common-tray.css';
 import { DeathFateHeader } from './DeathFateHeader';
 import { DeathSaveTitle } from './DeathSaveTitle';
@@ -249,7 +250,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                       )}
                     </div>
                   </div>
-                  {!deathSave?<img className="dice-common-frame" src="/dice-tray/moldura-reconstruida.png" alt="" aria-hidden="true" draggable={false} decoding="sync"/>:null}
+                  {!deathSave?<CommonTrayFrame/>:null}
                 </div>
 
                 {deathSave ? <DeathSaveTitle /> : null}
