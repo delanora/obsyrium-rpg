@@ -29,3 +29,15 @@ const direita=rotacaoDoPercurso({x:0,y:0},{x:.2,y:0},.2);
 assert.ok(direita[1]>0&&Math.abs(direita[0])<1e-12);
 assert.ok(Math.abs(2*Math.acos(direita[3])-1)<1e-12,'Percorrer um raio exige um radiano de giro.');
 console.log('✔ Eixo, sentido, distância, colisões e face final preservados.');
+
+const { dieFaces, d4SettleTransform } = await import('../src/dice/polyhedra.ts');
+const facesD4=dieFaces(4);
+for(let valor=1;valor<=4;valor++){
+ const adjacentes=facesD4.filter(f=>f.cornerValues?.includes(valor));
+ assert.equal(adjacentes.length,3,'Cada resultado ocupa um vértice compartilhado por três faces.');
+ const m=d4SettleTransform(valor).slice(9,-1).split(',').map(Number);
+ const normaisVisiveis=facesD4.filter(f=>m[2]*f.normal[0]+m[6]*f.normal[1]+m[10]*f.normal[2]>0);
+ assert.equal(normaisVisiveis.length,3);
+ assert.ok(normaisVisiveis.every(f=>f.cornerValues?.includes(valor)),'A ponta exposta precisa repetir o resultado nas três faces visíveis.');
+}
+console.log('✔ D4: três números por face e resultado no vértice superior em todas as poses.');

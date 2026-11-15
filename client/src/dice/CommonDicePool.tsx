@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { useTrayPhysics } from './useTrayPhysics';
 import type { DiceRollDto } from '../types';
 import { Die3D } from './Die3D';
@@ -27,7 +28,9 @@ export function CommonDicePool({ pool, result, rolling, settled, extraD20, remov
   });
   const arena = useTrayPhysics(pecas.length, rolling && result !== null, result?.id);
   return <div className="common-dice-pool" ref={arena}>{pecas.length === 0 ? <p className="dice-ring-hint">Escolha os dados abaixo</p> : pecas.map((die, index) => (
-    <span className="common-die-slot" key={index}>
+    <Fragment key={index}>
+    <span className="common-die-shadow" aria-hidden="true" />
+    <span className="common-die-slot">
       <Die3D
         appearance="azure"
         sides={die.sides}
@@ -41,5 +44,6 @@ export function CommonDicePool({ pool, result, rolling, settled, extraD20, remov
         onClick={!rolling && !settled && !pool[die.index]?.locked && removeDie ? () => removeDie(die.index) : undefined}
       />
     </span>
+    </Fragment>
   ))}</div>;
 }

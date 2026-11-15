@@ -371,6 +371,8 @@ function polyhedronFor(sides: number): Polyhedron {
 const MODEL_SCALE = 100;
 
 export interface DieFace {
+  /** D4: valor do vértice, repetido nas três faces que o compartilham. */
+  cornerValues?: number[];
   key: number;
   /** Valor pintado na face (1..sides) ou `null` quando a face não leva número. */
   value: number | null;
@@ -539,7 +541,10 @@ export function dieFaces(sides: number): DieFace[] {
   const { vertices, faces } = polyhedronFor(sides);
   // Só dá para pintar 1..sides quando o número de faces bate (d4..d20).
   const paint = faces.length === sides;
-  const built = faces.map((indices, index) => buildFace(vertices, indices, paint ? index + 1 : null, index));
+  const built = faces.map((indices, index) => ({
+    ...buildFace(vertices, indices, paint ? index + 1 : null, index),
+    ...(sides === 4 ? { cornerValues: indices.map(i => i + 1) } : {}),
+  }));
 
   faceCache.set(sides, built);
   return built;
@@ -560,4 +565,10 @@ export function settleTransform(sides: number, value: number): string {
     return toCss(multiply(rotationAxis([1, 1, 0.3], 0.35), rotationAxis([0, 1, 0], -0.5)));
   }
   return toCss(rotationBetween(face.normal, [0, 0, 1]));
+}
+
+/** D4 assenta numa base triangular: o resultado está no vértice oposto. */
+export function d4SettleTransform(value: number): string {
+  const vertice = TETRA.vertices[Math.max(0, Math.min(3, value - 1))];
+  return toCss(rotationBetween(vertice, [0, -.25, Math.sqrt(1 - .25 * .25)]));
 }

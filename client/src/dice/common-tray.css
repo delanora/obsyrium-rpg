@@ -271,14 +271,19 @@
 .dice-stage.is-standard-roll .ddie.is-resin.is-dropped .ddie-face { opacity: .55; }
 /* A sombra fica fora do contexto 3D: filtros no dado achatam suas faces. */
 .dice-stage.is-standard-roll .dice-ring-inner { container-type: inline-size; }
-.dice-stage.is-standard-roll .ddie.is-resin::before {
-  content: '';
+.common-die-shadow {
   position: absolute;
-  inset: 68% 8% 2%;
+  left: 50%;
+  top: 50%;
+  width: var(--physical-box);
+  height: calc(var(--physical-box) * .4);
+  margin-top: calc(var(--physical-box) * .27);
   border-radius: 50%;
-  background: radial-gradient(ellipse, #000a, transparent 70%);
+  background: radial-gradient(ellipse, #000b, transparent 70%);
   pointer-events: none;
+  opacity: .75;
 }
+
 @media (prefers-reduced-motion: reduce) {
   .dice-stage.is-standard-roll .ddie.is-resin.is-tumbling,
   .dice-stage.is-standard-roll .ddie.is-resin.is-tumbling .ddie-spin { animation: none; }

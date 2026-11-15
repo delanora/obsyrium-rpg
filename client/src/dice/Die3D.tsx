@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { poseInicialDeOracao, texturaDaFace } from './deathFaces';
-import { dieFaces, paintsValues, settleTransform, type V3 } from './polyhedra';
+import { dieFaces, d4SettleTransform, paintsValues, settleTransform, type V3 } from './polyhedra';
 
 /** Direção da luz (no espaço do modelo) usada para o facetado das faces. */
 const LIGHT: V3 = [-0.45, -0.78, 0.44];
@@ -58,7 +58,7 @@ export function Die3D({
   const valorVisual = resina ? (value ?? sides) : value;
   const faceVisual = valorVisual;
   const settle = resina
-    ? `rotateX(-10deg) rotateY(12deg) ${settleTransform(geometria, faceVisual ?? geometria)}`
+    ? sides === 4 ? d4SettleTransform(faceVisual ?? 4) : `rotateX(-10deg) rotateY(12deg) ${settleTransform(geometria, faceVisual ?? geometria)}`
     : temaMorte && !reveal && !tumbling
     ? poseInicialDeOracao()
     : value !== null && (reveal || (temaMorte && tumbling))
@@ -132,7 +132,12 @@ export function Die3D({
                       }}
                     />
                   ) : null}
-                  {!textura && (reveal || resina) && face.value !== null ? (
+                  {resina && sides === 4 ? face.polygon.map((canto, i) => {
+                    const x = face.center[0] + (canto[0] - face.center[0]) * .58;
+                    const y = face.center[1] + (canto[1] - face.center[1]) * .58;
+                    const angulo = Math.atan2(canto[0] - face.center[0], -(canto[1] - face.center[1]));
+                    return <span key={i} className="ddie-num ddie-corner-num" data-vertex-value={face.cornerValues?.[i]} style={{ left: x, top: y, fontSize: face.valueSize * .55, transform: `translate(-50%, -50%) rotate(${angulo}rad)` }}>{face.cornerValues?.[i]}</span>;
+                  }) : !textura && (reveal || resina) && face.value !== null ? (
                     // O número fica no centroide da face (não no centro da
                     // caixa) e cresce junto com a face. É um `font-size` no
                     // espaço do modelo, então o `.ddie-model` o escala na
