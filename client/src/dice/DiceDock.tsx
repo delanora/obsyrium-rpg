@@ -77,6 +77,7 @@ export function DiceDock({ roller }: DiceDockProps) {
     if (!expanded) return;
     const next = remoteBoards.find(b => b.userId === expanded.userId);
     if (next && next !== expanded) setExpanded(next);
+    if (!next && !expanded.result) setExpanded(null);
   }, [remoteBoards, expanded]);
   const preview = Boolean(selected && !open && !expanded && dismissed !== generation);
   const ownRoll = () => { setDismissed(generation); setExpanded(null); openFree(); };

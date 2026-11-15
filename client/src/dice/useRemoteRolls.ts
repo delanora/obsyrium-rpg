@@ -51,7 +51,7 @@ export function useRemoteRolls(ownUserId: string) {
     const board: RemoteBoard={userId:payload.userId,actorName:payload.actorName,avatarUrl:payload.avatarUrl,
       kind:payload.kind,label:payload.label,bonus:payload.board.bonus,pool:payload.board.pool,
       advantage:payload.board.advantage,disadvantage:payload.board.disadvantage,deathSave:payload.deathSave,
-      phase:payload.board.phase==='tumbling'?'tumbling':'idle',result:null,updatedAt:sequence.current};
+      phase:payload.board.phase==='tumbling'?'tumbling':'idle',result:null,updatedAt:existing?.phase==='idle' && payload.board.phase==='idle' ? existing.updatedAt : sequence.current};
     metadata.current.set(payload.userId,board);
     if(payload.lastRoll && !payload.lastRoll.isPrivate && payload.lastRoll.audience!=='masters'){
       const startedAt=Date.parse(payload.lastRoll.at)||Date.now();
@@ -75,5 +75,5 @@ export function useRemoteRolls(ownUserId: string) {
       advantage:roll.advantage,disadvantage:roll.disadvantage,deathSave:roll.deathSaveState?.before??cached?.deathSave,
       phase:roll.autoFail?'settled':'tumbling',result:roll,startedAt,updatedAt:sequence.current},roll.autoFail?0:rollAnimationMs(roll.kind));
   },[ownUserId,present]);
-  return { boards: boards.filter(b=>b.phase==='tumbling'||b.result), onActive, onRoll };
+  return { boards, onActive, onRoll };
 }

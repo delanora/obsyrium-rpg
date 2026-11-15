@@ -44,7 +44,10 @@ const emitRoll=async(r:DiceRollDto)=>act(async()=>roller.handlers.onDiceRoll?.({
 const button=(text:string)=>[...document.querySelectorAll<HTMLButtonElement>('button')].find(b=>b.textContent?.includes(text));
 const click=async(el:HTMLElement|null|undefined)=>{assert.ok(el);await act(async()=>el.dispatchEvent(new MouseEvent('click',{bubbles:true})));};
 try{
- await render();await emitActive(active('a','Umbrae da Lua','idle'));assert.equal(document.querySelector('.dice-spectator-preview'),null);
+ await render();await emitActive(active('a','Umbrae da Lua','idle'));assert.ok(document.querySelector('.dice-spectator-preview'),'A prévia abre enquanto o colega ainda prepara os dados.');
+ await advance(60000);assert.ok(document.querySelector('.dice-spectator-preview'),'Os cinco segundos só começam depois do resultado.');
+ await click(button('Expandir visualização'));assert.ok(document.querySelector('[role="dialog"]'));assert.ok(document.body.textContent?.includes('Aguardando a rolagem'));
+ await click(document.querySelector('[aria-label="Fechar o tabuleiro"]'));
  await emitActive(active('a','Umbrae da Lua'));assert.ok(document.querySelector('.dice-spectator-preview'));assert.notEqual(document.body.style.overflow,'hidden');
  await emitRoll(roll('a',17));await advance(500);
  await emitActive(active('b','Guerreiro de Ferro'));await emitRoll(roll('b',12));
@@ -62,6 +65,8 @@ try{
  await emitActive(active('b','Guerreiro de Ferro'));await emitRoll(roll('b',8));await click(button('Rolar meus dados'));
  assert.equal(document.querySelector('.dice-spectator-preview'),null);assert.ok(document.querySelector('[role="dialog"]'));assert.equal(roller.open,true);
  await click(document.querySelector('[aria-label="Fechar a janela de dados"]'));assert.equal(document.querySelector('.dice-spectator-preview'),null);
+ await emitActive(active('empty','Preparando','idle'));await click(button('Expandir visualização'));
+ await emitActive({...active('empty','Preparando','idle'),active:false});assert.equal(document.querySelector('[role="dialog"]'),null,'Bandeja fechada sem rolar encerra a espera expandida.');
  await emitActive({...active('d','Umbrae da Lua'),kind:'death-save'});await emitRoll({...roll('d',10),actorName:'Umbrae da Lua',kind:'death-save'});
  assert.ok(document.querySelector('.dice-spectator-preview .dice-stage.is-death-save'));
  assert.equal(document.querySelector('.dice-spectator-preview .dice-common-frame'),null);
