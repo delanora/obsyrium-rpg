@@ -770,7 +770,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
   return (
     <div className="wizard-overlay">
-      <div className="wizard">
+      <div className={`wizard${step === 3 ? ' is-race-step' : ''}`}>
         <header className="wizard-head">
           <h1>
             <Icon name="scroll" size={20} /> Criação de personagem
@@ -888,7 +888,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
           {/* --- 3. Raça (grade + sub-raça) ---------------------------------- */}
           {step === 3 ? (
-            <div className="wizard-step-body">
+            <div className="wizard-step-body race-selection">
               {creation && creation.raceCatalog.length > 0 ? (
                 raceSubStep === 'race' ? (
                   <>
