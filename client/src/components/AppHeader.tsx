@@ -2,7 +2,7 @@ import { useAuth } from '../auth';
 import { PageVolumeControl } from './PageVolumeControl';
 import type { SessionUser } from '../types';
 import type { ConnectionState } from '../useRealtime';
-import { Icon } from './Icon';
+import './app-header-brand.css';
 
 const CONNECTION_LABELS: Record<ConnectionState, string> = {
   connecting: 'conectando...',
@@ -16,23 +16,15 @@ interface AppHeaderProps {
   user: SessionUser;
 }
 
-/**
- * Cabeçalho do app: a marca, o estado da conexão e as ações da sessão
- * (tema, som e saída).
- *
- * A barra é a mesma para todos e NÃO mostra mais quem é quem: saíram a foto e
- * o nome do personagem/jogador, o título/subtítulo da tela (que repetia o
- * painel ou as contagens da mesa) e a lista de quem está online. O conteúdo de
- * cada aba é que dá esse contexto.
- */
+/** Cabeçalho compartilhado: identidade Obsyrium, conexão, conta, volume local e saída. */
 export function AppHeader({ connection, lastEventAt, user }: AppHeaderProps) {
   const { logout } = useAuth();
 
   return (
-    <header className="app-header">
+    <header className="app-header app-header-obsyrium">
       <div className="app-header-title">
         <h1>
-          <Icon name="dragon" className="brand-mark" size={22} /> Codex do Aventureiro
+          <img className="app-header-logo" src="/brand/obsyrium-nome.png" alt="Obsyrium" width={2172} height={724} decoding="async" />
         </h1>
       </div>
 
