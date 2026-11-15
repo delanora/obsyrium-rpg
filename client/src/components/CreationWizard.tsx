@@ -297,16 +297,17 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
   /** As raças na grade da 3a: uma entrada por grupo (sem as variantes de sub-raça). */
   const raceCards = useMemo(
-    () => (creation?.raceCatalog ?? []).filter((option) => !option.subraceId),
+    () => (creation?.raceCatalog ?? []).filter((option) => !option.subraceId)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })),
     [creation?.raceCatalog],
   );
 
-  /** Sub-raças de uma raça, na ordem do catálogo. */
+  /** Sub-raças ordenadas pelo nome em português, sem alterar o catálogo. */
   const subracesOf = useCallback(
     (base: RaceOption): RaceOption[] =>
       (creation?.raceCatalog ?? []).filter(
         (option) => option.subraceId && raceGroupKeyOf(option) === raceGroupKeyOf(base),
-      ),
+      ).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })),
     [creation?.raceCatalog],
   );
 
