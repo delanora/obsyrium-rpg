@@ -1,3 +1,4 @@
+import './wizard-ambience.css';
 import './race-icons.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fileToImagePayload, uploadAvatar } from '../api';

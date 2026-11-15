@@ -1,0 +1,7 @@
+/* Ambientação das nove etapas. O filtro pertence só à imagem, nunca aos campos. */
+.creation-shell:has(.wizard-overlay) { position: relative; isolation: isolate; }
+.creation-shell:has(.wizard-overlay)::before {
+  content: ''; position: fixed; inset: -3px; z-index: -1; pointer-events: none;
+  background: #120f0d url('/creation/fundo-acampamento.png') center / cover no-repeat;
+  filter: brightness(.68) blur(1.2px);
+}
