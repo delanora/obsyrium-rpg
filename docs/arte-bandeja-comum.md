@@ -1,6 +1,6 @@
 # Moldura da bandeja comum
 
-Moldura atual: `client/src/dice/CommonTrayFrame.tsx`, vetorial em código, sem uso de PNG no aro.
+Moldura atual: `client/public/dice-tray/aro-bronze-dourado.png`, PNG original de 1254 × 1254 fornecido pelo usuário, aplicado por `client/src/dice/CommonTrayFrame.tsx`.
 
 ## Histórico da moldura anterior
 
