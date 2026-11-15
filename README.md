@@ -350,7 +350,7 @@ client/             # app React (Vite + TypeScript)
     ├── socket.ts   # conexão Socket.io
     ├── sound.ts    # efeitos sonoros sintetizados (dados, crítico, turno)
     ├── styles.css  # identidade visual (pergaminho + grimório amaldiçoado)
-    ├── theme.ts    # tema claro/escuro, salvo no navegador
+    ├── theme.ts    # inicialização do tema escuro
     └── useRealtime.ts # hook de eventos em tempo real
 ```
 
@@ -370,7 +370,7 @@ O visual é o coração do projeto: a mesa inteira — ficha, painel e combate �
 - **Vida e magia visuais:** barra de HP que muda de cor com a gravidade (em largura total, com os cards de defesa de mesma altura abaixo) e espaços de magia em estrelas clicáveis.
 - **Painel do mestre "de comando":** cabeçalho escuro e molduras imponentes dentro do mesmo tema.
 - **Combate:** a tela "se transforma" com um **brasão de batalha** ao começar, e o turno atual brilha em dourado pulsante.
-- **Modo claro (pergaminho)** como padrão e **modo escuro ("grimório amaldiçoado")** alternável no cabeçalho, com a escolha salva.
+- **Tema escuro fixo**, sem seletor no cabeçalho, inclusive para navegadores com preferência clara antiga.
 - Totalmente **responsivo** (desktop, tablet e celular).
 
 ---
@@ -1282,9 +1282,9 @@ Para o visual não depender de CDN nem de internet, as fontes são servidas pela
 
 Todas de licença SIL Open Font License.
 
-### Tema claro e escuro
+### Tema escuro
 
-O tema é um atributo `data-theme` no `<html>`; o CSS troca todas as cores por variáveis. O `index.html` aplica o tema salvo **antes da primeira pintura**, evitando o flash claro. O botão de lua/sol no cabeçalho alterna e grava a escolha (`client/src/theme.ts`).
+A interface usa `data-theme="dark"` já no HTML inicial, evitando flash claro. A inicialização mantém o tema escuro e substitui preferências claras antigas. O cabeçalho não exibe seletor de tema.
 
 - **Pergaminho (claro):** bege/marfim, dourado e couro.
 - **Grimório amaldiçoado (escuro):** couro queimado e dourado mais vivo.

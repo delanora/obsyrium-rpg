@@ -6997,7 +6997,7 @@ check(
 
   check(
     'SC107) tooltips nativos legítimos (sem alternativa personalizada) foram preservados',
-    source('src/components/AppHeader.tsx').includes("title={theme === 'dark' ? 'Modo pergaminho'") &&
+    source('src/components/PageVolumeControl.tsx').includes('title="Volume da página"') &&
       source('src/combat/components/CombatantCard.tsx').includes(
         'title="Vida e CA visíveis apenas para o mestre"',
       ) &&

@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { useAuth } from '../auth';
 import { PageVolumeControl } from './PageVolumeControl';
-import { getTheme, toggleTheme, type Theme } from '../theme';
 import type { SessionUser } from '../types';
 import type { ConnectionState } from '../useRealtime';
 import { Icon } from './Icon';
@@ -29,7 +27,6 @@ interface AppHeaderProps {
  */
 export function AppHeader({ connection, lastEventAt, user }: AppHeaderProps) {
   const { logout } = useAuth();
-  const [theme, setTheme] = useState<Theme>(getTheme());
 
   return (
     <header className="app-header">
@@ -55,16 +52,6 @@ export function AppHeader({ connection, lastEventAt, user }: AppHeaderProps) {
         </span>
 
         <div className="header-actions">
-          <button
-            type="button"
-            className="btn btn-small theme-toggle"
-            title={theme === 'dark' ? 'Modo pergaminho' : 'Grimório amaldiçoado (escuro)'}
-            aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            onClick={() => setTheme(toggleTheme())}
-          >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
-          </button>
-
           <PageVolumeControl />
 
           <button type="button" className="btn btn-small" onClick={logout}>
