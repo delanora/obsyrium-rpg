@@ -240,7 +240,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .dice-mode { transition: none; } }
 
-/* Textura azul quase preta fornecida pelo usuário, com inscrições em latão. */
+/* Obsidiana com textura fornecida pelo usuário, reflexos claros e inscrições em latão. */
 .common-dice-pool { position: absolute; inset: 0; display: grid; place-items: center; }
 .common-die-slot { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
 .dice-stage.is-standard-roll .common-die-slot .ddie {
@@ -255,8 +255,8 @@
 }
 .ddie.is-resin .ddie-face {
   color: #e2c381;
-  box-shadow: inset 0 0 16px #00081288, inset 0 0 2px #8194a155;
-  border: 1px solid #64737e55;
+  box-shadow: inset 0 0 16px #08060c66, inset 0 0 3px #c2b9cb88;
+  border: 1px solid #9e93ab66;
 }
 .ddie.is-resin .ddie-num {
   color: #e2c381;

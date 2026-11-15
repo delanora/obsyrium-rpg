@@ -109,10 +109,11 @@ export function Die3D({
                     height: face.size,
                     clipPath: face.clipPath,
                     transform: face.transform,
+                    backgroundBlendMode: resina ? 'normal, normal, luminosity, normal' : undefined,
                     background: textura
                       ? OBSIDIANA
                       : resina
-                        ? `linear-gradient(145deg, rgb(72 91 103 / ${.12 + shade * .2}), rgb(0 4 9 / ${.55 - shade * .2})), url('/dice-tray/textura-dados-escura.png') ${face.key * 19}px ${face.key * 13}px / 112px 104px repeat, #10191f`
+                        ? `radial-gradient(ellipse at 24% 12%, rgb(215 210 221 / ${.16 + shade * .26}), transparent 58%), linear-gradient(145deg, rgb(113 107 121 / ${.25 + shade * .25}), rgb(3 2 5 / .38)), url('/dice-tray/textura-dados-escura.png') ${face.key * 19}px ${face.key * 13}px / 112px 104px repeat, #29252e`
                         : `linear-gradient(150deg, hsl(38 ${saturation}% ${Math.min(92, base + 8)}%), hsl(33 ${saturation - 4}% ${Math.max(30, base - 12)}%))`,
                   }}
                 >
