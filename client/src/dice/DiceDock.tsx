@@ -187,7 +187,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                   <div className="dice-ring-inner">
                     <div className="dice-ring-floor">
                       {deathSave ? (
-                        <DeathSaveRoll value={result?.dice[0]?.value ?? null} rolling={rolling} settled={settled} />
+                        <DeathSaveRoll audioRollId={result?.id} value={result?.dice[0]?.value ?? null} rolling={rolling} settled={settled} />
                       ) : (
                         <CommonDicePool pool={pool} result={result} rolling={rolling} settled={settled} extraD20={extraD20} removeDie={removeDie} />
                       )}

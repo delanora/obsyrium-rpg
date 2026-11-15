@@ -83,12 +83,18 @@ export function simularBandeja(inicio: PoseDado[], raio: number, duracaoMs: numb
   const passos = Math.ceil(duracaoMs / 1000 * 120);
   const dt = duracaoMs / 1000 / passos / 4;
   let impactos = 0;
+  const contatos: { atMs: number; intensidade: number }[] = [];
   for (let quadro = 1; quadro <= passos; quadro += 1) {
     const progresso = quadro / passos;
     for (let subpasso = 0; subpasso < 4; subpasso += 1) {
-      impactos += avancarCorpos(corpos, raio, dt, progresso < .45 ? .6 : 6.5);
+      const choque = avancarCorpos(corpos, raio, dt, progresso < .45 ? .6 : 6.5);
+      impactos += choque;
+      if (choque > 0) {
+        const velocidade = Math.sqrt(corpos.reduce((sum, c) => sum + c.vx * c.vx + c.vy * c.vy, 0) / Math.max(1, corpos.length));
+        contatos.push({ atMs: ((quadro - 1) + (subpasso + 1) / 4) / passos * duracaoMs, intensidade: Math.min(1, velocidade / 3.8) });
+      }
     }
     quadros.push(corpos.map(c => ({ x: c.x, y: c.y })));
   }
-  return { quadros, impactos };
+  return { quadros, impactos, contatos };
 }

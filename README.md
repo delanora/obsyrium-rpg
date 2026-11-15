@@ -1335,7 +1335,7 @@ A apresentação é **efêmera** (não vai para o banco): vive na memória do se
 
 ## 🎲 Janela de dados
 
-A bandeja usa sons de dados reais extraídos da referência enviada para o projeto, com variações e início sincronizado ao contato com a superfície. O efeito também acompanha a prévia dos espectadores e respeita o mudo global.
+A bandeja usa sons de dados reais extraídos da referência enviada para o projeto, com variações e impactos curtos vinculados aos contatos da trajetória visual, em vez de uma rolagem gravada inteira sobreposta à animação. O efeito também acompanha a prévia dos espectadores e respeita o mudo global.
 
 Durante o combate, o Mestre pode usar **botão direito no token → Solicitar teste**, escolher perícia, atributo ou salvaguarda e informar a **CD**. O pedido fica no bloco **Testes** do participante e pode ser rolado na bandeja, com os bônus atuais calculados no servidor. O Mestre acompanha todos os pedidos e pode cancelar uma solicitação; os jogadores recebem apenas os próprios. O resultado e a comparação com a CD entram no Registro, sem consumir ações.
 

@@ -1,11 +1,16 @@
 /** Recortes da referência enviada pelo usuário; o áudio não interfere no resultado. */
+export interface DiceSoundCue { atMs: number; strength: number }
+
 export interface DiceSoundOptions {
+  rollId?: string;
+  animationStartMs?: number;
+  cues?: DiceSoundCue[];
   durationMs?: number;
   contactDelayMs?: number;
   diceCount?: number;
 }
 
-let decoded: Promise<{ rolls: AudioBuffer[]; impact: AudioBuffer }> | null = null;
+let decoded: Promise<{ rolls: AudioBuffer[]; impacts: AudioBuffer[] }> | null = null;
 let generation = 0;
 const activeSources = new Set<AudioBufferSourceNode>();
 
@@ -16,8 +21,8 @@ export function prepareDiceSound(audio: AudioContext) {
       if (!response.ok) throw new Error('Som dos dados indisponível.');
       return audio.decodeAudioData(await response.arrayBuffer());
     };
-    decoded = Promise.all([load('rolagem-1'), load('rolagem-2'), load('rolagem-3'), load('rolagem-4'), load('impacto')])
-      .then(([a, b, c, d, impact]) => ({ rolls: [a, b, c, d], impact }))
+    decoded = Promise.all([load('rolagem-1'), load('rolagem-2'), load('rolagem-3'), load('rolagem-4'), load('contato-1'), load('contato-2'), load('contato-3'), load('contato-4')])
+      .then(([a, b, c, d, ...impacts]) => ({ rolls: [a, b, c, d], impacts }))
       .catch(error => { decoded = null; throw error; });
   }
   return decoded;
@@ -41,9 +46,12 @@ export async function playRecordedDice(audio: AudioContext, options: DiceSoundOp
   if (isMuted() || currentGeneration !== generation || audio.state !== 'running') return;
   const count = Math.max(1, options.diceCount ?? 1);
   const volume = Math.min(1, .72 + Math.log2(count + 1) * .08);
-  const end = start + duration;
+  const synced = options.animationStartMs !== undefined;
+  const audioAt = (ms: number) => synced ? audioTimeForPerformance(audio, options.animationStartMs! + ms) : start + ms / 1000;
+  const end = audioAt(duration * 1000);
 
-  const play = (buffer: AudioBuffer, target: number, peak: number) => {
+  const play = (buffer: AudioBuffer, target: number, peak: number, contactOnly = false) => {
+    if (contactOnly && audio.currentTime - target > .035) return;
     if (isMuted()) return;
     const at = Math.max(audio.currentTime, target);
     // Se o carregamento atrasou, acompanha a animação atual sem repetir o começo.
@@ -60,17 +68,30 @@ export async function playRecordedDice(audio: AudioContext, options: DiceSoundOp
     gain.gain.setValueAtTime(peak * volume, at + Math.max(.002, remaining - .012));
     gain.gain.linearRampToValueAtTime(0, at + remaining);
     source.connect(gain).connect(audio.destination);
-    source.onended = () => { activeSources.delete(source); source.disconnect(); gain.disconnect(); };
-    activeSources.add(source);
+    trackDiceSource(source, () => { source.disconnect(); gain.disconnect(); });
     source.start(at, offset);
     source.stop(at + remaining);
   };
 
-  play(samples.rolls[Math.floor(Math.random() * samples.rolls.length)], start + contact, .24);
-  // Pequenos contatos cada vez mais discretos acompanham a desaceleração.
-  if (duration - contact > 1) {
-    [ .45, .63, .79, .90 ].forEach((progress, index) => {
-      play(samples.impact, start + contact + (duration - contact) * progress, .07 * Math.pow(.65, index));
-    });
+  if (options.cues) {
+    for (const cue of options.cues) {
+      play(samples.impacts[Math.floor(Math.random() * samples.impacts.length)], audioAt(cue.atMs), .24 * cue.strength, true);
+    }
+  } else {
+    play(samples.rolls[Math.floor(Math.random() * samples.rolls.length)], start + contact, .24);
   }
+}
+
+/** Converte o relógio visual em tempo de saída de áudio, compensando o dispositivo. */
+export function audioTimeForPerformance(audio: AudioContext, performanceMs: number): number {
+  const timestamp = audio.getOutputTimestamp?.();
+  if (timestamp && timestamp.performanceTime && timestamp.contextTime !== undefined) {
+    return timestamp.contextTime + (performanceMs - timestamp.performanceTime) / 1000;
+  }
+  return audio.currentTime + (performanceMs - performance.now()) / 1000 - (audio.baseLatency || 0) - (audio.outputLatency || 0);
+}
+
+export function trackDiceSource(source: AudioBufferSourceNode, cleanup: () => void = () => {}) {
+  activeSources.add(source);
+  source.onended = () => { activeSources.delete(source); cleanup(); };
 }

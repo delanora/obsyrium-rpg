@@ -1,4 +1,4 @@
-import { playRecordedDice, prepareDiceSound, stopDiceSound, type DiceSoundOptions } from './dice/diceSound';
+import { playRecordedDice, prepareDiceSound, stopDiceSound, audioTimeForPerformance, trackDiceSource, type DiceSoundOptions } from './dice/diceSound';
 /**
  * Efeitos sonoros da mesa.
  *
@@ -11,6 +11,7 @@ const MUTE_KEY = 'grimorio.muted';
 
 let context: AudioContext | null = null;
 let muteVersion = 0;
+const playedDiceRolls = new Set<string>();
 let muted = typeof localStorage !== 'undefined' && localStorage.getItem(MUTE_KEY) === 'true';
 
 type AudioContextCtor = typeof AudioContext;
@@ -78,7 +79,7 @@ function playTone(
 }
 
 /** Estalo curto de ruído — o "clique" dos dados batendo na mesa. */
-function playClick(audio: AudioContext, at: number, duration: number, peak: number): void {
+function playClick(audio: AudioContext, at: number, duration: number, peak: number, tracked = false): void {
   const size = Math.max(1, Math.floor(audio.sampleRate * duration));
   const buffer = audio.createBuffer(1, size, audio.sampleRate);
   const data = buffer.getChannelData(0);
@@ -99,11 +100,17 @@ function playClick(audio: AudioContext, at: number, duration: number, peak: numb
   gain.gain.setValueAtTime(peak, at);
 
   source.connect(filter).connect(gain).connect(audio.destination);
+  if (tracked) trackDiceSource(source, () => { source.disconnect(); filter.disconnect(); gain.disconnect(); });
   source.start(at);
 }
 
 /** Som gravado de dados na bandeja; conserva uma alternativa sintetizada sem rede. */
 export function playDice(options: DiceSoundOptions = {}): void {
+  if (options.rollId) {
+    if (playedDiceRolls.has(options.rollId)) return;
+    playedDiceRolls.add(options.rollId);
+    if (playedDiceRolls.size > 200) playedDiceRolls.delete(playedDiceRolls.values().next().value!);
+  }
   if (muted) return;
   const audio = getContext();
   if (!audio) return;
@@ -111,12 +118,20 @@ export function playDice(options: DiceSoundOptions = {}): void {
   const version = muteVersion;
   void playRecordedDice(audio, options, () => muted).catch(() => {
     if (muted || version !== muteVersion || audio.state !== 'running') return;
+    if (options.cues) {
+      for (const cue of options.cues) {
+        const target = options.animationStartMs !== undefined ? audioTimeForPerformance(audio, options.animationStartMs + cue.atMs) : requestedAt + cue.atMs / 1000;
+        if (audio.currentTime - target > .035) continue;
+        playClick(audio, Math.max(audio.currentTime, target), .04, .05 * cue.strength, true);
+      }
+      return;
+    }
     const end = requestedAt + (options.durationMs ?? 550) / 1000;
     const now = Math.max(audio.currentTime, requestedAt + (options.contactDelayMs ?? 0) / 1000);
     if (now + .12 > end) return;
     for (let i = 0; i < 6; i += 1) {
       const at = now + i * .045 + Math.random() * .02;
-      if (at + .04 <= end) playClick(audio, at, .04, .05);
+      if (at + .04 <= end) playClick(audio, at, .04, .05, true);
     }
   });
 }

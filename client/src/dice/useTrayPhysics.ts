@@ -1,3 +1,5 @@
+import { playDice } from '../sound';
+import { traySoundTimeline } from './traySoundTimeline';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { prepararBandeja, simularBandeja, type PoseDado } from './trayPhysics';
 import { prepararRolamento, matrizDoRolamento } from './trayRolling';
@@ -26,11 +28,12 @@ export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: 
     const slots = Array.from(arena.querySelectorAll<HTMLElement>('.common-die-slot'));
     const sombras = Array.from(arena.querySelectorAll<HTMLElement>('.common-die-shadow'));
     const animacoes: Animation[] = [];
+    const reduzirMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const poses = simulacao ? simulacao.quadros[simulacao.quadros.length - 1] : preparacao.poses;
     if (simulacao) {
       const duracao = rollAnimationMs();
       arena.dataset.impacts = String(simulacao.impactos);
-      if (animar && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (animar && !reduzirMovimento) {
         const contato = COMMON_THROW_MS / duracao;
         slots.forEach((slot, i) => {
           const inicial = preparacao.poses[i];
@@ -62,7 +65,15 @@ export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: 
         });
       }
     }
-    if (startedAt && animar) animacoes.forEach(a => { a.currentTime = Math.max(0, Date.now() - startedAt); });
+    const elapsed = startedAt ? Math.max(0, Date.now() - startedAt) : 0;
+    const visualStart = performance.now() - elapsed;
+    if (animar) animacoes.forEach(animation => { animation.startTime = visualStart; });
+    if (animar && simulacao && rolagemId && quantidade > 0) {
+      playDice(reduzirMovimento ? { rollId: rolagemId } : {
+        rollId: rolagemId, animationStartMs: visualStart, durationMs: rollAnimationMs(), diceCount: quantidade,
+        cues: traySoundTimeline(simulacao, preparacao.raio, rollAnimationMs() - COMMON_THROW_MS),
+      });
+    }
     // A posição final fica como base da animação; ao terminar não há retorno
     // ao lugar de partida nem travessia de outra peça para "encaixar" o dado.
     slots.forEach((slot, i) => {
@@ -73,6 +84,6 @@ export function useTrayPhysics(quantidade: number, animar: boolean, rolagemId?: 
       if (!animar) posesDeEspera.current[i] = slot.querySelector<HTMLElement>('.ddie-orient')?.style.transform ?? '';
     });
     return () => { observador.disconnect(); animacoes.forEach(a => a.cancel()); };
-  }, [preparacao, simulacao, rolamento, animar, startedAt]);
+  }, [preparacao, simulacao, rolamento, animar, startedAt, rolagemId, quantidade]);
   return elemento;
 }

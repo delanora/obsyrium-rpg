@@ -1,5 +1,3 @@
-import { playDice } from '../sound';
-import { COMMON_THROW_MS } from './rollAnimation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DiceRollDto, TableRollActivePayload } from '../types';
 import type { RemoteBoard } from './useDiceRoller';
@@ -69,7 +67,6 @@ export function useRemoteRolls(ownUserId: string) {
     if(roll.actorUserId===ownUserId || roll.isPrivate || roll.audience==='masters' || roll.kind==='creation')return;
     const existing=current.current.get(roll.actorUserId);
     if(existing?.result?.id===roll.id)return;
-    if (!roll.autoFail) playDice({ durationMs: rollAnimationMs(roll.kind), contactDelayMs: roll.kind === 'death-save' ? 0 : COMMON_THROW_MS, diceCount: roll.dice.length });
     const cached=metadata.current.get(roll.actorUserId);
     const startedAt=Date.now();
     sequence.current = Math.max(startedAt, sequence.current + 1);

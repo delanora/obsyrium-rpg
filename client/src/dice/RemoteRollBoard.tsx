@@ -113,7 +113,7 @@ export function RemoteRollBoard({ board, onClose, presentation = 'dialog' }: Rem
           <div className="dice-ring-inner">
             <div className="dice-ring-floor">
               {deathSave ? (
-                <DeathSaveRoll value={result?.dice[0]?.value ?? null} rolling={rolling} settled={settled} startedAt={board.startedAt} />
+                <DeathSaveRoll audioRollId={result?.id} value={result?.dice[0]?.value ?? null} rolling={rolling} settled={settled} startedAt={board.startedAt} />
               ) : (
                 <CommonDicePool pool={board.pool} result={result} rolling={rolling} settled={settled} extraD20={extraD20} startedAt={board.startedAt} />
               )}
