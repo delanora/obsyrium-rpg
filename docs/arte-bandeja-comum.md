@@ -3,7 +3,7 @@
 Arte final: `client/public/dice-tray/moldura-reconstruida.png` (1254 × 1254, RGBA).
 Modo: ferramenta integrada `image_gen`, com fundo e abertura central transparentes.
 A geração redesenhou a textura e os ornamentos; não aumentou as dimensões em pixels.
-A moldura anterior foi preservada. A superfície original permanece no projeto,
+A moldura anterior foi preservada. A superfície atual usa `client/public/dice-tray/disco-mistico.png`, fornecida pelo usuário,
 centralizada em uma camada circular opaca sob a abertura, sem a faixa do painel.
 
 ## Prompt final da arte selecionada
