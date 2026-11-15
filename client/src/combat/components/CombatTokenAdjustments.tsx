@@ -1,3 +1,4 @@
+import { RequestCombatTestPanel } from './RequestCombatTestPanel';
 import type { CreatureAbility } from '../../../../src/modules/shared/creature-abilities';
 import { CombatHeightPanel } from './CombatHeightPanel';
 import { CreatureAbilitiesPanel } from './CreatureAbilitiesPanel';
@@ -14,7 +15,7 @@ export function CombatTokenAdjustments({ combat, combatant, busy, effectsRefresh
   onPrepareArea?: (combatantId: string, definition: CreatureAbility, multiattackId?:string) => void;
   onRun: (action: () => Promise<CombatDto>) => void;
 }) {
-  const [tab, setTab] = useState<'conditions' | 'hp' | 'economy' | 'relation' | 'abilities' | 'height'>('conditions');
+  const [tab, setTab] = useState<'conditions' | 'hp' | 'economy' | 'relation' | 'abilities' | 'height' | 'tests'>('conditions');
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [amount, setAmount] = useState('5');
   const specificHostileIds = (combatant.hostileToIds ?? []).filter(id => !(combatant.kind === 'CHARACTER' && combat.combatants.find(unit => unit.id === id)?.kind === 'CHARACTER'));
@@ -23,12 +24,13 @@ export function CombatTokenAdjustments({ combat, combatant, busy, effectsRefresh
   const valid = Number.isInteger(value) && value >= 1 && value <= 9999;
   return <>
     <div className="combat-token-menu-tabs" role="group" aria-label="Tipo de ajuste">
-      {([['conditions', 'Condições e efeitos'], ['hp', 'Vida'], ['economy', 'Economia'], ['relation', 'Relação'], ['height', 'Altura'], ...(combatant.creatureId ? [['abilities', 'Ações'] as const] : [])] as const).map(([key, label]) =>
+      {([['conditions', 'Condições e efeitos'], ['hp', 'Vida'], ['economy', 'Economia'], ['relation', 'Relação'], ['height', 'Altura'], ['tests', 'Solicitar teste'], ...(combatant.creatureId ? [['abilities', 'Ações'] as const] : [])] as const).map(([key, label]) =>
         <button key={key} type="button" className={tab === key ? 'active' : ''}
           aria-pressed={tab === key} disabled={key === 'economy' && combat.status !== 'ACTIVE'}
           title={key === 'economy' && combat.status !== 'ACTIVE' ? 'Disponível após a iniciativa.' : undefined} onClick={() => setTab(key)}>{label}</button>)}
     </div>
     <div className="combat-token-menu-body">
+      {tab === 'tests' ? <RequestCombatTestPanel combat={combat} combatant={combatant} busy={busy} onRun={onRun} /> : null}
       {tab === 'height' ? <CombatHeightPanel key={`${combatant.id}:${combat.version}`} combat={combat} combatant={combatant} busy={busy} onRun={onRun} /> : null}
       {tab === 'abilities' ? <CreatureAbilitiesPanel combat={combat} combatant={combatant} busy={busy} onRun={onRun} onPrepareArea={onPrepareArea} /> : null}
       {tab === 'conditions' ? <MechanicalPanel entity={{ kind: 'combatant', id: combatant.id }}

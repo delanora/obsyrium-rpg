@@ -1,3 +1,4 @@
+import { cancelCombatTest } from './combatApi';
 import type { RollContext } from '../dice/useDiceRoller';
 import { LegendaryActionsPanel } from './components/LegendaryActionsPanel';
 import type { AreaPreviewRequest } from './grid/areaPreviewGeometry';
@@ -719,6 +720,14 @@ export function CombatTracker({
    * dados e resultado são do servidor.
    */
   async function rollSpellSave(card: CombatResolutionCardDto, selected: string[], visibility: 'public' | 'private' | null): Promise<void> {
+    if (onRollTest && card.requestedTest && card.reference.entity && card.ability) {
+      onRollTest({ kind: card.requestedTest.kind === 'save' ? 'save' : 'skill',
+        label: `${card.title} — CD ${card.requestedTest.dc}`, bonus: 0,
+        entity: card.reference.entity, ability: card.ability,
+        pendingCombatTestId: card.requestedTest.id, expectedTestVersion: card.requestedTest.version,
+        selectedEffectModifiers: selected, visibility: visibility ?? 'public' });
+      return;
+    }
     if (onRollTest && card.reference.pendingId && card.reference.entity && card.ability) {
       onRollTest({ kind: 'save', label: `${card.title} — ${card.target.name}`,
         bonus: 0, entity: card.reference.entity, ability: card.ability,
@@ -751,7 +760,8 @@ export function CombatTracker({
     if (resolutionBusyId) return;
     setResolutionBusyId(card.id);
     try {
-      await declineSpellSaveCard(card);
+      if (card.requestedTest) onCombatChange(await cancelCombatTest(combat, card.requestedTest.id));
+      else await declineSpellSaveCard(card);
       await refreshResolutions();
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Falha ao recusar a salvaguarda.');

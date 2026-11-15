@@ -10,6 +10,8 @@ import { z } from 'zod';
  * token (e da ficha do usuário).
  */
 export const tableRollSchema = z.object({
+  pendingCombatTestId: z.string().min(1).max(64).optional(),
+  expectedTestVersion: z.number().int().nonnegative().optional(),
   entity: entitySchema.optional(),
   ability: z.enum(ABILITY_KEYS).optional(),
   /** Cada dado do pool, uma entrada por dado (permite empilhar d6, d6...). */

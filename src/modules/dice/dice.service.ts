@@ -1,3 +1,4 @@
+import { resolveCombatTest } from '../combat/requested-tests.service.js';
 import { PublicRollBoards } from './public-roll-boards.js';
 import { deathSavePresentationOf } from './death-save-presentation.js';
 import { entityHasWarCaster } from '../mechanical/war-caster.service.js';
@@ -813,7 +814,12 @@ async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput): P
   return roll;
 }
 
-export async function rollTableDice(actor: DiceActor, input: TableRollInput): Promise<DiceRollDto> {
+export async function rollTableDice(actor: DiceActor, input: TableRollInput, deferPublication = false): Promise<DiceRollDto> {
+  if (input.pendingCombatTestId) {
+    const outcome = await resolveCombatTest(actor, input, canonical => rollTableDice(actor, canonical, true));
+    if (!outcome.replayed) { history = [outcome.roll, ...history].slice(0, HISTORY_LIMIT); publish(outcome.roll, actor); }
+    return outcome.roll;
+  }
   const kind: DiceRollKind = input.kind ?? 'free';
 
   // Teste contra a Morte (Fase 6.3): caminho PRÓPRIO e server-authoritative.
@@ -957,8 +963,7 @@ export async function rollTableDice(actor: DiceActor, input: TableRollInput): Pr
   // Guarda o resultado no tabuleiro anunciado: quem chegar depois (recarga da
   // página, reconexão) vê o mesmo total, e não o dado parado sem resultado.
 
-  history = [roll, ...history].slice(0, HISTORY_LIMIT);
-  publish(roll, actor);
+  if (!deferPublication) { history = [roll, ...history].slice(0, HISTORY_LIMIT); publish(roll, actor); }
 
   return roll;
 }

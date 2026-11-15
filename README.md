@@ -1335,6 +1335,8 @@ A apresentação é **efêmera** (não vai para o banco): vive na memória do se
 
 ## 🎲 Janela de dados
 
+Durante o combate, o Mestre pode usar **botão direito no token → Solicitar teste**, escolher perícia, atributo ou salvaguarda e informar a **CD**. O pedido fica no bloco **Testes** do participante e pode ser rolado na bandeja, com os bônus atuais calculados no servidor. O Mestre acompanha todos os pedidos e pode cancelar uma solicitação; os jogadores recebem apenas os próprios. O resultado e a comparação com a CD entram no Registro, sem consumir ações.
+
 Na bandeja comum, clique em um dado para removê-lo ou dê duplo clique para retirar todas as cópias daquele tipo. Duplo clique numa parte vazia da bandeja remove todos os dados escolhidos. Dados obrigatórios de testes permanecem fixos. O botão **?**, ao lado de fechar, explica os comandos por hover, foco ou clique.
 
 Os botões do bloco **Testes** abrem a bandeja para as salvaguardas pendentes de magias e habilidades. Cada jogador rola pela própria ficha; o Mestre pode rolar pelos alvos autorizados. O servidor aplica os bônus e modificadores suportados e resolve a pendência; a bandeja mostra o resultado e mantém as escolhas de efeitos opcionais.

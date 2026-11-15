@@ -231,7 +231,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                     </p>
                   )}
 
-                  {settled && result?.lucky && !context?.pendingEffectSaveId && !context?.pendingConcentrationSaveId ? (
+                  {settled && result?.lucky && !context?.pendingCombatTestId && !context?.pendingEffectSaveId && !context?.pendingConcentrationSaveId ? (
                     <button
                       type="button"
                       className="dice-lucky"
@@ -243,7 +243,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                   ) : null}
                 </div>
 
-                {deathSave || context?.pendingEffectSaveId || context?.pendingConcentrationSaveId ? null : (
+                {deathSave || context?.pendingCombatTestId || context?.pendingEffectSaveId || context?.pendingConcentrationSaveId ? null : (
                   <div className="dice-picker" role="group" aria-label="Tipos de dado">
                     {DICE_TYPES.map((sides) => (
                       <button
@@ -296,7 +296,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                   <button
                     type="button"
                     className={deathSave ? 'btn btn-primary dice-submit' : 'dice-mode dice-mode-roll dice-submit'}
-                    disabled={rolling || pool.length === 0 || Boolean(result && (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId))}
+                    disabled={rolling || pool.length === 0 || Boolean(result && (context?.pendingCombatTestId || context?.pendingEffectSaveId || context?.pendingConcentrationSaveId))}
                     onClick={() => void submit()}
                   >
                     <Icon name="die" size={15} /> {rolling ? 'Rolando...' : 'Rolar'}

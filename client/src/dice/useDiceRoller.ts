@@ -55,6 +55,8 @@ export interface RemoteBoard {
 
 /** Contexto da rolagem aberta (livre ou de perícia/salvaguarda). */
 export interface RollContext {
+  pendingCombatTestId?: string;
+  expectedTestVersion?: number;
   /** Pendência autorizada: o servidor deriva atributo, CD, bônus e modo. */
   pendingEffectSaveId?: string;
   visibility?: 'public' | 'private';
@@ -362,23 +364,23 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   const revisaoDoPool = useRef(0);
 
   const addDie = useCallback((sides: number) => {
-    if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
+    if (context?.pendingCombatTestId || context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
     revisaoDoPool.current += 1;
     if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
     setPhase('idle');
     setResult(null);
     setPool((prev) => [...prev, { sides, locked: false }]);
-  }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
+  }, [context?.pendingCombatTestId, context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
 
   const removeDie = useCallback((index: number | number[]) => {
-    if (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
+    if (context?.pendingCombatTestId || context?.pendingEffectSaveId || context?.pendingConcentrationSaveId) return;
     revisaoDoPool.current += 1;
     if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
     setPhase('idle');
     setResult(null);
     const indices = new Set(Array.isArray(index) ? index : [index]);
     setPool((prev) => prev.filter((die, position) => !indices.has(position) || die.locked));
-  }, [context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
+  }, [context?.pendingCombatTestId, context?.pendingEffectSaveId, context?.pendingConcentrationSaveId]);
 
   const setAdvantage = useCallback((value: boolean) => {
     setAdvantageValue(value);
@@ -391,7 +393,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   }, []);
 
   const submit = useCallback(async () => {
-    if (phase === 'tumbling' || pool.length === 0 || (result && (context?.pendingEffectSaveId || context?.pendingConcentrationSaveId))) return;
+    if (phase === 'tumbling' || pool.length === 0 || (result && (context?.pendingCombatTestId || context?.pendingEffectSaveId || context?.pendingConcentrationSaveId))) return;
 
     const clientId = `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     myClientId.current = clientId;
@@ -424,6 +426,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
         clientId,
         entity: context?.entity,
         ability: context?.ability,
+        ...(context?.pendingCombatTestId ? { pendingCombatTestId: context.pendingCombatTestId, expectedTestVersion: context.expectedTestVersion } : {}),
         ...(context?.pendingEffectSaveId ? { pendingEffectSaveId: context.pendingEffectSaveId } : {}),
         ...(isMaster ? { visibility: isPrivate ? 'private' as const : 'public' as const } : {}),
         ...(context?.pendingConcentrationSaveId

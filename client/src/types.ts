@@ -3051,6 +3051,8 @@ export interface TableRollActiveRequest {
 
 /** Pedido de rolagem enviado ao servidor. */
 export interface TableRollRequest {
+  pendingCombatTestId?: string;
+  expectedTestVersion?: number;
   pendingEffectSaveId?: string;
   entity?: MechanicalEntity;
   ability?: AbilityKey;
@@ -3366,7 +3368,7 @@ export interface EffectsUpdatedPayload {
  * apresentação. O card NÃO contém a regra: ele aponta para a pendência
  * persistida (`PendingEffectSave`) ou para o ciclo de morte real.
  */
-export type CombatResolutionKind = 'spell-saving-throw' | 'ability-saving-throw' | 'death-saving-throw';
+export type CombatResolutionKind = 'spell-saving-throw' | 'ability-saving-throw' | 'death-saving-throw' | 'requested-test';
 
 export type CombatResolutionStatus =
   | 'pending'
@@ -3384,6 +3386,7 @@ export interface CombatResolutionActionDto {
 }
 
 export interface CombatResolutionCardDto {
+  requestedTest?: { id: string; version: number; kind: 'skill' | 'ability' | 'save'; key: string; dc: number };
   id: string;
   kind: CombatResolutionKind;
   status: CombatResolutionStatus;

@@ -58,7 +58,7 @@ export function ResolutionCard({
   const [options, setOptions] = useState<EffectOptionalModifierDto[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
 
-  const isSpell = card.kind === 'spell-saving-throw' || card.kind === 'ability-saving-throw';
+  const isSpell = card.kind !== 'death-saving-throw';
   const entity = card.reference.entity;
   const ability = card.ability;
 
@@ -73,7 +73,7 @@ export function ResolutionCard({
         live = false;
       };
     }
-    const query = new URLSearchParams({ roll: 'save', ability });
+    const query = new URLSearchParams({ roll: card.requestedTest && card.requestedTest.kind !== 'save' ? 'check' : 'save', ability });
     api<{ options: EffectOptionalModifierDto[] }>(
       `/api/dice/options/${entity.kind}/${entity.id}?${query.toString()}`,
     )
@@ -112,7 +112,7 @@ export function ResolutionCard({
       ) : null}
 
       <p className="resolution-card-meta">
-        {isSpell && ability ? `Salvaguarda de ${ABILITY_LABELS[ability]}` : 'Salvaguarda contra a Morte'}
+        {isSpell && ability ? card.requestedTest ? `CD ${card.requestedTest.dc}` : `Salvaguarda de ${ABILITY_LABELS[ability]}` : 'Salvaguarda contra a Morte'}
         {ongoing ? ' — fim do turno' : ''}
       </p>
 
@@ -164,7 +164,7 @@ export function ResolutionCard({
                   ? 'Rolar privado'
                   : action.visibility === 'public'
                     ? 'Rolar público'
-                    : 'Rolar salvaguarda'}
+                    : card.requestedTest ? 'Rolar teste' : 'Rolar salvaguarda'}
               </button>
             ))
           : rollActions.map((action) => (
@@ -184,10 +184,10 @@ export function ResolutionCard({
             type="button"
             className="btn btn-small"
             disabled={busy}
-            title="O efeito continua ativo; o próximo turno oferece outra chance."
+            title={card.requestedTest ? 'Cancelar este pedido sem rolar.' : 'O efeito continua ativo; o próximo turno oferece outra chance.'}
             onClick={() => onDecline(card)}
           >
-            Não tentar neste turno
+            {card.requestedTest ? 'Cancelar solicitação' : 'Não tentar neste turno'}
           </button>
         ) : null}
       </div>

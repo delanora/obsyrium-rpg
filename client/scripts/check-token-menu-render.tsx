@@ -1,6 +1,8 @@
 /** Menu do token: alvo, condições, PV, teclado e fechamento, sem rede real. */
 import { JSDOM } from 'jsdom';
 import assert from 'node:assert/strict';
+import { register } from 'node:module';
+register('data:text/javascript,'+encodeURIComponent("export async function load(url,context,next){return url.endsWith('.css')?{format:'module',source:'export default {}',shortCircuit:true}:next(url,context)}"),import.meta.url);
 const dom = new JSDOM('<html><body></body></html>', { url: 'http://localhost', pretendToBeVisual: true });
 const globals = globalThis as unknown as Record<string, unknown>;
 for (const name of ['window', 'document', 'HTMLElement', 'SVGElement', 'Element', 'Node', 'Event',
@@ -37,7 +39,8 @@ globals.fetch = async (url: string, options: any = {}) => {
     assert.equal(body.entity.id,'target');
     state=mechanicalStateOf({...state,conditions:[{id:'condition-fixture',condition:body.condition,sourceType:'manual',appliedAt:new Date().toISOString()}]});
     result={mechanical:dto()};
-  } else if(url==='/api/combat/hp') result={combat};
+  } else if(url.endsWith('/tests')) result={combat};
+  else if(url==='/api/combat/hp') result={combat};
   else if(url.endsWith('/side')) result={combat};
   else if(url.endsWith('/economy/override')) result={combat};
   else return {ok:false,status:404,text:async()=>JSON.stringify({message:'Leitura auxiliar indisponível na fixture.'})};
@@ -116,6 +119,18 @@ check('nenhum comando assume ou avança turno',!calls.some(call=>/next-turn|atta
 const { MasterEconomyPanel } = await import('../src/combat/components/MasterEconomyPanel');
 await act(async()=>root.render(h(MasterEconomyPanel,{combat,combatant:{...(target as object),turnEconomy:{actionsGranted:2,actionsUsed:0,bonusActionUsed:false,reactionAvailable:true}} as never,busy:false,expanded:true,onRun:()=>{}})));
 check('economia atualizada preenche os mesmos ícones sem trocar o turno', document.querySelectorAll('.token-economy-state .is-ready').length===4 && !document.querySelector('.token-economy-state .is-spent'));
+await act(async()=>root.render(h(AuthProvider,null,h(CombatTokenAdjustments,{combat,combatant:target,busy:false,effectsRefresh:0,onRun:action=>{void action()}}))));
+await click(button('Solicitar teste'));
+check('aba oferece CD, categorias e perícias',!!document.querySelector('.requested-tests-panel input[type="number"]')&&document.querySelectorAll('.requested-test-option').length===18);
+const dcField=document.querySelector<HTMLInputElement>('.requested-tests-panel input[type="number"]')!;
+await act(async()=>{
+ Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value')!.set!.call(dcField,'18');
+ dcField.dispatchEvent(new Event('input',{bubbles:true}));
+});
+await click(document.querySelector('[aria-label="Solicitar Furtividade"]')!);
+check('solicitação envia somente tipo, chave, CD, versão e operação para o token escolhido',calls.some(c=>c.url==='/api/combat/combat/participants/target/tests'&&c.body.kind==='skill'&&c.body.key==='stealth'&&c.body.dc===18&&c.body.expectedVersion===7&&typeof c.body.operationId==='string'));
+await click(button('Salvaguardas'));
+check('salvaguardas oferecem os seis atributos',document.querySelectorAll('.requested-test-option').length===6);
 const { CombatGrid } = await import('../src/combat/grid/CombatGrid');
 let inspections=0;
 for(const master of [true,false]) {

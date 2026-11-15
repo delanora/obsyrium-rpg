@@ -219,3 +219,13 @@ export function passLegendaryAction(combat:CombatDto,windowId:string,combatantId
 export function setLegendarySurprise(combat:CombatDto,combatantId:string,surprised:boolean):Promise<CombatDto> {
  return api<{combat:CombatDto}>('/api/combat/legendary/surprise',{method:'POST',body:{...operationFor(combat),combatantId,surprised}}).then(result=>result.combat);
 }
+
+/** Solicitação administrativa: sem consumo de economia e sem resultado enviado pelo cliente. */
+export function requestCombatTest(combat: CombatDto, combatantId: string, kind: 'skill' | 'ability' | 'save', key: string, dc: number): Promise<CombatDto> {
+  return api<{ combat: CombatDto }>(`/api/combat/${combat.id}/participants/${combatantId}/tests`, { method: 'POST',
+    body: { kind, key, dc, expectedVersion: combat.version, operationId: createOperationId() } }).then(result => result.combat);
+}
+export function cancelCombatTest(combat: CombatDto, requestId: string): Promise<CombatDto> {
+  return api<{ combat: CombatDto }>(`/api/combat/${combat.id}/tests/${requestId}/cancel`, { method: 'POST',
+    body: { expectedVersion: combat.version, operationId: createOperationId() } }).then(result => result.combat);
+}

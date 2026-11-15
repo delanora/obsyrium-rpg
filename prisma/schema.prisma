@@ -971,6 +971,7 @@ enum CombatantKind {
 /// aplicação em `startCombat` continua existindo (caminho rápido) e o erro
 /// P2002 do INSERT é traduzido para o mesmo 409.
 model Combat {
+  testRequests CombatTestRequest[]
   /// Fronteira de fim de turno; não ativa o próximo enquanto o Mestre decide.
   legendaryWindow Json?
   creatureAreaUses CreatureAreaUse[]
@@ -1029,6 +1030,7 @@ model Combat {
 }
 
 model Combatant {
+  testRequests CombatTestRequest[]
   /// Gasto lendário, surpresa inicial e primeiro turno encerrado desta cópia.
   legendaryState Json @default("{}")
   elevationRequests ElevationRequest[]
@@ -1855,4 +1857,23 @@ model CreatureAreaUse {
  pendingSaves PendingEffectSave[]
  @@index([combatId,status])
  @@map("creature_area_uses")
+}
+
+/// Teste genérico solicitado pelo Mestre; não consome economia nem aplica efeitos.
+model CombatTestRequest {
+  id String @id @default(cuid())
+  combatId String
+  combat Combat @relation(fields: [combatId], references: [id], onDelete: Cascade)
+  combatantId String
+  combatant Combatant @relation(fields: [combatantId], references: [id], onDelete: Cascade)
+  kind String
+  key String
+  dc Int
+  status String @default("pending")
+  version Int @default(0)
+  resolutionFingerprint String?
+  result Json?
+  createdAt DateTime @default(now())
+  @@index([combatId, status])
+  @@map("combat_test_requests")
 }

@@ -44,7 +44,9 @@ globals.fetch=async(url:string,options:RequestInit={})=>{
  return new Response(JSON.stringify(value),{status:url==='/api/dice/roll'?201:200});
 };
 localStorage.setItem('grimorio.token','fixture');
-function Harness(){const [combat,update]=useState(serverCombat);return h(AuthProvider,null,h(CombatTracker,{combat,user:viewer,log:[],turnAlert:null,onCombatChange:update,onCombatEnd:()=>{},onError:message=>{reportedErrors.push(message)}}));}
+let requestTray = false;
+const trayContexts: import('../src/dice/useDiceRoller').RollContext[] = [];
+function Harness(){const [combat,update]=useState(serverCombat);return h(AuthProvider,null,h(CombatTracker,{combat,user:viewer,onRollTest:requestTray ? input => trayContexts.push(input) : undefined,log:[],turnAlert:null,onCombatChange:update,onCombatEnd:()=>{},onError:message=>{reportedErrors.push(message)}}));}
 const root=createRoot(document.getElementById('root')!);let checks=0;
 const check=(label:string,ok:unknown)=>{assert.ok(ok,label);checks++;console.log('✔ '+label)};
 const click=async(selector:string)=>{const button=document.querySelector<HTMLButtonElement>(selector);assert.ok(button,selector);await act(async()=>button.click())};
@@ -69,5 +71,16 @@ try {
  await click('.combat-tests-panel .resolution-card-roll');
  check('rolagem reutiliza endpoint existente e remove o card resolvido',calls.some(c=>c.url==='/api/dice/roll'&&c.body.pendingEffectSaveId==='pending-spell')&&!document.querySelector('.combat-tests-panel .resolution-card'));
  check('não consulta formulário legado de salvaguardas da dock',!calls.some(c=>c.url.startsWith('/api/effects/pending/')));
+ requestTray = true;
+ requests=[{...card('spell-saving-throw'), id:'requested', kind:'requested-test', title:'Furtividade', ability:'dexterity',
+   reference:{entity:{kind:'character',id:'sheet'},pendingId:null},
+   requestedTest:{id:'request-1',version:0,kind:'skill',key:'stealth',dc:18},
+   actions:[{kind:'roll',actor:'owner',visibility:null}]}];
+ await act(async()=>{root.render(h(Harness));notifyResolutionRequestsChanged();});
+ const rollsBefore=calls.filter(c=>c.url==='/api/dice/roll').length;
+ await click('.combat-tests-panel .resolution-card-roll');
+ check('teste solicitado abre bandeja sem resolver ao clicar no card',trayContexts.length===1&&calls.filter(c=>c.url==='/api/dice/roll').length===rollsBefore);
+ check('contexto preserva solicitação, versão e atributo, sem bônus do cliente',trayContexts[0].pendingCombatTestId==='request-1'&&trayContexts[0].expectedTestVersion===0&&trayContexts[0].kind==='skill'&&trayContexts[0].ability==='dexterity'&&trayContexts[0].bonus===0);
+ check('perícia consulta efeitos de teste, sem confundir com salvaguarda',calls.some(c=>c.url.includes('roll=check')&&c.url.includes('ability=dexterity')));
  console.log(`✔ ${checks} verificações das salvaguardas no bloco Testes.`);
 } finally {await act(async()=>root.unmount());dom.window.close();}

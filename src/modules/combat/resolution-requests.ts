@@ -1,3 +1,4 @@
+import { requestedTestDefinition, type RequestedTestKind } from '../shared/requested-tests.js';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../lib/http-error.js';
 import { allSpells } from '../shared/spells/index.js';
@@ -30,7 +31,7 @@ import { orderCombatants } from './combat.dto.js';
  */
 
 /** Tipos implementados nesta fase. */
-export type CombatResolutionKind = 'spell-saving-throw' | 'ability-saving-throw' | 'death-saving-throw';
+export type CombatResolutionKind = 'spell-saving-throw' | 'ability-saving-throw' | 'death-saving-throw' | 'requested-test';
 
 /** Status de um card (só `pending` é emitido hoje; os demais são histórico). */
 export type CombatResolutionStatus =
@@ -75,6 +76,7 @@ export interface CombatResolutionCountersDto {
 }
 
 export interface CombatResolutionCardDto {
+  requestedTest?: { id: string; version: number; kind: RequestedTestKind; key: string; dc: number };
   /** Id determinístico do card (nunca aleatório: o mesmo pedido tem o mesmo id). */
   id: string;
   kind: CombatResolutionKind;
@@ -345,6 +347,23 @@ export async function resolutionRequestsForCombat(
     });
   }
 
+  const manual = await prisma.combatTestRequest.findMany({ where: { combatId, status: 'pending' }, orderBy: { createdAt: 'asc' } });
+  for (const request of manual) {
+    const target = visible.find(item => item.combatantId === request.combatantId);
+    const definition = requestedTestDefinition(request.kind as RequestedTestKind, request.key);
+    if (!target || !definition) continue;
+    const isCharacter = target.entity.kind === 'character';
+    requests.push({ id: `requested-test:${request.id}`, kind: 'requested-test', status: 'pending',
+      target: { ...target.entity, name: target.name, ownerUserId: target.ownerUserId },
+      title: definition.label, shortDescription: `Solicitado pelo Mestre — CD ${request.dc}`,
+      ability: definition.ability, phase: null, optional: false, canResolve: true,
+      actions: [ { kind: 'roll', actor: actor.role === 'MASTER' ? 'master' : 'owner', visibility: isCharacter ? null : 'public' },
+        ...(actor.role === 'MASTER' && !isCharacter ? [{ kind: 'roll' as const, actor: 'master' as const, visibility: 'private' as const }] : []),
+        ...(actor.role === 'MASTER' ? [{ kind: 'decline' as const, actor: 'master' as const, visibility: null }] : []) ],
+      presentation: { tone: 'arcane', icon: 'sparkle' }, counters: null,
+      reference: { pendingId: null, entity: target.entity }, createdAt: request.createdAt.toISOString(),
+      requestedTest: { id: request.id, version: request.version, kind: request.kind as RequestedTestKind, key: request.key, dc: request.dc } });
+  }
   return { combatId, requests, at };
 }
 

@@ -418,18 +418,7 @@ export function deriveStats(input: DerivedInput): DerivedStats {
    * se dois valerem para o MESMO teste, vale o MAIOR — nunca a soma.
    */
   function halfProficiencyFor(ability: AbilityKey): number {
-    if (halfProfGrants.length === 0) return 0;
-    const physical =
-      ability === 'strength' || ability === 'dexterity' || ability === 'constitution';
-    const applicable = halfProfGrants.filter(
-      (grant) => grant.target === 'checks' || (grant.target === 'physicalChecks' && physical),
-    );
-    if (applicable.length === 0) return 0;
-
-    return applicable.reduce((top, grant) => {
-      const value = grant.round === 'up' ? Math.ceil(prof / 2) : Math.floor(prof / 2);
-      return Math.max(top, value);
-    }, 0);
+    return halfProficiencyForAbility(halfProfGrants, prof, ability);
   }
 
   const modifiers = {} as Record<AbilityKey, number>;
@@ -559,3 +548,19 @@ export const FEATURE_SOURCE_LABELS: Record<FeatureSource, string> = {
   feat: 'Talento',
   other: 'Outro',
 };
+
+/** Metade da proficiência compartilhada pela ficha e pelos testes solicitados. */
+export function halfProficiencyForAbility(grants: readonly { target: string; round: string }[], proficiency: number, ability: AbilityKey): number {
+  if (grants.length === 0) return 0;
+  const physical =
+    ability === 'strength' || ability === 'dexterity' || ability === 'constitution';
+  const applicable = grants.filter(
+    (grant) => grant.target === 'checks' || (grant.target === 'physicalChecks' && physical),
+  );
+  if (applicable.length === 0) return 0;
+
+  return applicable.reduce((top, grant) => {
+    const value = grant.round === 'up' ? Math.ceil(proficiency / 2) : Math.floor(proficiency / 2);
+    return Math.max(top, value);
+  }, 0);
+}

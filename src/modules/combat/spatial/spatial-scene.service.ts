@@ -44,6 +44,7 @@ import type { SpatialObstacleShape } from './spatial-obstacle.js';
  */
 
 export interface SpatialOperationInput {
+  testRequestId?: string;
   elevationFeet?: number | null;
   bodyHeightFeet?: number | null;
   elevationRequestId?: string;
@@ -167,7 +168,7 @@ export async function runSpatialOperation<T extends { combat: CombatDto }>(
         throw new HttpError('Combate mudou ou não está ativo. Atualize e tente novamente.', 409, 'CONFLICT');
       }
       const combat = await loadCombatById(input.combatId, db);
-        if(type!=='combatant-spatial-visibility')assertLegendaryTurnOpen(combat.legendaryWindow);
+        if(!['combatant-spatial-visibility','combat-test-request','combat-test-cancel'].includes(type))assertLegendaryTurnOpen(combat.legendaryWindow);
       const response = await apply(db, combat);
       await db.combatOperation.create({
         data: {

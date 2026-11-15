@@ -1,3 +1,5 @@
+import { requestedTestSchema } from '../shared/requested-tests.js';
+import { requestCombatTest, cancelCombatTest } from './requested-tests.service.js';
 import { legendaryUseSchema, legendaryPassSchema, legendarySurpriseSchema } from './combat.schema.js';
 import { useLegendaryAction, passLegendaryAction, setLegendarySurprise } from './legendary.service.js';
 import { areaVisualSchema, shareAreaVisual } from './spatial/area-visual.service.js';
@@ -114,6 +116,17 @@ function actorFrom(req: { user?: { sub: string; username: string; role: Role } }
  * contra a Morte é DERIVADO do estado + turno (nunca persistido como card). O
  * servidor filtra por papel/posse antes de responder.
  */
+combatRouter.post('/:combatId/participants/:combatantId/tests', authenticate, requireRole('MASTER'), async (req, res) => {
+  const parsed = requestedTestSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }); return; }
+  res.json(await requestCombatTest(actorFrom(req), String(req.params.combatId), String(req.params.combatantId), parsed.data));
+});
+combatRouter.post('/:combatId/tests/:requestId/cancel', authenticate, requireRole('MASTER'), async (req, res) => {
+  const parsed = combatOperationSchema.pick({ expectedVersion: true, operationId: true }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }); return; }
+  res.json(await cancelCombatTest(actorFrom(req), String(req.params.combatId), String(req.params.requestId), parsed.data));
+});
+
 combatRouter.get('/:combatId/resolution-requests', authenticate, async (req, res) => {
   res.json(await resolutionRequestsForCombat(actorFrom(req), String(req.params.combatId)));
 });

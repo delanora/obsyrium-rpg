@@ -1,0 +1,12 @@
+.combat-token-menu .combat-token-menu-tabs { flex-wrap: wrap; }
+.combat-token-menu .combat-token-menu-tabs button { flex: 1 1 28%; }
+.requested-tests-panel { display: grid; gap: .85rem; }
+.requested-tests-panel p { margin: 0; font-size: .85rem; line-height: 1.5; }
+.requested-tests-panel label { display: grid; gap: .35rem; font-size: .8rem; color: var(--ink-soft); }
+.requested-tests-panel input { width: 100%; box-sizing: border-box; }
+.requested-tests-categories { display: flex; flex-wrap: wrap; gap: .35rem; }
+.requested-tests-categories [aria-pressed='true'] { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.requested-tests-list { display: grid; gap: .35rem; }
+.requested-test-option { display: flex; align-items: center; justify-content: space-between; gap: .65rem; padding: .5rem .65rem; background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; }
+.requested-test-option span { min-width: 0; font-size: .85rem; }
+.requested-test-option button { flex-shrink: 0; }
