@@ -21,7 +21,7 @@ export function GridHelp({ isMaster, hint }: { isMaster: boolean; hint: string }
       <dl>
         <dt>Mover o token</dt><dd>Arraste o token sob seu controle e confirme o movimento na prévia.</dd>
         <dt>Mover a câmera</dt><dd>Segure Espaço e arraste, ou use o botão do meio do mouse.</dd>
-        <dt>Zoom</dt><dd>Use a roda do mouse ou os botões − e +. Enquadrar mostra a cena; Centralizar retorna ao foco do combate.</dd>
+        <dt>Zoom</dt><dd>Segure Ctrl e gire a rodinha do mouse, ou use os botões − e +. Enquadrar mostra a cena; Centralizar retorna ao foco do combate.</dd>
         <dt>Medir</dt><dd>Segure F para usar a régua. Esc cancela a operação atual.</dd>
         <dt>Sinalizar</dt><dd>Segure Alt e clique no mapa para enviar um ping à mesa.</dd>
         <dt>Menu radial</dt><dd>Clique com o botão direito em uma célula vazia para acessar as ferramentas de área{isMaster ? ', participantes e marcações do terreno' : ''}.</dd>
