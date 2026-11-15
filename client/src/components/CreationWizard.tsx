@@ -1,3 +1,4 @@
+import { getTool } from '../../../src/modules/shared/tools';
 import { useWizardMusic } from '../music/useWizardMusic';
 import './wizard-ambience.css';
 import './race-icons.css';
@@ -1251,37 +1252,24 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
             <div className="wizard-step-body">
               {creation && creation.backgroundCatalog.length > 0 ? (
                 <>
-                  <label className="field">
-                    <span>Antecedente</span>
-                    <select
-                      value={background}
-                      onChange={(event) => selectBackground(event.target.value)}
-                    >
-                      <option value="">— escolha —</option>
-                      {creation.backgroundCatalog.map((option) => {
-                        const granted = backgroundSkillNames(option);
-                        return (
-                          <option key={option.key} value={option.name}>
-                            {granted.length > 0
-                              ? `${option.name} · ${granted.join(', ')}`
-                              : option.name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </label>
-
-                  {selectedBackground ? (
-                    <p className="section-note">
-                      {selectedBackground.description}
-                      {backgroundSkillLabels.length > 0
-                        ? ` Perícias concedidas: ${backgroundSkillLabels.join(' e ')}.`
-                        : ''}
-                      {selectedBackground.feature
-                        ? ` Característica: ${selectedBackground.feature.name}.`
-                        : ''}
-                    </p>
-                  ) : null}
+                  <h3 className="wizard-selection-title">Selecionar antecedente</h3>
+                  <div className="wizard-class-grid" role="group" aria-label="Antecedente">
+                    {[...creation.backgroundCatalog].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((option) => (
+                      <button type="button" key={option.key} className={`wizard-class-card${background === option.name ? ' is-selected' : ''}`}
+                        aria-pressed={background === option.name} disabled={busy} onClick={() => selectBackground(option.name)}>
+                        <span className="wizard-class-emblem"><Icon name="scroll" size={64} /></span><span>{option.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {selectedBackground ? <section className="wizard-option-detail" aria-label="Detalhes do antecedente">
+                    <h3>{selectedBackground.name}</h3>
+                    {selectedBackground.description ? <p className="wizard-option-description">{selectedBackground.description}</p> : null}
+                    {backgroundSkillLabels.length ? <div className="wizard-detail-highlight"><strong>Perícias</strong><span>{backgroundSkillLabels.join(' · ')}</span></div> : null}
+                    {selectedBackground.toolProficiencies?.length ? <div className="wizard-detail-highlight"><strong>Ferramentas</strong><span>{selectedBackground.toolProficiencies.map(id => getTool(id)?.namePt ?? id).join(' · ')}</span></div> : null}
+                    {backgroundLanguageCount > 0 ? <div className="wizard-detail-highlight"><strong>Idiomas</strong><span>{backgroundLanguageCount} à escolha</span></div> : null}
+                    {selectedBackground.feature ? <div className="wizard-detail-resource"><h4>{selectedBackground.feature.name}</h4><p>{selectedBackground.feature.description}</p></div> : null}
+                    {selectedBackground.suggestedEquipment ? <div className="wizard-detail-resource"><h4>Equipamento sugerido</h4><p>{selectedBackground.suggestedEquipment}</p></div> : null}
+                  </section> : null}
 
                   {/* Ferramentas à escolha por categoria (instrumento, artesão…). */}
                   {selectedBackground && backgroundToolChoiceDefs.length > 0 ? (
@@ -1409,20 +1397,22 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
 
               {/* Clérigo, Feiticeiro e Bruxo escolhem a subclasse já no nível 1. */}
               {classSubStep === 'subclass' && classNeedsSubclass && selectedClass ? (
-                <div className="wizard-subclass">
-                  <h3 className="subsection-title">Subclasse de {selectedClass.name}</h3>
-                  <div className="wizard-subclass-options" role="group" aria-label="Subclasse">
+                <div className="wizard-subclass-selection">
+                  <h3 className="wizard-selection-title">Subclasse de {selectedClass.name}</h3>
+                  <div className="wizard-class-grid" role="group" aria-label="Subclasse">
                     {selectedClass.subclassNames.map((name) => (
-                      <button type="button" key={name} className={`wizard-subclass-card${subclass === name ? ' is-selected' : ''}`}
+                      <button type="button" key={name} className={`wizard-class-card${subclass === name ? ' is-selected' : ''}`}
                         aria-pressed={subclass === name} disabled={busy} onClick={() => setSubclass(name)}>
-                        <Icon name={CLASS_ICONS[classKey] ?? 'star'} size={28} /><span>{name}</span>
+                        <span className="wizard-class-emblem"><Icon name={CLASS_ICONS[classKey] ?? 'star'} size={64} /></span><span>{name}</span>
                       </button>
                     ))}
                   </div>
-                  <p className="section-note">
-                    {selectedClass.name} escolhe a subclasse já no nível 1: ela entra na ficha junto
-                    da classe.
-                  </p>
+                  {subclass ? <section className="wizard-option-detail" aria-label="Detalhes da subclasse">
+                    <h3>{subclass}</h3>
+                    <div className="wizard-detail-highlight"><strong>Classe</strong><span>{selectedClass.name}</span></div>
+                    <div className="wizard-detail-highlight"><strong>Disponível</strong><span>Nível {selectedClass.subclassLevel}</span></div>
+                    <p className="wizard-option-description">Esta escolha entra na ficha junto da classe. As escolhas de características disponíveis aparecem abaixo.</p>
+                  </section> : null}
                 </div>
               ) : null}
 
