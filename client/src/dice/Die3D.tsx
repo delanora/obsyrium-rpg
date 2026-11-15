@@ -112,7 +112,7 @@ export function Die3D({
                     background: textura
                       ? OBSIDIANA
                       : resina
-                        ? `radial-gradient(ellipse at ${22 + face.key * 17 % 55}% ${18 + face.key * 23 % 56}%, rgb(104 245 237 / .5), transparent 49%), radial-gradient(ellipse at 76% 82%, rgb(12 194 210 / .42), transparent 55%), radial-gradient(ellipse at 25% 18%, rgb(222 253 255 / .48), transparent 29%), linear-gradient(145deg, hsl(200 92% ${29 + shade * 22}%), hsl(216 90% ${15 + shade * 16}%))`
+                        ? `linear-gradient(145deg, rgb(72 91 103 / ${.12 + shade * .2}), rgb(0 4 9 / ${.55 - shade * .2})), url('/dice-tray/textura-dados-escura.png') ${face.key * 19}px ${face.key * 13}px / 112px 104px repeat, #10191f`
                         : `linear-gradient(150deg, hsl(38 ${saturation}% ${Math.min(92, base + 8)}%), hsl(33 ${saturation - 4}% ${Math.max(30, base - 12)}%))`,
                   }}
                 >
