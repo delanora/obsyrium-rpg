@@ -1,3 +1,4 @@
+import { DiceTrayHelp } from './DiceTrayHelp';
 import { RemoteRollPreview } from './RemoteRollPreview';
 import { DiceTypeIcon } from './DiceTypeIcon';
 import { CommonTrayFrame } from './CommonTrayFrame';
@@ -166,6 +167,8 @@ export function DiceDock({ roller }: DiceDockProps) {
                       bônus {context.bonus >= 0 ? `+${context.bonus}` : context.bonus}
                     </span>
                   ) : null}
+                  <div className="dice-head-actions">
+                    <DiceTrayHelp deathSave={deathSave} />
                   <button
                     type="button"
                     className="dice-head-close"
@@ -174,6 +177,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                   >
                     <Icon name="x" size={16} />
                   </button>
+                  </div>
                 </header>
 
                 {deathSave ? <DeathFateHeader before={deathSaveBefore} result={result} settled={settled} /> : null}
