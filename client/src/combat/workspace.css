@@ -604,7 +604,7 @@
   flex-wrap: wrap;
 }
 
-.combat-workspace-log .combat-log {
+.combat-workspace-log .combat-log-panel .combat-log {
   flex: 1 1 auto;
   min-height: 0;
   max-height: none;
@@ -2663,7 +2663,7 @@
 
   /* Empilhado, o registro é uma faixa: os cartões voltam ao tamanho natural
      (um evento não deve virar um bloco de 26rem). */
-  .combat-workspace-log .combat-log {
+  .combat-workspace-log .combat-log-panel .combat-log {
     max-height: 26rem;
     align-content: start;
     grid-auto-rows: auto;
@@ -3278,6 +3278,6 @@
 
 @media (max-width: 760px) {
   .combat-log-and-tests {
-    grid-template-rows: minmax(12rem, 26rem) 17rem;
+    grid-template-rows: minmax(12rem, 26rem) auto;
   }
 }

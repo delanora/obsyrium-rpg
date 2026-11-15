@@ -6200,11 +6200,11 @@ check(
 
   check(
     'SC60) registro e testes têm blocos separados, com rolagem própria e reserva estável',
-    workspaceRule('.combat-workspace-log .combat-log').includes('overflow-y: auto;') &&
-      workspaceRule('.combat-workspace-log .combat-log').includes('max-height: none;') &&
+    workspaceRule('.combat-workspace-log .combat-log-panel .combat-log').includes('overflow-y: auto;') &&
+      workspaceRule('.combat-workspace-log .combat-log-panel .combat-log').includes('max-height: none;') &&
       // Os eventos PREENCHEM a coluna: a linha da grade divide a altura e o
       // cartão visível estica junto, sem vão de pergaminho embaixo.
-      workspaceRule('.combat-workspace-log .combat-log').includes(
+      workspaceRule('.combat-workspace-log .combat-log-panel .combat-log').includes(
         'grid-auto-rows: minmax(min-content, 1fr);',
       ) &&
       workspaceRule('.combat-workspace-log .log-card-summary').includes('flex: 1 1 auto;') &&
@@ -6291,7 +6291,7 @@ check(
 
   check(
     'SC66) registro denso e testes com rolagem independente, sem tocar em outros pontos da ficha',
-    workspaceRule('.combat-workspace-log .combat-log').includes('gap: 0.28rem;') &&
+    workspaceRule('.combat-workspace-log .combat-log-panel .combat-log').includes('gap: 0.28rem;') &&
       workspaceRule('.combat-workspace-log .log-card-summary').includes('padding: 0.34rem 0.5rem;') &&
       workspaceRule('.combat-workspace-log .log-entry').includes('padding: 0.34rem 0.5rem;') &&
       workspaceRule('.combat-tests-panel .combat-resolution-list').includes('overflow-y: auto;') &&
