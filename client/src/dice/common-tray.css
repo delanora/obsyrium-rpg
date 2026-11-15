@@ -241,11 +241,17 @@
 @media (prefers-reduced-motion: reduce) { .dice-mode { transition: none; } }
 
 /* Marfim envelhecido: números gravados, sombra no chão e pouso contínuo. */
-.common-die-slot { display: contents; }
+.common-dice-pool { position: absolute; inset: 0; display: grid; place-items: center; }
+.common-die-slot { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
+.dice-stage.is-standard-roll .common-die-slot .ddie {
+  --ddie-box: var(--physical-box);
+  --ddie-scale: var(--physical-scale);
+}
+.dice-stage.is-standard-roll .common-die-slot .ddie.is-tumbling,
+.dice-stage.is-standard-roll .common-die-slot .ddie.is-tumbling .ddie-spin { animation: none; }
+
 .dice-stage.is-standard-roll .ddie.is-ivory {
   animation: none;
-
-
 }
 .ddie.is-ivory .ddie-face {
   color: #302315;
@@ -254,13 +260,6 @@
 }
 .ddie.is-ivory .ddie-num { text-shadow: 0 1px 0 #fff5dd99, 0 -1px 1px #2b1c1844; }
 .ddie.is-ivory .ddie-orient { transition: transform 400ms cubic-bezier(.2,.7,.25,1); }
-.dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling {
-  animation: common-die-flight var(--common-roll-duration) linear both;
-}
-.dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling .ddie-spin {
-  animation: common-die-spin var(--common-roll-duration) linear both;
-  animation-delay: 0s;
-}
 .dice-stage.is-standard-roll .ddie.is-ivory.is-dropped .ddie-face { opacity: .55; }
 /* A sombra fica fora do contexto 3D: filtros no dado achatam suas faces. */
 .dice-stage.is-standard-roll .dice-ring-inner { container-type: inline-size; }
@@ -271,24 +270,6 @@
   border-radius: 50%;
   background: radial-gradient(ellipse, #000a, transparent 70%);
   pointer-events: none;
-}
-@keyframes common-die-flight {
-  0% { transform: translate(0, 0); }
-  14% { transform: translate(calc(-1 * var(--common-roll-travel) * var(--common-roll-direction)), calc(-1.1 * var(--common-roll-travel))) scale(1.08); }
-  33% { transform: translate(calc(var(--common-roll-travel) * var(--common-roll-direction)), calc(.5 * var(--common-roll-travel))) scale(.96); }
-  49% { transform: translate(calc(.7 * var(--common-roll-travel) * var(--common-roll-direction)), calc(-.7 * var(--common-roll-travel))) scale(1.03); }
-  65% { transform: translate(calc(-.65 * var(--common-roll-travel) * var(--common-roll-direction)), calc(.3 * var(--common-roll-travel))) scale(.99); }
-  78% { transform: translate(calc(-.25 * var(--common-roll-travel) * var(--common-roll-direction)), calc(-.3 * var(--common-roll-travel))); }
-  89% { transform: translate(calc(.12 * var(--common-roll-travel) * var(--common-roll-direction)), calc(.1 * var(--common-roll-travel))); }
-  96% { transform: translate(0, -.5cqw); }
-  100% { transform: translate(0, 0); }
-}
-@keyframes common-die-spin {
-  0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
-  33% { transform: rotateX(620deg) rotateY(-450deg) rotateZ(300deg); }
-  65% { transform: rotateX(970deg) rotateY(-650deg) rotateZ(340deg); }
-  89% { transform: rotateX(1074deg) rotateY(-716deg) rotateZ(359deg); }
-  100% { transform: rotateX(1080deg) rotateY(-720deg) rotateZ(360deg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling,

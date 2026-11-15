@@ -1,8 +1,7 @@
-import type { CSSProperties } from 'react';
+import { useTrayPhysics } from './useTrayPhysics';
 import type { DiceRollDto } from '../types';
 import { Die3D } from './Die3D';
 import type { DicePoolDie } from './useDiceRoller';
-import { rollAnimationMs } from './rollAnimation';
 
 /** Mantém as mesmas peças entre espera, arremesso e resultado do servidor. */
 export function CommonDicePool({ pool, result, rolling, settled, extraD20, removeDie }: {
@@ -26,12 +25,9 @@ export function CommonDicePool({ pool, result, rolling, settled, extraD20, remov
       { ...base, sides: 10, value: percentual % 10 || 10, percentile: 'units' as const },
     ];
   });
-  return pecas.length === 0 ? <p className="dice-ring-hint">Escolha os dados abaixo</p> : pecas.map((die, index) => (
-    <span className="common-die-slot" key={index} style={{
-      '--common-roll-duration': `${rollAnimationMs()}ms`,
-      '--common-roll-direction': index % 2 ? -1 : 1,
-      '--common-roll-travel': pecas.length > 12 ? '2cqw' : pecas.length > 3 ? '7cqw' : '16cqw',
-    } as CSSProperties}>
+  const arena = useTrayPhysics(pecas.length, rolling && result !== null, result?.id);
+  return <div className="common-dice-pool" ref={arena}>{pecas.length === 0 ? <p className="dice-ring-hint">Escolha os dados abaixo</p> : pecas.map((die, index) => (
+    <span className="common-die-slot" key={index}>
       <Die3D
         appearance="ivory"
         sides={die.sides}
@@ -45,5 +41,5 @@ export function CommonDicePool({ pool, result, rolling, settled, extraD20, remov
         onClick={!rolling && !settled && !pool[die.index]?.locked && removeDie ? () => removeDie(die.index) : undefined}
       />
     </span>
-  ));
+  ))}</div>;
 }
