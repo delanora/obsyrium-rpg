@@ -353,7 +353,7 @@ export function DiceDock({ roller }: DiceDockProps) {
                   )}
                   <button
                     type="button"
-                    className="btn btn-primary dice-submit"
+                    className={deathSave ? 'btn btn-primary dice-submit' : 'dice-mode dice-mode-roll dice-submit'}
                     disabled={rolling || pool.length === 0}
                     onClick={() => void submit()}
                   >

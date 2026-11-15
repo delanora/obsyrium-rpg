@@ -168,12 +168,18 @@
 .dice-type-icon { display: block; width: 2rem; height: 2rem; }
 .dice-stage.is-standard-roll .dice-controls-common {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.65rem;
   align-items: center;
 }
-.dice-controls-common .dice-submit { grid-column: 2; grid-row: 1; min-width: 6rem; justify-content: center; }
+.dice-controls-common .dice-submit { grid-column: 2; grid-row: 1; min-width: 0; justify-content: center; }
 .dice-mode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  height: 2.5rem;
   min-width: 0;
   min-height: 2.5rem;
   padding: 0.45rem 0.5rem;
@@ -201,6 +207,13 @@
   grid-column: 3;
   grid-row: 1;
 }
+.dice-mode-roll {
+  --mode-border: #b38e51;
+  --mode-ink: #f0d398;
+  --mode-surface: #594329;
+}
+.dice-mode:disabled { opacity: 0.5; cursor: not-allowed; }
+.dice-mode:disabled:hover { transform: none; filter: none; }
 .dice-mode:hover { transform: translateY(-1px); filter: brightness(1.12); }
 .dice-mode[aria-pressed='true'], .dice-mode:active {
   transform: translateY(2px);
@@ -223,6 +236,6 @@
   .dice-type-icon { width: 1.7rem; height: 1.7rem; }
   .dice-stage.is-standard-roll .dice-controls-common { gap: 0.4rem; }
   .dice-mode { font-size: 0.65rem; padding-inline: 0.2rem; }
-  .dice-controls-common .dice-submit { min-width: 5rem; }
+  .dice-controls-common .dice-submit { min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .dice-mode { transition: none; } }

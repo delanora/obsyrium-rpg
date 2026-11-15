@@ -177,7 +177,7 @@ A **sequência abaixo é direcional**, não autorização para antecipar fases. 
 - **Fase 8.5 (⬜ conceito complementar):** Soundboard e áudio sincronizado por Scene/sessão, biblioteca ou upload; armadilhas com execução assistida e confirmação do Mestre, sem dano automático não autorizado.
 - **Fase 9 (⬜):** importação/exportação, compatibilidade de dados, migrações e conteúdo complementar.
 - **Fase 10 (🟡):** segurança, backups, recuperação, observabilidade, deploy e verificações operacionais.
-- **Fase 11 (🟡):** acessibilidade, responsividade, performance, feedback e consistência visual. Bandeja comum personalizada com fundo, superfície e moldura próprios para autor e espectador; moldura vetorial em código, abertura sem desfoque e superfície circular alinhada com o disco místico fornecido pelo usuário. Seletores com ícones dos dados e botões de Vantagem/Desvantagem em relevo, com Rolar centralizado. Estabilidade mecânica vem primeiro.
+- **Fase 11 (🟡):** acessibilidade, responsividade, performance, feedback e consistência visual. Bandeja comum personalizada com fundo, superfície e moldura próprios para autor e espectador; moldura vetorial em código, abertura sem desfoque e superfície circular alinhada com o disco místico fornecido pelo usuário. Seletores com ícones dos dados e botões de Vantagem/Desvantagem em relevo, com Rolar centralizado e os três botões com o mesmo tamanho e acabamento. Estabilidade mecânica vem primeiro.
 
 ## 7. Critérios comuns de conclusão
 
