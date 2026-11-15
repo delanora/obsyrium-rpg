@@ -69,6 +69,15 @@ try {
   });
   await aguardarClique();
   assert.deepEqual(roller.pool.map(d => d.sides), [8], 'Cliques rápidos em peças diferentes removem ambas.');
+  await act(async () => { roller.addDie(6); roller.addDie(4); });
+  await act(async () => document.querySelector('.common-dice-pool')!.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  assert.equal(roller.pool.length, 3, 'Um clique no fundo não limpa.');
+  await act(async () => document.querySelector('.common-dice-pool')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+  assert.equal(roller.pool.length, 0, 'Duplo clique no fundo remove todos os tipos.');
+  await act(async () => roller.openSkillRoll({ kind: 'skill', label: 'Percepção', bonus: 0 }));
+  await act(async () => { roller.addDie(6); roller.addDie(4); });
+  await act(async () => document.querySelector('.common-dice-pool')!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+  assert.deepEqual(roller.pool, [{ sides: 20, locked: true }], 'Limpeza preserva o d20 fixo.');
   await act(async () => roller.openSkillRoll({ kind: 'save', label: 'Sopro', bonus: 0,
     entity: { kind: 'character', id: 'fixture' }, ability: 'dexterity', pendingEffectSaveId: 'pendente' }));
   assert.equal(document.querySelector('button.ddie'), null, 'Dado obrigatório não é removível.');

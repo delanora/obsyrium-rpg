@@ -43,7 +43,15 @@ export function CommonDicePool({ pool, result, rolling, settled, extraD20, remov
     ];
   });
   const arena = useTrayPhysics(pecas.length, rolling && result !== null, result?.id, startedAt);
-  return <div className="common-dice-pool" ref={arena}>{pecas.length === 0 ? <p className="dice-ring-hint">Escolha os dados abaixo</p> : pecas.map((die, index) => (
+  return <div className="common-dice-pool" ref={arena} onDoubleClick={removeDie ? (event) => {
+    // O duplo clique em um dado continua restrito àquele tipo.
+    if ((event.target as Element).closest('.ddie')) return;
+    const editaveis = pool.flatMap((die, index) => die.locked ? [] : [index]);
+    if (editaveis.length === 0) return;
+    cancelarClique();
+    indicesPendentes.current.clear();
+    removeDie(editaveis);
+  } : undefined}>{pecas.length === 0 ? <p className="dice-ring-hint">Escolha os dados abaixo</p> : pecas.map((die, index) => (
     <Fragment key={index}>
     <span className="common-die-shadow" aria-hidden="true" />
     <span className="common-die-slot">

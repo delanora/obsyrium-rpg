@@ -1335,7 +1335,7 @@ A apresentação é **efêmera** (não vai para o banco): vive na memória do se
 
 ## 🎲 Janela de dados
 
-Na bandeja comum, clique em um dado para removê-lo ou dê duplo clique para retirar todas as cópias daquele tipo. Dados obrigatórios de testes permanecem fixos.
+Na bandeja comum, clique em um dado para removê-lo ou dê duplo clique para retirar todas as cópias daquele tipo. Duplo clique numa parte vazia da bandeja remove todos os dados escolhidos. Dados obrigatórios de testes permanecem fixos.
 
 Os botões do bloco **Testes** abrem a bandeja para as salvaguardas pendentes de magias e habilidades. Cada jogador rola pela própria ficha; o Mestre pode rolar pelos alvos autorizados. O servidor aplica os bônus e modificadores suportados e resolve a pendência; a bandeja mostra o resultado e mantém as escolhas de efeitos opcionais.
 
