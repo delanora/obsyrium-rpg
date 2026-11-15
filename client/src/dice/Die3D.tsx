@@ -28,7 +28,7 @@ interface Die3DProps {
    * a bandeja de morte tem movimento próprio e alinhamento suave da face.
    */
   percentile?: 'tens' | 'units';
-  appearance?: 'death-save' | 'ivory';
+  appearance?: 'death-save' | 'azure';
 }
 
 /**
@@ -49,15 +49,15 @@ export function Die3D({
   appearance,
   percentile,
 }: Die3DProps) {
-  const marfim = appearance === 'ivory';
+  const resina = appearance === 'azure';
   const geometria = sides;
   const faces = useMemo(() => dieFaces(geometria), [geometria]);
   const paints = paintsValues(sides);
   const temaMorte = appearance === 'death-save';
   // A pose de espera é ilustrativa: não preenche nem antecipa o resultado.
-  const valorVisual = marfim ? (value ?? sides) : value;
+  const valorVisual = resina ? (value ?? sides) : value;
   const faceVisual = valorVisual;
-  const settle = marfim
+  const settle = resina
     ? `rotateX(-10deg) rotateY(12deg) ${settleTransform(geometria, faceVisual ?? geometria)}`
     : temaMorte && !reveal && !tumbling
     ? poseInicialDeOracao()
@@ -69,7 +69,7 @@ export function Die3D({
     'ddie',
     `ddie-s${sides}`,
     temaMorte ? 'is-death-save' : '',
-    marfim ? 'is-ivory' : '',
+    resina ? 'is-resin' : '',
     tumbling ? 'is-tumbling' : '',
     reveal ? 'is-revealed' : '',
     dropped ? 'is-dropped' : '',
@@ -111,8 +111,8 @@ export function Die3D({
                     transform: face.transform,
                     background: textura
                       ? OBSIDIANA
-                      : marfim
-                        ? `radial-gradient(ellipse at 30% 20%, hsl(43 39% ${Math.min(91, 74 + shade * 17)}%), transparent 65%), linear-gradient(145deg, #d8c69e, #a88d60)`
+                      : resina
+                        ? `radial-gradient(ellipse at ${22 + face.key * 17 % 55}% ${18 + face.key * 23 % 56}%, rgb(104 245 237 / .5), transparent 49%), radial-gradient(ellipse at 76% 82%, rgb(12 194 210 / .42), transparent 55%), radial-gradient(ellipse at 25% 18%, rgb(222 253 255 / .48), transparent 29%), linear-gradient(145deg, hsl(200 92% ${29 + shade * 22}%), hsl(216 90% ${15 + shade * 16}%))`
                         : `linear-gradient(150deg, hsl(38 ${saturation}% ${Math.min(92, base + 8)}%), hsl(33 ${saturation - 4}% ${Math.max(30, base - 12)}%))`,
                   }}
                 >
@@ -131,7 +131,7 @@ export function Die3D({
                       }}
                     />
                   ) : null}
-                  {!textura && (reveal || marfim) && face.value !== null ? (
+                  {!textura && (reveal || resina) && face.value !== null ? (
                     // O número fica no centroide da face (não no centro da
                     // caixa) e cresce junto com a face. É um `font-size` no
                     // espaço do modelo, então o `.ddie-model` o escala na
@@ -142,7 +142,7 @@ export function Die3D({
                         left: `${face.valueX}%`,
                         top: `${face.valueY}%`,
                         fontSize: `${face.valueSize * (percentile === 'tens' ? 0.8 : 1)}px`,
-                        ...(marfim ? { transform: `translate(-50%, -50%) rotate(${anguloNumero}rad)` } : {}),
+                        ...(resina ? { transform: `translate(-50%, -50%) rotate(${anguloNumero}rad)` } : {}),
                       }}
                     >
                       {inscricao}
@@ -155,7 +155,7 @@ export function Die3D({
         </span>
       </span>
 
-      {!temaMorte && !marfim && (!reveal || !paints) ? (
+      {!temaMorte && !resina && (!reveal || !paints) ? (
         <span className="ddie-badge">
           {reveal && value !== null && !paints ? value : `d${sides}`}
         </span>

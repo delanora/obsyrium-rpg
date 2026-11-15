@@ -29,7 +29,7 @@ export function CommonDicePool({ pool, result, rolling, settled, extraD20, remov
   return <div className="common-dice-pool" ref={arena}>{pecas.length === 0 ? <p className="dice-ring-hint">Escolha os dados abaixo</p> : pecas.map((die, index) => (
     <span className="common-die-slot" key={index}>
       <Die3D
-        appearance="ivory"
+        appearance="azure"
         sides={die.sides}
         percentile={die.percentile}
         value={die.value}

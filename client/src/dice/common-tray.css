@@ -240,7 +240,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .dice-mode { transition: none; } }
 
-/* Marfim envelhecido: números gravados, sombra no chão e pouso contínuo. */
+/* Resina azul e turquesa com inscrições em latão, inspirada no dado de mesa. */
 .common-dice-pool { position: absolute; inset: 0; display: grid; place-items: center; }
 .common-die-slot { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
 .dice-stage.is-standard-roll .common-die-slot .ddie {
@@ -250,20 +250,28 @@
 .dice-stage.is-standard-roll .common-die-slot .ddie.is-tumbling,
 .dice-stage.is-standard-roll .common-die-slot .ddie.is-tumbling .ddie-spin { animation: none; }
 
-.dice-stage.is-standard-roll .ddie.is-ivory {
+.dice-stage.is-standard-roll .ddie.is-resin {
   animation: none;
 }
-.ddie.is-ivory .ddie-face {
-  color: #302315;
-  box-shadow: inset 0 0 12px #6b482c88;
-  border: 1px solid #80613e66;
+.ddie.is-resin .ddie-face {
+  color: #e2c381;
+  box-shadow: inset 0 0 16px #001b4766, inset 0 0 2px #a7f2ff99;
+  border: 1px solid #8ad7ed66;
 }
-.ddie.is-ivory .ddie-num { text-shadow: 0 1px 0 #fff5dd99, 0 -1px 1px #2b1c1844; }
-.ddie.is-ivory .ddie-orient { transition: transform 400ms cubic-bezier(.2,.7,.25,1); }
-.dice-stage.is-standard-roll .ddie.is-ivory.is-dropped .ddie-face { opacity: .55; }
+.ddie.is-resin .ddie-num {
+  color: #e2c381;
+  background: linear-gradient(160deg, #fff0be 8%, #e3c182 38%, #b68a45 62%, #f0d49b 85%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  -webkit-text-stroke: .45px #ebcb88;
+}
+.ddie.is-resin .ddie-orient { transition: transform 400ms cubic-bezier(.2,.7,.25,1); }
+.dice-stage.is-standard-roll .ddie.is-resin.is-dropped .ddie-face { opacity: .55; }
 /* A sombra fica fora do contexto 3D: filtros no dado achatam suas faces. */
 .dice-stage.is-standard-roll .dice-ring-inner { container-type: inline-size; }
-.dice-stage.is-standard-roll .ddie.is-ivory::before {
+.dice-stage.is-standard-roll .ddie.is-resin::before {
   content: '';
   position: absolute;
   inset: 68% 8% 2%;
@@ -272,7 +280,7 @@
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling,
-  .dice-stage.is-standard-roll .ddie.is-ivory.is-tumbling .ddie-spin { animation: none; }
-  .ddie.is-ivory .ddie-orient { transition: none; }
+  .dice-stage.is-standard-roll .ddie.is-resin.is-tumbling,
+  .dice-stage.is-standard-roll .ddie.is-resin.is-tumbling .ddie-spin { animation: none; }
+  .ddie.is-resin .ddie-orient { transition: none; }
 }
