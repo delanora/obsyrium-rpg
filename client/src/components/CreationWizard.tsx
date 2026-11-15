@@ -1,6 +1,7 @@
 import { useWizardMusic } from '../music/useWizardMusic';
 import './wizard-ambience.css';
 import './race-icons.css';
+import './wizard-layout.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fileToImagePayload, uploadAvatar } from '../api';
 import { fetchCompendium } from '../gameApi';
@@ -143,7 +144,7 @@ interface CreationWizardProps {
  * As regras são todas do servidor (classe, pré-requisito de atributo, PV, CA,
  * perícias e níveis iniciais) — aqui só existe a condução dos passos.
  */
-export function CreationWizard({ user, onCharacter, onFinished }: CreationWizardProps) {
+export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps) {
   useWizardMusic();
   const [state, setState] = useState<CreationResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -775,10 +776,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     <div className="wizard-overlay">
       <div className={`wizard${step === 3 ? ' is-race-step' : ''}`}>
         <header className="wizard-head">
-          <h1>
-            <Icon name="scroll" size={20} /> Criação de personagem
-          </h1>
-          <span className="wizard-user">{user.displayName}</span>
+          <h1>Criação de personagem</h1>
         </header>
 
         {/* Trilha dos nove passos. */}
@@ -787,7 +785,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
             const number = index + 1;
             const state_ = number === step ? 'current' : number < step ? 'done' : 'todo';
             return (
-              <li key={label} className={`wizard-step-chip ${state_}`}>
+              <li key={label} className={`wizard-step-chip ${state_}`} aria-current={number === step ? 'step' : undefined} title={label}>
                 <span className="wizard-step-number">{number}</span>
                 <span className="wizard-step-label">{label}</span>
               </li>
