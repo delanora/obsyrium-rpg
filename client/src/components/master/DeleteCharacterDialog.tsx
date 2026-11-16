@@ -19,8 +19,8 @@ interface DeleteCharacterDialogProps {
  *
  * A ação é irreversível e vai além da ficha: exclui também a **conta do
  * jogador**, então o texto diz exatamente o que desaparece e quem perde o
- * acesso — nada de um "tem certeza?" genérico. Só o segundo clique (no botão
- * vermelho) apaga; Esc e "cancelar" fecham.
+ * acesso. O botão vermelho exige uma confirmação adicional antes de apagar;
+ * Esc e "cancelar" fecham sem excluir.
  */
 export function DeleteCharacterDialog({
   character,
@@ -41,6 +41,10 @@ export function DeleteCharacterDialog({
   }, [busy, onCancel]);
 
   async function confirm(): Promise<void> {
+    if (busy || !window.confirm(
+      `Você tem certeza? Esta ação não pode ser revertida.\n\nO personagem ${character.name} e a conta do jogador serão excluídos.`,
+    )) return;
+
     setBusy(true);
     setError(null);
 

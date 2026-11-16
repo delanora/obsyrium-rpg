@@ -20,6 +20,11 @@ const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/f
 await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 try{browser=await chromium.launch({headless:true,args:['--no-sandbox']});const page=await browser.newPage();await page.goto(`http://127.0.0.1:${server.address().port}`);
 for(const [open,label,confirm,error,call] of [['Excluir','Excluir Personagem descartável','excluir personagem e conta','Falha simulada da exclusão','delete'],['Reduzir','Reduzir nível','reduzir nível','Falha simulada da redução','level']]){
- await page.getByRole('button',{name:open,exact:true}).click();const dialog=page.getByRole('dialog',{name:label,exact:true});await dialog.waitFor();assert.equal(await dialog.evaluate(el=>!!el.closest('[inert]')),false);assert.equal(await page.locator('[inert]').count(),1);await dialog.getByRole('button',{name:confirm,exact:true}).click();await dialog.getByText(error,{exact:true}).waitFor();assert.equal(await page.evaluate(c=>window.calls.filter(x=>x===c).length,call),1);await dialog.getByRole('button',{name:'cancelar',exact:true}).click();assert.equal(await page.locator('[inert]').count(),0);
+ await page.getByRole('button',{name:open,exact:true}).click();const dialog=page.getByRole('dialog',{name:label,exact:true});await dialog.waitFor();assert.equal(await dialog.evaluate(el=>!!el.closest('[inert]')),false);assert.equal(await page.locator('[inert]').count(),1);if(call==='delete'){
+ page.once('dialog',async prompt=>{assert.match(prompt.message(),/Você tem certeza\? Esta ação não pode ser revertida/);await prompt.dismiss();});
+ await dialog.getByRole('button',{name:confirm,exact:true}).click();assert.equal(await page.evaluate(()=>window.calls.length),0);
+ page.once('dialog',prompt=>prompt.accept());
+}
+await dialog.getByRole('button',{name:confirm,exact:true}).click();await dialog.getByText(error,{exact:true}).waitFor();assert.equal(await page.evaluate(c=>window.calls.filter(x=>x===c).length,call),1);await dialog.getByRole('button',{name:'cancelar',exact:true}).click();assert.equal(await page.locator('[inert]').count(),0);
 }console.log('Exclusão e redução: confirmação clicável fora de inert, callback único, erro visível e cancelamento verificados sem API/banco.');
 }finally{await browser?.close();await new Promise(r=>server.close(r));}
