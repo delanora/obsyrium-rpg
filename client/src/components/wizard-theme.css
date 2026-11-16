@@ -76,3 +76,14 @@
 .wizard-class-card[data-ancestry='red'] .wizard-class-emblem { color: #df8772; }
 .wizard-class-card[data-ancestry='silver'] .wizard-class-emblem { color: #c8d6e1; }
 .wizard-class-card[data-ancestry='white'] .wizard-class-emblem { color: #f1ece0; }
+.wizard-mode-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; padding-block: .6rem; }
+.wizard-mode-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; min-height: 15rem; padding: 1.6rem; border: 1px solid #957043; border-radius: 4px; background: linear-gradient(145deg, #352619dd, #17110cdd); box-shadow: inset 0 0 0 3px #140d08, inset 0 0 0 4px #b58b4c44; color: #edddc1; text-align: center; cursor: pointer; transition: opacity .2s, border-color .2s, box-shadow .2s, background .2s; }
+.wizard-mode-card > .icon { color: #ddb16b; }
+.wizard-mode-card strong { font: 1.15rem var(--font-display); color: #efc887; }
+.wizard-mode-card > span { font-family: var(--font-body); font-size: .95rem; line-height: 1.6; max-width: 28rem; }
+.wizard-mode-card.is-dimmed { opacity: .5; }
+.wizard-mode-card:hover { opacity: 1; border-color: #d9ac6d; }
+.wizard-mode-card.is-selected { background: radial-gradient(ellipse at top, #9d693738, transparent 75%), linear-gradient(145deg, #49321ddd, #21170fdd); border-color: #ffe1a0; box-shadow: 0 0 16px #e6a33b44, inset 0 0 0 3px #4b301a, inset 0 0 0 4px #e3b66c99; }
+.wizard-mode-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+@media (max-width: 600px) { .wizard-mode-cards { grid-template-columns: minmax(0, 1fr); } .wizard-mode-card { min-height: 12rem; padding: 1.2rem; } }
+@media (prefers-reduced-motion: reduce) { .wizard-mode-card { transition: none; } }

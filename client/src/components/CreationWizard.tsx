@@ -855,35 +855,22 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                 O personagem é novo (você rola os atributos) ou já existe na mesa (você digita os
                 valores que já tem)?
               </p>
-              <ul className="modal-list">
+              <div className="wizard-mode-cards" role="group" aria-label="Tipo de personagem">
                 {[
-                  {
-                    value: 'new' as const,
-                    label: 'Personagem novo',
-                    hint: 'Role 4d6 (descartando o menor) seis vezes e distribua os valores.',
-                  },
-                  {
-                    value: 'existing' as const,
-                    label: 'Personagem existente',
-                    hint: 'Digite os atributos da sua ficha, de 1 a 20.',
-                  },
-                ].map((option) => (
-                  <li key={option.value}>
-                    <label className={mode === option.value ? 'check-row active' : 'check-row'}>
-                      <input
-                        type="radio"
-                        name="creation-mode"
-                        checked={mode === option.value}
-                        onChange={() => setMode(option.value)}
-                      />
-                      <span className="check-name">
-                        {option.label}
-                        <span className="muted"> · {option.hint}</span>
-                      </span>
-                    </label>
-                  </li>
+                  { value: 'new' as const, label: 'Personagem novo', icon: 'die' as const,
+                    hint: 'Role 4d6, descarte o menor dado e repita seis vezes. Depois, distribua os resultados entre os atributos.' },
+                  { value: 'existing' as const, label: 'Personagem existente', icon: 'scroll' as const,
+                    hint: 'Traga um personagem que já existe. Digite os atributos da sua ficha, com valores de 1 a 20.' },
+                ].map(option => (
+                  <button type="button" key={option.value} aria-pressed={mode === option.value}
+                    className={`wizard-mode-card${mode === option.value ? ' is-selected' : mode ? ' is-dimmed' : ''}`}
+                    disabled={busy} onClick={() => setMode(option.value)}>
+                    <Icon name={option.icon} size={44} />
+                    <strong>{option.label}</strong>
+                    <span>{option.hint}</span>
+                  </button>
                 ))}
-              </ul>
+              </div>
             </div>
           ) : null}
 
