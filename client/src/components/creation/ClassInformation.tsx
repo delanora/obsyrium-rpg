@@ -8,7 +8,7 @@ function FeatureInformation({ features }: { features: ClassFeatureDefinition[] }
     <h4>{feature.name} <small>· nível {feature.level}</small></h4>
     <p>{feature.description}</p>
     {feature.choice ? <><p className="section-note">{feature.choice.prompt ?? feature.name} · {feature.choice.count ?? 1} escolha(s)</p>
-      <ul className="wizard-information-list">{feature.choice.options.map(option => <li key={option.key}>
+      <ul className="wizard-information-list">{feature.choice.options.filter(option => !option.requiresLevel || option.requiresLevel <= 1).map(option => <li key={option.key}>
         <strong>{option.name}</strong>{option.description ? ` — ${option.description}` : ''}{option.requiresLevel ? ` (a partir do nível ${option.requiresLevel})` : ''}{option.requiresPact ? ` · requer Pacto: ${option.requiresPact}` : ''}
       </li>)}</ul></> : null}
   </article>)}</>;
@@ -38,7 +38,6 @@ export function ClassInformation({ option, subclass }: { option: ClassOption; su
       <p className="section-note">As alternativas abaixo compõem o equipamento inicial, além do antecedente. Esta consulta não adiciona itens ao inventário.</p>
       <ul className="wizard-information-list">{(CLASS_STARTING_EQUIPMENT[option.key] ?? []).map(text => <li key={text}>{text}</li>)}</ul>
     </div> : null}
-    {features.some(feature => feature.level > 1) ? <><h4 className="wizard-information-heading">Progressão nos próximos níveis</h4>
-      <FeatureInformation features={[...features].filter(feature => feature.level > 1).sort((a, b) => a.level - b.level)} /></> : null}
+
   </section>;
 }

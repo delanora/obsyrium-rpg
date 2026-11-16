@@ -35,6 +35,7 @@ import type {
   RaceOption,
   SessionUser,
 } from '../types';
+import { DraconicAncestry, racialTraitSummary } from './creation/DraconicAncestry';
 import { ClassInformation } from './creation/ClassInformation';
 import { AbilityStep } from './creation/AbilityStep';
 import { FeatureChoiceField } from './FeatureChoiceField';
@@ -335,7 +336,8 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
   );
 
   const raceBaseSubraces = raceBaseOption ? subracesOf(raceBaseOption) : [];
-  const raceNeedsSubrace = raceBaseSubraces.length > 0;
+  const draconicChoice = raceBaseOption?.choices?.find(choice => choice.id === 'draconic-ancestry');
+  const raceNeedsSubrace = raceBaseSubraces.length > 0 || Boolean(draconicChoice);
 
   /** Traços que são SÓ da sub-raça escolhida (os da raça base ficam à parte). */
   const subraceOnlyTraits = useMemo(() => {
@@ -830,7 +832,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                     disabled={busy || uploading || step < 3}
                     aria-current={step === 3 && raceSubStep === 'subrace' ? 'step' : undefined}
                     onClick={() => { setStep(3); setRaceSubStep('subrace'); setError(null); }}>
-                    <span>Sub-raça</span><strong>{selectedRace?.subraceId ? subraceName(selectedRace) : 'Selecionar'}</strong>
+                    <span>{draconicChoice ? 'Ancestralidade' : 'Sub-raça'}</span><strong>{draconicChoice ? draconicChoice.options.find(option => option.id === raceChoices[draconicChoice.id])?.label ?? 'Selecionar' : selectedRace?.subraceId ? subraceName(selectedRace) : 'Selecionar'}</strong>
                   </button>
                 ) : null}
                 {number === 5 && classNeedsSubclass ? (
@@ -991,7 +993,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                               {(raceBaseOption.traits ?? []).map((trait) => (
                                 <p className="race-trait-line" key={trait.id}>
                                   <strong>{trait.name}</strong>
-                                  {trait.description}
+                                  {racialTraitSummary(trait.id, trait.description)}
                                 </p>
                               ))}
                             </div>
@@ -1039,13 +1041,13 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
 
                         {/* Demais escolhas: ancestralidade do Draconato, perícias
                             do Meio-Elfo, ferramenta do Anão... */}
-                        {raceExtraChoices.length > 0 ? (
+                        {raceExtraChoices.some(choice => choice.id !== 'draconic-ancestry') ? (
                           <div className="wizard-race-choice">
                             <p className="section-note">
                               {raceBaseOption.name} pede as escolhas abaixo.
                             </p>
                             <div className="grid grid-2">
-                              {raceExtraChoices.map((choice) => (
+                              {raceExtraChoices.filter(choice => choice.id !== 'draconic-ancestry').map((choice) => (
                                 <label className="field" key={choice.id}>
                                   <span>{choice.label}</span>
                                   <select
@@ -1112,6 +1114,9 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                       <p className="section-note">Escolha uma raça acima para ver os detalhes.</p>
                     )}
                   </>
+                ) : draconicChoice ? (
+                  <DraconicAncestry choice={draconicChoice} value={raceChoices[draconicChoice.id] ?? ''} disabled={busy}
+                    onSelect={value => setRaceExtraChoice(draconicChoice.id, value)} />
                 ) : (
                   <>
                     <p className="wizard-race-title">Selecionar Sub-raça</p>
@@ -1158,7 +1163,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                               {(raceBaseOption.traits ?? []).map((trait) => (
                                 <p className="race-trait-line" key={trait.id}>
                                   <strong>{trait.name}</strong>
-                                  {trait.description}
+                                  {racialTraitSummary(trait.id, trait.description)}
                                 </p>
                               ))}
                             </div>
@@ -1184,7 +1189,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                               {subraceOnlyTraits.map((trait) => (
                                 <p className="race-trait-line" key={trait.id}>
                                   <strong>{trait.name}</strong>
-                                  {trait.description}
+                                  {racialTraitSummary(trait.id, trait.description)}
                                 </p>
                               ))}
                             </div>

@@ -11,14 +11,16 @@ for (const definition of CLASS_PRESENTATIONS) {
   const html = renderToStaticMarkup(<ClassInformation option={option} />);
   assert.ok(html.includes(definition.name));
   assert.ok(html.includes('Equipamento inicial da classe'));
+  assert.ok(!html.includes('Progressão nos próximos níveis'));
+  assert.ok(!html.includes('undefined'));
   assert.ok(CLASS_STARTING_EQUIPMENT[definition.key]?.length);
-  for (const feature of definition.features) assert.ok(html.includes(feature.name.replaceAll('&', '&amp;')), `${definition.name}: ${feature.name}`);
+  for (const feature of definition.features.filter(feature => feature.level <= 1)) assert.ok(html.includes(feature.name.replaceAll('&', '&amp;')), `${definition.name}: ${feature.name}`);
   for (const subclass of definition.subclasses) {
     subclasses++;
     const content = renderToStaticMarkup(<ClassInformation option={option} subclass={subclass.name} />);
     assert.ok(content.includes('Detalhes da subclasse'));
-    for (const feature of subclass.features) assert.ok(content.includes(feature.name.replaceAll('&', '&amp;')), `${subclass.name}: ${feature.name}`);
+    for (const feature of subclass.features.filter(feature => feature.level <= 1)) assert.ok(content.includes(feature.name.replaceAll('&', '&amp;')), `${subclass.name}: ${feature.name}`);
   }
 }
 assert.equal(CLASS_PRESENTATIONS.length, 12);
-console.log(`Consulta de criação: 12 classes e ${subclasses} subclasses com todos os benefícios cadastrados visíveis; equipamento informativo disponível.`);
+console.log(`Consulta de criação: 12 classes e ${subclasses} subclasses com benefícios iniciais visíveis; equipamento informativo disponível.`);

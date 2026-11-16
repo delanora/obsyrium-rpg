@@ -66,3 +66,13 @@
 .wizard-information-list li { padding-block: .25rem; }
 .wizard-information-list li::marker { color: #c6954d; }
 .wizard-detail-resource h4 small { flex: none; font-size: .75rem; font-weight: normal; color: #c8aa7a; }
+.wizard-class-card[data-ancestry='black'] .wizard-class-emblem { color: #a4a09b; }
+.wizard-class-card[data-ancestry='blue'] .wizard-class-emblem { color: #72b7eb; }
+.wizard-class-card[data-ancestry='brass'] .wizard-class-emblem { color: #ddc06b; }
+.wizard-class-card[data-ancestry='bronze'] .wizard-class-emblem { color: #bd905c; }
+.wizard-class-card[data-ancestry='copper'] .wizard-class-emblem { color: #cf8562; }
+.wizard-class-card[data-ancestry='gold'] .wizard-class-emblem { color: #f1ce73; }
+.wizard-class-card[data-ancestry='green'] .wizard-class-emblem { color: #8bb578; }
+.wizard-class-card[data-ancestry='red'] .wizard-class-emblem { color: #df8772; }
+.wizard-class-card[data-ancestry='silver'] .wizard-class-emblem { color: #c8d6e1; }
+.wizard-class-card[data-ancestry='white'] .wizard-class-emblem { color: #f1ece0; }
