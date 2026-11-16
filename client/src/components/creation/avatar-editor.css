@@ -21,7 +21,6 @@
 .avatar-editor-crop { overflow: hidden; }
 /* RGB original; as máscaras limpam apenas o halo externo de transparência. */
 .avatar-editor img[data-frame='ametista'] { mask-image: url('/avatar-frames/ametista-recorte.png'); mask-size: 100% 100%; mask-repeat: no-repeat; }
-.avatar-editor img[data-frame='esmeralda'] { mask-image: url('/avatar-frames/esmeralda-recorte.png'); mask-size: 100% 100%; mask-repeat: no-repeat; }
 /* Nome e alinhamento compartilham a mesma caixa e o mesmo acabamento. */
 .avatar-identity-fields .field { display: grid; grid-template-rows: auto 2.75rem; gap: .45rem; margin: 0; }
 .avatar-identity-fields .field > span { line-height: 1.2; color: #d9b57d; letter-spacing: .07em; }
@@ -35,3 +34,8 @@
 .avatar-identity-fields .field > select { padding-right: 2rem; }
 .avatar-identity-fields .field > input:focus,
 .avatar-identity-fields .field > select:focus { border-color: #e4b76a; outline: 2px solid #d5a45a44; outline-offset: 2px; }
+
+/* Sete pedras em uma única fileira, sem aumentar a altura do editor. */
+.avatar-editor-frames { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .35rem; max-width: 42rem; }
+.avatar-editor-frames button { width: 100%; min-width: 0; padding: .25rem .1rem; font-size: clamp(.5rem, 1.1vw, .75rem); }
+.avatar-editor-frames button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

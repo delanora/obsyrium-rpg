@@ -3,7 +3,8 @@ import { fileToImagePayload, uploadAvatar } from '../../api';
 import { Icon } from '../Icon';
 import './avatar-editor.css';
 
-const FRAMES = [{ id: 'ametista', name: 'Ametista' }, { id: 'esmeralda', name: 'Esmeralda' }, { id: 'rubi', name: 'Rubi' }];
+const FRAMES = [{ id: 'ametista', name: 'Ametista' }, { id: 'esmeralda', name: 'Esmeralda' }, { id: 'rubi', name: 'Rubi' }, { id: 'topazio', name: 'Topázio' }, { id: 'diamante', name: 'Diamante' }, { id: 'obsidiana', name: 'Obsidiana' }, { id: 'safira', name: 'Safira' }];
+const frameUrl = (id: string) => `/avatar-frames/${id === 'esmeralda' ? 'esmeralda-v2' : id}.png`;
 type Draft = { source: string; frame: string; zoom: number; x: number; y: number; result: string; dirty?: boolean };
 export interface AvatarEditorHandle { save: () => Promise<string> }
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -37,7 +38,7 @@ export const AvatarEditor = forwardRef<AvatarEditorHandle, { value: string; user
   useImperativeHandle(ref, () => ({ save: async () => {
     if (!draft.source || (!draft.dirty && draft.result)) return draft.result;
     if (baked) return draft.source;
-    const [image, frame] = await Promise.all([loadImage(draft.source), loadImage(`/avatar-frames/${draft.frame}.png`)]);
+    const [image, frame] = await Promise.all([loadImage(draft.source), loadImage(frameUrl(draft.frame))]);
     const exportScale = Math.max(.8 / image.width, .78 / image.height) * draft.zoom;
     const exportWidth = image.width * exportScale, exportHeight = image.height * exportScale;
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1254;
@@ -47,8 +48,10 @@ export const AvatarEditor = forwardRef<AvatarEditorHandle, { value: string; user
     // A máscara altera somente o alfa; a textura vem sempre do PNG original.
     const layer = document.createElement('canvas'); layer.width = layer.height = 1254;
     const layerContext = layer.getContext('2d'); if (!layerContext) throw new Error('Não foi possível preparar a moldura.');
-    layerContext.drawImage(frame, 0, 0, 1254, 1254);
-    if (draft.frame !== 'rubi') {
+    const frameScale = Math.min(1254 / frame.width, 1254 / frame.height);
+    const frameWidth = frame.width * frameScale, frameHeight = frame.height * frameScale;
+    layerContext.drawImage(frame, (1254 - frameWidth) / 2, (1254 - frameHeight) / 2, frameWidth, frameHeight);
+    if (draft.frame === 'ametista') {
       const mask = await loadImage(`/avatar-frames/${draft.frame}-recorte.png`);
       layerContext.globalCompositeOperation = 'destination-in'; layerContext.drawImage(mask, 0, 0, 1254, 1254);
     }
@@ -68,13 +71,13 @@ export const AvatarEditor = forwardRef<AvatarEditorHandle, { value: string; user
       onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
       {draft.source ? <>{baked ? <img className="avatar-editor-baked" src={draft.source} alt="Avatar do personagem" /> : <>
         <div className="avatar-editor-crop"><img src={draft.source} alt="Imagem do personagem" draggable={false} style={{ width: `${width * 100}%`, height: `${height * 100}%`, left: `${(0.5 + draft.x) * 100}%`, top: `${(.455 + draft.y) * 100}%` }} /></div>
-        <img className="avatar-editor-frame" data-frame={draft.frame} src={`/avatar-frames/${draft.frame}.png`} alt="" draggable={false} />
+        <img className="avatar-editor-frame" data-frame={draft.frame} src={frameUrl(draft.frame)} alt="" draggable={false} />
       </>}</> : <button type="button" className="avatar-editor-add" onClick={() => fileInput.current?.click()} aria-label="Adicionar imagem do personagem"><Icon name="plus" size={56} /></button>}
     </div>
     <button type="button" className="btn" onClick={() => fileInput.current?.click()}>{draft.source ? 'Trocar imagem' : 'Adicionar imagem'}</button>
     <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => void upload(event.target.files?.[0])} />
     {draft.source && !baked ? <><p className="section-note">Arraste a imagem para posicionar o rosto dentro da moldura.</p><label className="avatar-editor-zoom">Zoom <input type="range" min="1" max="3" step=".01" value={draft.zoom} onChange={event => update({ zoom: Number(event.target.value), x: 0, y: 0 })} /></label></> : null}
     <h3 className="wizard-selection-title">Escolher moldura</h3>
-    <div className="avatar-editor-frames" role="group" aria-label="Moldura do avatar">{FRAMES.map(frame => <button type="button" key={frame.id} aria-pressed={draft.frame === frame.id} disabled={baked} onClick={() => update({ frame: frame.id })}><img data-frame={frame.id} src={`/avatar-frames/${frame.id}.png`} alt="" /><span>{frame.name}</span></button>)}</div>
+    <div className="avatar-editor-frames" role="group" aria-label="Moldura do avatar">{FRAMES.map(frame => <button type="button" key={frame.id} aria-pressed={draft.frame === frame.id} disabled={baked} onClick={() => update({ frame: frame.id })}><img data-frame={frame.id} src={frameUrl(frame.id)} alt="" /><span>{frame.name}</span></button>)}</div>
   </div>;
 });
