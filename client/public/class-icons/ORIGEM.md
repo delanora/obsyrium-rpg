@@ -5,3 +5,5 @@
 Bardo e Domínio da Tempestade usam recortes de alfa derivados pela ferramenta de edição de imagens para remover o halo branco/cinza do fundo. São máscaras de transparência, sem substituir as cores da arte original.
 
 As associações usam os identificadores do catálogo do projeto. Por exemplo, Saber corresponde a Conhecimento, Valor a Bravura, Trapaça a Engano, e Berserker ao Guerreiro Primitivo. Classes e subclasses sem arquivo permanecem com símbolo provisório.
+
+`Patrulheiro.zip` acrescenta a classe Patrulheiro e as subclasses Caçador e Mestre das Feras. As três artes usam a mesma normalização proporcional em 512px; as fontes têm 1254px (classe e Caçador) e 768px (Mestre das Feras).
