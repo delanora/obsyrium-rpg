@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useMemo, useState } from 'react';
 import { ABILITY_KEYS, ABILITY_LABELS, SKILLS } from '../../dnd';
 import type {
@@ -129,8 +130,8 @@ export function LevelDownDialog({
   }
 
   if (summary) {
-    return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Nível reduzido">
+    return createPortal(
+      <div className="modal-backdrop is-confirm" role="dialog" aria-modal="true" aria-label="Nível reduzido">
         <div className="modal levelup-modal">
           <h2>
             <Icon name="scroll" size={20} /> Nível reduzido
@@ -218,12 +219,13 @@ export function LevelDownDialog({
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   }
 
-  return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Reduzir nível">
+  return createPortal(
+    <div className="modal-backdrop is-confirm" role="dialog" aria-modal="true" aria-label="Reduzir nível">
       <div className="modal levelup-modal">
         <h2>
           <Icon name="scroll" size={20} /> Reduzir nível
@@ -427,6 +429,7 @@ export function LevelDownDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import type { Character } from '../../types';
 import { Icon } from '../Icon';
@@ -55,9 +56,9 @@ export function DeleteCharacterDialog({
 
   const owner = character.ownerUsername ?? '—';
 
-  return (
+  return createPortal(
     <div
-      className="modal-backdrop"
+      className="modal-backdrop is-confirm"
       role="dialog"
       aria-modal="true"
       aria-label={`Excluir ${character.name}`}
@@ -101,6 +102,7 @@ export function DeleteCharacterDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
