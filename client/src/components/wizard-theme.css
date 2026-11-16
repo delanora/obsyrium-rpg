@@ -98,3 +98,8 @@
   .wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2::after,
   .wizard-overlay .wizard.is-race-step .wizard-body > h2::after { width: 1.35rem; height: 2.5rem; }
 }
+.wizard-class-emblem .class-emblem-art { display: block; width: 100%; height: 100%; object-fit: contain; }
+.wizard-class-card:has(.class-emblem-art) .wizard-class-emblem { filter: none; }
+/* Os recortes alteram apenas transparência; cores e textura vêm da arte original. */
+.class-emblem-art[data-emblem='bardo'] { mask: url('/class-icons/bardo_recorte.webp') center / 100% 100% no-repeat; }
+.class-emblem-art[data-emblem='clerigo_dominio_da_tempestade'] { mask: url('/class-icons/clerigo_dominio_da_tempestade_recorte.webp') center / 100% 100% no-repeat; }

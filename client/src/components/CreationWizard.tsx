@@ -39,7 +39,8 @@ import { DraconicAncestry, racialTraitSummary } from './creation/DraconicAncestr
 import { ClassInformation } from './creation/ClassInformation';
 import { AbilityStep } from './creation/AbilityStep';
 import { FeatureChoiceField } from './FeatureChoiceField';
-import { Icon, type IconName } from './Icon';
+import { Icon } from './Icon';
+import { ClassEmblem } from './creation/ClassEmblem';
 import { LevelUpDialog } from './LevelUpDialog';
 import { AvatarEditor, type AvatarEditorHandle } from './creation/AvatarEditor';
 import { RaceFaceIcon } from './RaceFace';
@@ -59,13 +60,6 @@ const STEP_LABELS = [
 ];
 
 const LAST_STEP = STEP_LABELS.length;
-/** Símbolos provisórios, substituíveis pelas artes definitivas sem mudar a seleção. */
-const CLASS_ICONS: Record<string, IconName> = {
-  barbarian: 'flame', bard: 'music', cleric: 'sun', druid: 'earth', fighter: 'sword',
-  monk: 'wind', paladin: 'shield', ranger: 'ammo', rogue: 'eye', sorcerer: 'bolt',
-  warlock: 'moon', wizard: 'book',
-};
-
 /** Nome padrão da ficha recém-criada: enquanto for este, o passo 2 está vazio. */
 const DEFAULT_NAME = 'novo personagem';
 
@@ -1277,7 +1271,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                         setPicks((current) => pruneSkillPicksToClass(current, option.skillChoice?.from ?? []));
                         setClassKey(option.key); setSubclass(''); setChoicePicks({});
                       }}>
-                      <span className="wizard-class-emblem"><Icon name={CLASS_ICONS[option.key] ?? 'star'} size={64} /></span>
+                      <span className="wizard-class-emblem"><ClassEmblem classKey={option.key} /></span>
                       <span>{option.name}</span>
                     </button>
                   ))}
@@ -1296,7 +1290,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     {selectedClass.subclassNames.map((name) => (
                       <button type="button" key={name} className={`wizard-class-card${subclass === name ? ' is-selected' : ''}`}
                         aria-pressed={subclass === name} disabled={busy} onClick={() => setSubclass(name)}>
-                        <span className="wizard-class-emblem"><Icon name={CLASS_ICONS[classKey] ?? 'star'} size={64} /></span><span>{name}</span>
+                        <span className="wizard-class-emblem"><ClassEmblem classKey={classKey} subclass={name} /></span><span>{name}</span>
                       </button>
                     ))}
                   </ChoiceGallery>
