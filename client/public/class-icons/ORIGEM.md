@@ -9,3 +9,5 @@ As associações usam os identificadores do catálogo do projeto. Por exemplo, S
 `Patrulheiro.zip` acrescenta a classe Patrulheiro e as subclasses Caçador e Mestre das Feras. As três artes usam a mesma normalização proporcional em 512px; as fontes têm 1254px (classe e Caçador) e 768px (Mestre das Feras).
 
 `Paladino.zip` confirma a arte da classe Paladino e acrescenta os juramentos de Devoção, Vingança e dos Anciões, seguindo a mesma normalização proporcional e transparência das outras artes.
+
+`Feiticeiro.zip` acrescenta a classe Feiticeiro e as origens Linhagem Dracônica e Magia Selvagem, com fontes de 1254px e a mesma normalização proporcional em 512px.
