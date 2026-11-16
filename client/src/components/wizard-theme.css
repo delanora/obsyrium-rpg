@@ -87,3 +87,14 @@
 .wizard-mode-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
 @media (max-width: 600px) { .wizard-mode-cards { grid-template-columns: minmax(0, 1fr); } .wizard-mode-card { min-height: 12rem; padding: 1.2rem; } }
 @media (prefers-reduced-motion: reduce) { .wizard-mode-card { transition: none; } }
+/* Cristal original fornecido para a ornamentação comum aos títulos do wizard. */
+.wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2::after,
+.wizard-overlay .wizard.is-race-step .wizard-body > h2::after {
+  width: 2rem; height: 3.5rem; top: .4rem; clip-path: none;
+  background: url('/creation/cristal-topazio.png') center / contain no-repeat;
+  filter: drop-shadow(0 1px 3px #0008);
+}
+@media (max-width: 760px) {
+  .wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2::after,
+  .wizard-overlay .wizard.is-race-step .wizard-body > h2::after { width: 1.35rem; height: 2.5rem; }
+}
