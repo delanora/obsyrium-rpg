@@ -1,0 +1,4 @@
+/* O PNG composto é a borda final; a aura acompanha sua silhueta transparente. */
+.grid-token.has-custom-frame .grid-token-art { border: 0; background: none; overflow: visible; }
+.grid-token.has-custom-frame:not(.is-current):not(.is-selected):not(.is-target-picked):not(.is-targetable):not(.is-area-hit):not(.is-area-uncertain) .grid-token-art { box-shadow: none; }
+.grid-token.has-custom-frame .grid-token-img { object-fit: contain; border-radius: 0; filter: drop-shadow(0 0 2px var(--token-relation-color, transparent)) drop-shadow(0 0 4px var(--token-relation-color, transparent)); }

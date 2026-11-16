@@ -115,7 +115,9 @@ export function GridToken({
   const label = SIZE_LABELS[size];
   const relation = combatant.relation ?? 'unknown';
   const relationLabel = {hostile:'hostil',allied:'aliado',neutral:'neutro',unknown:'relação não definida'}[relation];
+  const framedAvatar = combatant.spatial.tokenImageRef?.includes('#obsyrium-frame=') ?? false;
   const classes = ['grid-token'];
+  if (framedAvatar) classes.push('has-custom-frame');
   if(areaStatus==='pass')classes.push('is-area-hit');
   if(areaStatus==='unknown')classes.push('is-area-uncertain');
   if (showNumber && combatant.tokenNumber) classes.push('has-number');
@@ -207,7 +209,7 @@ export function GridToken({
       onMouseEnter={interactive && onHover ? () => onHover(combatant.id) : undefined}
       onMouseLeave={interactive && onHover ? () => onHover(null) : undefined}
     >
-      {relation !== 'unknown' ? <span className="grid-token-relation-ring" aria-hidden="true" /> : null}
+      {relation !== 'unknown' && !framedAvatar ? <span className="grid-token-relation-ring" aria-hidden="true" /> : null}
       <span className="grid-token-art">
         {combatant.spatial.tokenImageRef ? (
           <img

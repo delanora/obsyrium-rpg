@@ -6,7 +6,6 @@ import './race-icons.css';
 import './wizard-layout.css';
 import './wizard-theme.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fileToImagePayload, uploadAvatar } from '../api';
 import { fetchCompendium } from '../gameApi';
 import {
   creationLevelUp,
@@ -42,7 +41,7 @@ import { AbilityStep } from './creation/AbilityStep';
 import { FeatureChoiceField } from './FeatureChoiceField';
 import { Icon, type IconName } from './Icon';
 import { LevelUpDialog } from './LevelUpDialog';
-import { Portrait } from './Portrait';
+import { AvatarEditor, type AvatarEditorHandle } from './creation/AvatarEditor';
 import { RaceFaceIcon } from './RaceFace';
 import { SpellPicker } from './sections/SpellPicker';
 
@@ -140,7 +139,7 @@ interface CreationWizardProps {
  * As regras são todas do servidor (classe, pré-requisito de atributo, PV, CA,
  * perícias e níveis iniciais) — aqui só existe a condução dos passos.
  */
-export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps) {
+export function CreationWizard({ user, onCharacter, onFinished }: CreationWizardProps) {
   useWizardMusic();
   const [state, setState] = useState<CreationResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,7 +179,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   /** Catálogo de magias para a escolha do passo 8 (buscado uma vez). */
   const [catalogSpells, setCatalogSpells] = useState<CompendiumSpell[]>([]);
-  const avatarInput = useRef<HTMLInputElement>(null);
+  const avatarEditor = useRef<AvatarEditorHandle>(null);
 
   const character = state?.character ?? null;
   const creation = state?.creation ?? null;
@@ -250,6 +249,11 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
       setError(null);
 
       try {
+        if (step === 2 && avatarEditor.current) {
+          const composed = await avatarEditor.current.save();
+          body = { ...body, avatarUrl: composed };
+          setAvatarUrl(composed);
+        }
         const response = await saveCreationStep({ step, ...body } as CreationStepRequest);
         setState(response);
         if (response.character) onCharacter(response.character);
@@ -768,23 +772,6 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
     return response.character as Character;
   }
 
-  async function handleAvatar(files: FileList | null): Promise<void> {
-    const file = files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setError(null);
-    try {
-      const payload = await fileToImagePayload(file);
-      const image = await uploadAvatar(payload.dataUrl, payload.name);
-      setAvatarUrl(image.url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao enviar o avatar.');
-    } finally {
-      setUploading(false);
-    }
-  }
-
   const racialBonus = useMemo(
     () => raceBonusesWithChoices(selectedRace, abilityChoices),
     [selectedRace, abilityChoices],
@@ -877,49 +864,14 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
           {/* --- 2. Identidade ---------------------------------------------- */}
           {step === 2 ? (
             <div className="wizard-step-body">
-              <div className="wizard-identity">
-                <div className="wizard-avatar">
-                  <Portrait src={avatarUrl} alt={name || 'Personagem'} size="lg" icon="users" />
-                  <button
-                    type="button"
-                    className="btn btn-small"
-                    disabled={uploading || busy}
-                    onClick={() => avatarInput.current?.click()}
-                  >
-                    <Icon name="quill" size={14} /> {uploading ? 'enviando...' : 'escolher avatar'}
-                  </button>
-                  <input
-                    ref={avatarInput}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(event) => void handleAvatar(event.target.files)}
-                  />
-                  <small className="muted">opcional</small>
-                </div>
-
-                <div className="grid grid-2">
-                  <label className="field">
-                    <span>Nome</span>
-                    <input
-                      type="text"
-                      value={name}
-                      maxLength={120}
-                      onChange={(event) => setName(event.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Alinhamento</span>
-                    <select value={alignment} onChange={(event) => setAlignment(event.target.value)}>
-                      <option value="">— escolha —</option>
-                      {ALIGNMENTS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+              <div className="wizard-identity avatar-identity">
+                <label className="field"><span>Nome</span><input type="text" value={name} maxLength={120} onChange={event => setName(event.target.value)} /></label>
+                <AvatarEditor ref={avatarEditor} value={avatarUrl} userId={user.id} onBusy={setUploading} onError={setError} />
+                <footer className="avatar-identity-footer"><label className="field"><span>Alinhamento</span>
+                  <select value={alignment} onChange={event => setAlignment(event.target.value)}><option value="">— escolha —</option>
+                    {ALIGNMENTS.map(option => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </label></footer>
               </div>
             </div>
           ) : null}

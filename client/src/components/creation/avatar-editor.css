@@ -1,0 +1,26 @@
+.wizard-overlay .wizard-identity.avatar-identity { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; justify-items: center; }
+.avatar-identity > .field { width: min(100%, 28rem); }
+.avatar-identity > .field:first-child { text-align: center; }
+.avatar-identity > .field:first-child input { text-align: center; font: 1.3rem var(--font-display); }
+.avatar-identity-footer { width: 100%; border-top: 1px solid #a8794066; padding-top: 1.2rem; display: flex; justify-content: center; }
+.avatar-identity-footer .field { width: min(100%, 28rem); }
+.avatar-editor { display: grid; gap: .8rem; justify-items: center; width: 100%; }
+.avatar-editor-stage { width: min(22rem, 100%); aspect-ratio: 1; position: relative; touch-action: none; }
+.avatar-editor-stage.has-image { cursor: grab; }
+.avatar-editor-stage.has-image:active { cursor: grabbing; }
+.avatar-editor-crop { position: absolute; inset: 0; clip-path: ellipse(40% 39% at 50% 45.5%); pointer-events: none; }
+.avatar-editor-crop img { position: absolute; max-width: none; transform: translate(-50%, -50%); object-fit: fill; user-select: none; }
+.avatar-editor-frame, .avatar-editor-baked { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.avatar-editor-add { position: absolute; inset: 8%; width: 84%; height: 84%; border: 1px solid #c59350; border-radius: 50%; background: radial-gradient(circle, #56391f77, #17110ce6); color: #edbd73; cursor: pointer; box-shadow: inset 0 0 0 4px #17110c, inset 0 0 0 5px #a8794077, 0 0 20px #b8793522; display: grid; place-items: center; }
+.avatar-editor-add:focus-visible, .avatar-editor-frames button:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.avatar-editor-zoom { display: flex; align-items: center; gap: 1rem; color: #edbd73; font-family: var(--font-display); width: min(100%, 22rem); }
+.avatar-editor-zoom input { min-width: 0; flex: 1; accent-color: #c59350; }
+.avatar-editor-frames { display: flex; justify-content: center; gap: 1rem; width: 100%; }
+.avatar-editor-frames button { display: grid; justify-items: center; gap: .4rem; width: min(30%, 8rem); padding: .3rem; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #d5bc91; cursor: pointer; font-family: var(--font-display); }
+.avatar-editor-frames img { width: 100%; aspect-ratio: 1; object-fit: contain; }
+.avatar-editor-frames button[aria-pressed='true'] { border-color: #e4b76a; background: #9d693722; box-shadow: 0 0 12px #b8793533; color: #ffe2a6; }
+.avatar-editor .section-note { text-align: center; }
+.avatar-editor-crop { overflow: hidden; }
+/* RGB original; as máscaras limpam apenas o halo externo de transparência. */
+.avatar-editor img[data-frame='ametista'] { mask-image: url('/avatar-frames/ametista-recorte.png'); mask-size: 100% 100%; mask-repeat: no-repeat; }
+.avatar-editor img[data-frame='esmeralda'] { mask-image: url('/avatar-frames/esmeralda-recorte.png'); mask-size: 100% 100%; mask-repeat: no-repeat; }

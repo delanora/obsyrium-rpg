@@ -21,3 +21,8 @@
 .portrait.portrait:has(> img) > img {
   border-radius: 50%;
 }
+.portrait.portrait.portrait-framed-avatar:has(> img) { overflow: visible; border-radius: 0; }
+.portrait.portrait.portrait-framed-avatar > img { border-radius: 0; object-fit: contain; }
+.dock-portrait:has(> img[src*='#obsyrium-frame=']) { border: 0; background: none; box-shadow: none; overflow: visible; }
+.dock-portrait:has(> img[src*='#obsyrium-frame=']) > img { border-radius: 0; object-fit: contain; }
+.dock-portrait:has(> img[src*='#obsyrium-frame=']) .dock-portrait-hp { bottom: -4px; left: 10%; width: 80%; }

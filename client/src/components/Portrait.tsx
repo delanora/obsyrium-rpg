@@ -32,7 +32,7 @@ export function Portrait({
   zoomable = true,
 }: PortraitProps) {
   const { open } = useLightbox();
-  const base = `portrait portrait-${size}`;
+  const base = `portrait portrait-${size}${src.includes('#obsyrium-frame=') ? ' portrait-framed-avatar' : ''}`;
 
   if (!src) {
     return (
