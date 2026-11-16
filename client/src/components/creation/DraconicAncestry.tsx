@@ -3,7 +3,8 @@ import type { RaceChoice } from '../../types';
 import { Icon } from '../Icon';
 
 /** Apresentação PHB 2014; a escolha continua no contrato racial existente. */
-export function DraconicAncestry({ choice, value, disabled, onSelect }: {
+export function DraconicAncestry({ choice, value, disabled, onSelect, baseDescription, bonusLabel }: {
+  baseDescription?: string; bonusLabel: string;
   choice: RaceChoice; value: string; disabled: boolean; onSelect: (id: string) => void;
 }) {
   const selected = choice.options.find(option => option.id === value);
@@ -19,7 +20,10 @@ export function DraconicAncestry({ choice, value, disabled, onSelect }: {
       </button>)}
     </ChoiceGallery>
     {selected ? <section className="wizard-option-detail" aria-label="Detalhes da ancestralidade">
-      <h3>Draconato {selected.label}</h3>
+      <h3>Draconato ({selected.label})</h3>
+      {baseDescription ? <p className="wizard-option-description">{baseDescription}</p> : null}
+      <div className="wizard-detail-highlight"><strong>Bônus de atributo</strong><span>{bonusLabel}</span></div>
+      <div className="wizard-detail-highlight"><strong>Idiomas</strong><span>Comum e Dracônico</span></div>
       <p className="wizard-option-description">Sua linhagem de dragões se manifesta no sopro e na proteção contra {selected.damageType?.toLocaleLowerCase('pt-BR')}.</p>
       <div className="wizard-detail-highlight"><strong>Sopro</strong><span>{selected.damageType} · {cone ? 'cone de 4,5 m' : 'linha de 9 m por 1,5 m'} · salvaguarda de {constitution ? 'Constituição' : 'Destreza'}.</span></div>
       <div className="wizard-detail-highlight"><strong>Resistência</strong><span>Você recebe metade do dano de {selected.damageType?.toLocaleLowerCase('pt-BR')}.</span></div>

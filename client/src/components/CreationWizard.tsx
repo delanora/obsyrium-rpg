@@ -121,21 +121,6 @@ function subraceName(option: RaceOption): string {
   return option.name.match(/\(([^)]+)\)/)?.[1] ?? option.name;
 }
 
-/** Diferença de bônus de atributo entre a sub-raça e a raça base (o que a sub-raça concede). */
-function subraceBonusLabel(base: RaceOption, lineage: RaceOption): string {
-  return ABILITY_KEYS.filter(
-    (ability) =>
-      (lineage.abilityBonuses?.[ability] ?? 0) !== (base.abilityBonuses?.[ability] ?? 0),
-  )
-    .map(
-      (ability) =>
-        `${ABILITY_LABELS[ability]} ${signed(
-          (lineage.abilityBonuses?.[ability] ?? 0) - (base.abilityBonuses?.[ability] ?? 0),
-        )}`,
-    )
-    .join(' · ');
-}
-
 interface CreationWizardProps {
   user: SessionUser;
   /** Como começar a mesa: o nível inicial vem da configuração da mesa. */
@@ -339,13 +324,6 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
   const raceBaseSubraces = raceBaseOption ? subracesOf(raceBaseOption) : [];
   const draconicChoice = raceBaseOption?.choices?.find(choice => choice.id === 'draconic-ancestry');
   const raceNeedsSubrace = raceBaseSubraces.length > 0 || Boolean(draconicChoice);
-
-  /** Traços que são SÓ da sub-raça escolhida (os da raça base ficam à parte). */
-  const subraceOnlyTraits = useMemo(() => {
-    if (!raceBaseOption || !selectedRace?.subraceId) return [];
-    const baseIds = new Set((raceBaseOption.traits ?? []).map((trait) => trait.id));
-    return (selectedRace.traits ?? []).filter((trait) => !baseIds.has(trait.id));
-  }, [raceBaseOption, selectedRace]);
 
   /**
    * As escolhas da raça (ancestralidade do Draconato, perícia/ferramenta,
@@ -1116,7 +1094,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                     )}
                   </>
                 ) : draconicChoice ? (
-                  <DraconicAncestry choice={draconicChoice} value={raceChoices[draconicChoice.id] ?? ''} disabled={busy}
+                  <DraconicAncestry baseDescription={raceBaseOption?.description} bonusLabel={raceBaseOption ? raceBonusLabel(raceBaseOption) : ''} choice={draconicChoice} value={raceChoices[draconicChoice.id] ?? ''} disabled={busy}
                     onSelect={value => setRaceExtraChoice(draconicChoice.id, value)} />
                 ) : (
                   <>
@@ -1143,65 +1121,19 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                       })}
                     </ChoiceGallery>
 
-                    {/* A raça base segue visível durante a escolha da sub-raça,
-                        para comparar o que a linhagem acrescenta. */}
                     {raceBaseOption ? (
                       <div className="race-detail">
-                        <h3>{raceBaseOption.name}</h3>
-                        {raceBaseOption.description ? (
-                          <p className="race-detail-note">{raceBaseOption.description}</p>
-                        ) : null}
-
-                        <p className="race-bonus">
-                          <strong>Bônus de atributo</strong>
-                          {raceBonusLabel(raceBaseOption) || '—'}
-                        </p>
-
-                        {(raceBaseOption.traits ?? []).length > 0 ? (
-                          <>
-                            <span className="race-detail-sub">Recursos da raça</span>
-                            <div className="race-traits-full">
-                              {(raceBaseOption.traits ?? []).map((trait) => (
-                                <p className="race-trait-line" key={trait.id}>
-                                  <strong>{trait.name}</strong>
-                                  {racialTraitSummary(trait.id, trait.description)}
-                                </p>
-                              ))}
-                            </div>
-                          </>
-                        ) : null}
+                        <h3>{selectedRace?.name ?? raceBaseOption.name}</h3>
+                        {raceBaseOption.description ? <p className="race-detail-note">{raceBaseOption.description}</p> : null}
+                        <p className="race-bonus"><strong>Bônus de atributo</strong>{raceBonusLabel(selectedRace ?? raceBaseOption) || '—'}</p>
+                        <span className="race-detail-sub">Recursos da raça</span>
+                        <div className="race-traits-full">
+                          {(selectedRace?.traits ?? raceBaseOption.traits ?? []).map(trait => (
+                            <p className="race-trait-line" key={trait.id}><strong>{trait.name}</strong>{racialTraitSummary(trait.id, trait.description)}</p>
+                          ))}
+                        </div>
                       </div>
                     ) : null}
-
-                    {selectedRace ? (
-                      <div className="race-detail">
-                        <h3>{selectedRace.name}</h3>
-                        {raceBaseOption && subraceBonusLabel(raceBaseOption, selectedRace) ? (
-                          <p className="race-bonus">
-                            <strong>Bônus da sub-raça</strong>
-                            {subraceBonusLabel(raceBaseOption, selectedRace)}
-                          </p>
-                        ) : null}
-
-                        {subraceOnlyTraits.length > 0 ? (
-                          <>
-                            <span className="race-detail-sub">Traços da sub-raça</span>
-                            <div className="race-traits-full">
-                              {subraceOnlyTraits.map((trait) => (
-                                <p className="race-trait-line" key={trait.id}>
-                                  <strong>{trait.name}</strong>
-                                  {racialTraitSummary(trait.id, trait.description)}
-                                </p>
-                              ))}
-                            </div>
-                          </>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="section-note">
-                        Escolha uma sub-raça acima para ver o que ela acrescenta.
-                      </p>
-                    )}
 
                     {/* Escolhas PRÓPRIAS da sub-raça (ex.: o truque do Alto Elfo). */}
                     {selectedRace && subraceExtraChoices.length > 0 ? (
