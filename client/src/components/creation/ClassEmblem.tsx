@@ -1,8 +1,9 @@
 import { Icon, type IconName } from '../Icon';
 import { CLASS_PRESENTATIONS } from './classPresentation';
 
-const BASE: Record<string, string> = { barbarian: 'barbaro', bard: 'bardo', cleric: 'clerigo', druid: 'druida', fighter: 'guerreiro', monk: 'monge', paladin: 'paladino', ranger: 'patrulheiro', sorcerer: 'feiticeiro' };
+const BASE: Record<string, string> = { barbarian: 'barbaro', bard: 'bardo', cleric: 'clerigo', druid: 'druida', fighter: 'guerreiro', monk: 'monge', paladin: 'paladino', ranger: 'patrulheiro', sorcerer: 'feiticeiro', warlock: 'bruxo' };
 const SUBCLASS: Record<string, string> = {
+  'warlock:archfey': 'bruxo_arquifada', 'warlock:fiend': 'bruxo_infero', 'warlock:great-old-one': 'bruxo_corruptor',
   'sorcerer:draconic': 'feiticeiro_linhagem_draconica', 'sorcerer:wild-magic': 'feiticeiro_magia_selvagem',
   'paladin:devotion': 'paladino_juramento_da_devocao', 'paladin:ancients': 'paladino_juramento_dos_ancioes', 'paladin:vengeance': 'paladino_juramento_da_vinganca',
   'ranger:hunter': 'patrulheiro_cacador', 'ranger:beast-master': 'patrulheiro_mestre_das_feras',

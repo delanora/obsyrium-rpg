@@ -11,3 +11,5 @@ As associações usam os identificadores do catálogo do projeto. Por exemplo, S
 `Paladino.zip` confirma a arte da classe Paladino e acrescenta os juramentos de Devoção, Vingança e dos Anciões, seguindo a mesma normalização proporcional e transparência das outras artes.
 
 `Feiticeiro.zip` acrescenta a classe Feiticeiro e as origens Linhagem Dracônica e Magia Selvagem, com fontes de 1254px e a mesma normalização proporcional em 512px.
+
+`Bruxo.zip` acrescenta Bruxo e seus três patronos, com a mesma normalização proporcional em 512px. A associação considera a arte: `bruxo_infero` (chamas e figura infernal) representa O Corruptor; `bruxo_corruptor` (olho cósmico) representa O Grande Antigo; `bruxo_arquifada` representa Arquifada. Os nomes do catálogo PHB permanecem preservados.
