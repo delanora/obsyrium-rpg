@@ -20,11 +20,17 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
     if (compact && buttons.length >= cards.length * 7) {
       const cycle = buttons[cards.length].offsetLeft - buttons[0].offsetLeft;
       let shift = 0;
-      if (cycle > 0 && element.scrollLeft < cycle * 2.5) shift = cycle;
-      else if (cycle > 0 && element.scrollLeft > cycle * 3.5) shift = -cycle;
+      if (cycle > 0 && element.scrollLeft < cycle * 1.5) shift = cycle;
+      else if (cycle > 0 && element.scrollLeft > cycle * 4.5) shift = -cycle;
       if (shift) {
-        element.scrollLeft += shift;
+        // As cópias recém-visíveis precisam receber escala e opacidade antes
+        // da pintura, sem interpolar os valores que tinham fora da tela.
+        element.classList.add('is-rebasing');
+        element.scrollTo({ left: element.scrollLeft + shift, behavior: 'instant' });
         if (gesture.current) gesture.current.scroll += shift;
+        highlightCenter();
+        void element.offsetWidth;
+        requestAnimationFrame(() => element.classList.remove('is-rebasing'));
       }
     }
   }

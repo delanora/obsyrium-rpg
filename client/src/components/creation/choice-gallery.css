@@ -41,7 +41,10 @@
 }
 .wizard-overlay .choice-gallery > button { position: relative; }
 .wizard-overlay .choice-gallery > button .race-portrait,
-.wizard-overlay .choice-gallery > button .wizard-class-emblem { width: 82%; height: auto; aspect-ratio: 1; }
-.wizard-overlay .choice-gallery > button .wizard-class-emblem .icon { width: 78%; height: 78%; }
+.wizard-overlay .choice-gallery > button .wizard-class-emblem { width: 100%; height: auto; aspect-ratio: 1; }
+.wizard-overlay .choice-gallery > button .wizard-class-emblem .icon { width: 92%; height: 92%; }
 .wizard-overlay .choice-gallery.is-compact > button .race-portrait,
-.wizard-overlay .choice-gallery.is-compact > button .wizard-class-emblem { width: 82%; height: auto; aspect-ratio: 1; }
+.wizard-overlay .choice-gallery.is-compact > button .wizard-class-emblem { width: 100%; height: auto; aspect-ratio: 1; }
+
+.wizard-overlay .choice-gallery.is-compact > button { padding: .3rem; }
+.wizard-overlay .choice-gallery.is-rebasing > button { transition: none; }
