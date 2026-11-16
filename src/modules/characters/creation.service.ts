@@ -671,6 +671,18 @@ export async function saveCreationStep(
   };
   const patch: UpdateCharacterInput = {};
 
+  if (input.resetAbilities) {
+    if (draft.mode !== 'new' || input.step >= 6) {
+      throw new HttpError('A redistribuição só pode ser reiniciada antes da etapa de atributos de um personagem novo.', 400);
+    }
+    nextDraft.baseAbilities = {};
+    nextDraft.step = input.step;
+    await updateDraftSheet(actor, {}, nextDraft as unknown as Prisma.InputJsonValue, { skipClassPrerequisite: true });
+    const saved = await prisma.character.findUniqueOrThrow({ where: { userId: actor.userId } });
+    const config = await getGameConfig();
+    return buildState(actor, saved, config.startingLevel);
+  }
+
   switch (input.step) {
     case 1: {
       if (!input.mode) {

@@ -1457,6 +1457,7 @@ export interface CreationResponse {
 
 /** Passo concluído enviado ao servidor (`PATCH /api/characters/me/creation`). */
 export interface CreationStepRequest {
+  resetAbilities?: boolean;
   step: number;
   mode?: 'new' | 'existing';
   name?: string;

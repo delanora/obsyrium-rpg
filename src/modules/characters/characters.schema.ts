@@ -881,6 +881,8 @@ export const creationRollRequestSchema = z.object({
 });
 
 export const creationStepSchema = z.object({
+  /** Limpa só a distribuição ao retornar antes dos atributos, preservando os dados rolados. */
+  resetAbilities: z.boolean().optional(),
   /** Número do passo que acabou de ser concluído (1 a 9). */
   step: z.number().int().min(CREATION_FIRST_STEP).max(CREATION_LAST_STEP),
   /** Passo 1: como o personagem está sendo montado. */

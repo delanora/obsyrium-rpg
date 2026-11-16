@@ -706,16 +706,32 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
   // Voltar mantém o rascunho local; avançar valida e grava pelo mesmo contrato do servidor.
   const navigationReady = canAdvance && (step !== 3 ||
     ((!raceNeedsSubrace || selectedRace !== null) && raceChoicesReady));
-  async function navigateTo(destination: number): Promise<void> {
-    if (busy || uploading || destination === step) return;
+  async function navigateTo(destination: number): Promise<boolean> {
+    if (busy || uploading) return false;
+    if (destination === step) return true;
     if (destination > step) {
-      if (!navigationReady || destination > Math.max(furthestStep, step + 1)) return;
-      if (!(await saveStep(stepBody()))) return;
+      if (!navigationReady || destination > Math.max(furthestStep, step + 1)) return false;
+      if (!(await saveStep(stepBody()))) return false;
+    }
+    if (destination < step && destination < 6 && mode === 'new' &&
+      (assignedCount > 0 || Object.keys(creation?.baseAbilities ?? {}).length > 0)) {
+      setBusy(true);
+      try {
+        const response = await saveCreationStep({ step: destination, resetAbilities: true });
+        setState(response);
+        if (response.character) onCharacter(response.character);
+        setAssigned({});
+        setFurthestStep(destination);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Falha ao liberar a redistribuição dos atributos.');
+        return false;
+      } finally { setBusy(false); }
     }
     setError(null);
     setStep(destination);
     if (destination === 3) setRaceSubStep('race');
     if (destination === 5) setClassSubStep('class');
+    return true;
   }
 
   const stepSummaries = [
@@ -810,7 +826,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                   <button type="button" className={`wizard-substep-link${step === 3 && raceSubStep === 'subrace' ? ' current' : ''}`}
                     disabled={busy || uploading || step < 3}
                     aria-current={step === 3 && raceSubStep === 'subrace' ? 'step' : undefined}
-                    onClick={() => { setStep(3); setRaceSubStep('subrace'); setError(null); }}>
+                    onClick={() => { void navigateTo(3).then(ok => { if (ok) setRaceSubStep('subrace'); }); }}>
                     <span>{draconicChoice ? 'Ancestralidade' : 'Sub-raça'}</span><strong>{draconicChoice ? draconicChoice.options.find(option => option.id === raceChoices[draconicChoice.id])?.label ?? 'Selecionar' : selectedRace?.subraceId ? subraceName(selectedRace) : 'Selecionar'}</strong>
                   </button>
                 ) : null}
@@ -818,7 +834,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                   <button type="button" className={`wizard-substep-link${step === 5 && classSubStep === 'subclass' ? ' current' : ''}`}
                     disabled={busy || uploading || step < 5}
                     aria-current={step === 5 && classSubStep === 'subclass' ? 'step' : undefined}
-                    onClick={() => { setStep(5); setClassSubStep('subclass'); setError(null); }}>
+                    onClick={() => { void navigateTo(5).then(ok => { if (ok) setClassSubStep('subclass'); }); }}>
                     <span>Subclasse</span><strong>{subclass || 'Selecionar'}</strong>
                   </button>
                 ) : null}
