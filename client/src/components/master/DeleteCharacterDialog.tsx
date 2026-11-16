@@ -28,6 +28,7 @@ export function DeleteCharacterDialog({
   onConfirm,
 }: DeleteCharacterDialogProps) {
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Esc cancela — nunca confirma, para um toque errado não apagar nada.
@@ -41,9 +42,11 @@ export function DeleteCharacterDialog({
   }, [busy, onCancel]);
 
   async function confirm(): Promise<void> {
-    if (busy || !window.confirm(
-      `Você tem certeza? Esta ação não pode ser revertida.\n\nO personagem ${character.name} e a conta do jogador serão excluídos.`,
-    )) return;
+    if (busy) return;
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
 
     setBusy(true);
     setError(null);
@@ -72,22 +75,25 @@ export function DeleteCharacterDialog({
           <Icon name="trash" size={20} /> Excluir personagem
         </h2>
 
-        <p className="section-note">
-          Esta ação <strong>não pode ser desfeita</strong>.
+        <p className="section-note" aria-live="polite">
+          {confirming ? <>Você tem certeza? <strong>Esta ação não pode ser revertida.</strong></> :
+            <>Esta ação <strong>não pode ser desfeita</strong>.</>}
         </p>
 
         <p className="delete-target">
           {character.name} <span className="muted">· jogador: {owner}</span>
         </p>
 
-        <ul>
+        {confirming ? (
+          <p>O personagem {character.name} e a conta do jogador {owner} serão excluídos definitivamente.</p>
+        ) : <ul>
           <li>A ficha inteira: atributos, perícias, inventário, magias, ataques e anotações.</li>
           <li>
             A <strong>conta do jogador {owner}</strong> — ele não conseguirá mais entrar no
             grimório com este usuário e senha.
           </li>
           <li>O avatar enviado e a participação dele em um combate em andamento.</li>
-        </ul>
+        </ul>}
 
         {error ? <p className="form-error">{error}</p> : null}
 
@@ -102,7 +108,7 @@ export function DeleteCharacterDialog({
             disabled={busy}
           >
             <Icon name="trash" size={14} />
-            {busy ? 'excluindo...' : 'excluir personagem e conta'}
+            {busy ? 'excluindo...' : confirming ? 'sim, excluir definitivamente' : 'excluir personagem e conta'}
           </button>
         </div>
       </div>
