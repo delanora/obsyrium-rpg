@@ -4,7 +4,7 @@
 .wizard-overlay .choice-gallery.is-compact {
   position: relative; flex-wrap: nowrap; justify-content: flex-start;
   overflow-x: auto; overflow-y: hidden; padding: .7rem calc(50% - 3.6rem) 1rem;
-  gap: 1rem; cursor: grab; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: #9d6937 #100c0955;
+  gap: 1rem; cursor: grab; touch-action: pan-y; scrollbar-width: none;
   overscroll-behavior-x: contain;
 }
 .wizard-overlay .choice-gallery.is-compact:active { cursor: grabbing; }
@@ -27,7 +27,10 @@
 }
 .wizard-overlay .choice-gallery.is-compact { padding-top: 1.4rem; padding-bottom: 1.4rem; }
 .wizard-overlay .choice-gallery.is-compact > button {
+  opacity: var(--carousel-opacity, 1);
   transform: scale(var(--carousel-scale, 1)); transform-origin: center;
-  transition: transform .16s ease-out, border-color .18s, box-shadow .18s;
+  transition: transform .16s ease-out, opacity .16s ease-out, border-color .18s, box-shadow .18s;
 }
 @media (prefers-reduced-motion: reduce) { .wizard-overlay .choice-gallery.is-compact > button { transition: none; } }
+
+.wizard-overlay .choice-gallery.is-compact::-webkit-scrollbar { display: none; }

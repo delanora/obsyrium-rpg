@@ -8,6 +8,7 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
   const selectedKey = isValidElement(selected) ? selected.key : null;
   const compact = selectedKey !== null;
   const root = useRef<HTMLDivElement>(null);
+  const previousSelection = useRef<string | null>(null);
   const gesture = useRef<{ x: number; scroll: number; pointer: number; moved: boolean } | null>(null);
   function highlightCenter() {
     const element = root.current;
@@ -17,16 +18,27 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
       const rect = card.getBoundingClientRect();
       const distance = Math.abs(rect.left + rect.width / 2 - center);
       card.style.setProperty('--carousel-scale', String(1 + .12 * Math.max(0, 1 - distance / 130)));
+      const pitch = card.offsetWidth + parseFloat(getComputedStyle(element).columnGap || '0');
+      const fade = Math.max(0, distance / pitch - 1.15);
+      card.style.setProperty('--carousel-opacity', String(Math.max(.08, 1 - fade * .48)));
     }
   }
   useLayoutEffect(() => {
     const element = root.current;
     const card = element?.querySelector<HTMLElement>('[aria-pressed="true"]');
     if (!element || !card) return;
-    const centerSelected = () => { element.scrollTo({ left: card.offsetLeft - element.offsetLeft - (element.clientWidth - card.offsetWidth) / 2, behavior: 'auto' });
-    highlightCenter(); };
-    centerSelected();
-    const observer = new ResizeObserver(centerSelected);
+    const centerSelected = (behavior: ScrollBehavior) => {
+      element.scrollTo({ left: card.offsetLeft - element.offsetLeft - (element.clientWidth - card.offsetWidth) / 2, behavior });
+      highlightCenter();
+    };
+    const animate = previousSelection.current !== null && previousSelection.current !== selectedKey
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    previousSelection.current = selectedKey;
+    centerSelected(animate ? 'smooth' : 'auto');
+    let width = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth !== width) { width = element.clientWidth; centerSelected('auto'); }
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, [selectedKey]);
@@ -34,6 +46,7 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
     onScroll={highlightCenter}
     onPointerDown={event => {
       if (!compact || event.button !== 0) return;
+      event.currentTarget.scrollTo({ left: event.currentTarget.scrollLeft, behavior: 'instant' });
       gesture.current = { x: event.clientX, scroll: event.currentTarget.scrollLeft, pointer: event.pointerId, moved: false };
     }}
     onPointerMove={event => {
