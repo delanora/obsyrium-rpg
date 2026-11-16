@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ChoiceGallery } from './ChoiceGallery';
 import type { RaceChoice } from '../../types';
 import { Icon } from '../Icon';
@@ -7,13 +8,16 @@ export function DraconicAncestry({ choice, value, disabled, onSelect, baseDescri
   baseDescription?: string; bonusLabel: string;
   choice: RaceChoice; value: string; disabled: boolean; onSelect: (id: string) => void;
 }) {
-  const selected = choice.options.find(option => option.id === value);
-  const cone = ['gold', 'green', 'red', 'silver', 'white'].includes(value);
-  const constitution = ['green', 'silver', 'white'].includes(value);
+  const [previewIndex, setPreviewIndex] = useState(-1);
+  const options = [...choice.options].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+  const selected = options[previewIndex] ?? choice.options.find(option => option.id === value);
+  const previewValue = selected?.id ?? value;
+  const cone = ['gold', 'green', 'red', 'silver', 'white'].includes(previewValue);
+  const constitution = ['green', 'silver', 'white'].includes(previewValue);
   return <>
     <h3 className="wizard-selection-title">Ancestralidade dracônica</h3>
-    <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Ancestralidade dracônica">
-      {[...choice.options].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map(option => <button
+    <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Ancestralidade dracônica" onPreviewIndex={setPreviewIndex}>
+      {options.map(option => <button
         key={option.id} data-ancestry={option.id} type="button" className={`wizard-class-card${value === option.id ? ' is-selected' : ''}`}
         aria-pressed={value === option.id} disabled={disabled} onClick={() => onSelect(option.id)}>
         <span className="wizard-class-emblem"><Icon name="dragon" size={64} /></span><span>{option.label}</span>

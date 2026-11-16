@@ -291,6 +291,9 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
       .filter((skill): skill is (typeof SKILLS)[number] => Boolean(skill));
   }, [creation?.skillChoice.from]);
 
+  const [galleryPreview, setGalleryPreview] = useState<Record<string, number>>({});
+  const previewGallery = (name: string, index: number) => setGalleryPreview(current => current[name] === index ? current : { ...current, [name]: index });
+
   /** A LINHAGEM escolhida (raça base ou sub-raça), quando vem do catálogo. */
   const selectedRace = useMemo(
     () => findRaceOption(creation?.raceCatalog ?? [], race),
@@ -304,6 +307,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     [creation?.raceCatalog],
   );
 
+  const previewBaseRace = raceCards[galleryPreview.race ?? -1] ?? raceCards.find(option => raceGroupKeyOf(option) === raceBaseKey) ?? null;
   /** Sub-raças ordenadas pelo nome em português, sem alterar o catálogo. */
   const subracesOf = useCallback(
     (base: RaceOption): RaceOption[] =>
@@ -771,6 +775,13 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     [selectedRace, abilityChoices],
   );
 
+  const backgroundCards = [...(creation?.backgroundCatalog ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  const classCards = [...(character?.classOptions ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  const previewBackground = backgroundCards[galleryPreview.background ?? -1] ?? selectedBackground;
+  const previewClass = classCards[galleryPreview.class ?? -1] ?? selectedClass;
+  const previewLineage = (raceBaseSubraces.length >= 4 ? raceBaseSubraces[galleryPreview.subrace ?? -1] : null) ?? selectedRace ?? raceBaseOption;
+  const previewSubclass = (selectedClass && selectedClass.subclassNames.length >= 4 ? selectedClass.subclassNames[galleryPreview.subclass ?? -1] : null) ?? subclass;
+
   if (loading) {
     return (
       <div className="wizard-overlay">
@@ -879,7 +890,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                   <>
                     <p className="wizard-race-title">Selecionar Raça</p>
 
-                    <ChoiceGallery className="race-grid" role="radiogroup" aria-label="Raça">
+                    <ChoiceGallery className="race-grid" role="radiogroup" aria-label="Raça" onPreviewIndex={index => previewGallery('race', index)}>
                       {raceCards.map((base) => {
                         const selected = raceGroupKeyOf(base) === raceBaseKey;
                         return (
@@ -903,23 +914,23 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                       })}
                     </ChoiceGallery>
 
-                    {raceBaseOption ? (
+                    {previewBaseRace ? (
                       <div className="race-detail">
-                        <h3>{raceBaseOption.name}</h3>
-                        {raceBaseOption.description ? (
-                          <p className="race-detail-note">{raceBaseOption.description}</p>
+                        <h3>{previewBaseRace.name}</h3>
+                        {previewBaseRace.description ? (
+                          <p className="race-detail-note">{previewBaseRace.description}</p>
                         ) : null}
 
                         <p className="race-bonus">
                           <strong>Bônus de atributo</strong>
-                          {raceBonusLabel(raceBaseOption) || '—'}
+                          {raceBonusLabel(previewBaseRace) || '—'}
                         </p>
 
-                        {(raceBaseOption.traits ?? []).length > 0 ? (
+                        {(previewBaseRace.traits ?? []).length > 0 ? (
                           <>
                             <span className="race-detail-sub">Recursos da raça</span>
                             <div className="race-traits-full">
-                              {(raceBaseOption.traits ?? []).map((trait) => (
+                              {(previewBaseRace.traits ?? []).map((trait) => (
                                 <p className="race-trait-line" key={trait.id}>
                                   <strong>{trait.name}</strong>
                                   {racialTraitSummary(trait.id, trait.description)}
@@ -930,7 +941,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                         ) : null}
 
                         {/* Meio-Elfo: +1 em dois atributos à escolha. */}
-                        {raceChoiceNeeded > 0 ? (
+                        {raceBaseOption && raceBaseOption.key === previewBaseRace?.key && raceChoiceNeeded > 0 ? (
                           <div className="wizard-race-choice">
                             <p className="section-note">
                               {raceBaseOption.name} concede +1 em {raceChoiceNeeded} atributos à sua
@@ -970,7 +981,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
                         {/* Demais escolhas: ancestralidade do Draconato, perícias
                             do Meio-Elfo, ferramenta do Anão... */}
-                        {raceExtraChoices.some(choice => choice.id !== 'draconic-ancestry') ? (
+                        {raceBaseOption && raceBaseOption.key === previewBaseRace?.key && raceExtraChoices.some(choice => choice.id !== 'draconic-ancestry') ? (
                           <div className="wizard-race-choice">
                             <p className="section-note">
                               {raceBaseOption.name} pede as escolhas abaixo.
@@ -1000,7 +1011,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                         ) : null}
 
                         {/* Idiomas à escolha (Humano e Meio-Elfo concedem 1). */}
-                        {languageChoiceCount > 0 ? (
+                        {raceBaseOption && raceBaseOption.key === previewBaseRace?.key && languageChoiceCount > 0 ? (
                           <div className="wizard-race-choice">
                             <p className="section-note">
                               {raceBaseOption.name} concede {languageChoiceCount} idioma(s) à sua
@@ -1050,7 +1061,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                   <>
                     <p className="wizard-race-title">Selecionar Sub-raça</p>
 
-                    <ChoiceGallery className="race-grid" role="radiogroup" aria-label="Sub-raça">
+                    <ChoiceGallery className="race-grid" role="radiogroup" key={raceBaseKey} aria-label="Sub-raça" onPreviewIndex={index => previewGallery('subrace', index)}>
                       {raceBaseSubraces.map((lineage) => {
                         const selected = selectedRace?.key === lineage.key;
                         return (
@@ -1071,14 +1082,14 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                       })}
                     </ChoiceGallery>
 
-                    {raceBaseOption ? (
+                    {previewLineage ? (
                       <div className="race-detail">
-                        <h3>{selectedRace?.name ?? raceBaseOption.name}</h3>
-                        {raceBaseOption.description ? <p className="race-detail-note">{raceBaseOption.description}</p> : null}
-                        <p className="race-bonus"><strong>Bônus de atributo</strong>{raceBonusLabel(selectedRace ?? raceBaseOption) || '—'}</p>
+                        <h3>{previewLineage.name}</h3>
+                        {previewLineage.description ? <p className="race-detail-note">{previewLineage.description}</p> : null}
+                        <p className="race-bonus"><strong>Bônus de atributo</strong>{raceBonusLabel(previewLineage) || '—'}</p>
                         <span className="race-detail-sub">Recursos da raça</span>
                         <div className="race-traits-full">
-                          {(selectedRace?.traits ?? raceBaseOption.traits ?? []).map(trait => (
+                          {(previewLineage.traits ?? []).map(trait => (
                             <p className="race-trait-line" key={trait.id}><strong>{trait.name}</strong>{racialTraitSummary(trait.id, trait.description)}</p>
                           ))}
                         </div>
@@ -1142,22 +1153,22 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
               {creation && creation.backgroundCatalog.length > 0 ? (
                 <>
                   <h3 className="wizard-selection-title">Selecionar antecedente</h3>
-                  <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Antecedente">
-                    {[...creation.backgroundCatalog].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((option) => (
+                  <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Antecedente" onPreviewIndex={index => previewGallery('background', index)}>
+                    {backgroundCards.map((option) => (
                       <button type="button" key={option.key} className={`wizard-class-card${background === option.name ? ' is-selected' : ''}`}
                         aria-pressed={background === option.name} disabled={busy} onClick={() => selectBackground(option.name)}>
                         <span className="wizard-class-emblem"><Icon name="scroll" size={64} /></span><span>{option.name}</span>
                       </button>
                     ))}
                   </ChoiceGallery>
-                  {selectedBackground ? <section className="wizard-option-detail" aria-label="Detalhes do antecedente">
-                    <h3>{selectedBackground.name}</h3>
-                    {selectedBackground.description ? <p className="wizard-option-description">{selectedBackground.description}</p> : null}
-                    {backgroundSkillLabels.length ? <div className="wizard-detail-highlight"><strong>Perícias</strong><span>{backgroundSkillLabels.join(' · ')}</span></div> : null}
-                    {selectedBackground.toolProficiencies?.length ? <div className="wizard-detail-highlight"><strong>Ferramentas</strong><span>{selectedBackground.toolProficiencies.map(id => getTool(id)?.namePt ?? id).join(' · ')}</span></div> : null}
-                    {backgroundLanguageCount > 0 ? <div className="wizard-detail-highlight"><strong>Idiomas</strong><span>{backgroundLanguageCount} à escolha</span></div> : null}
-                    {selectedBackground.feature ? <div className="wizard-detail-resource"><h4>{selectedBackground.feature.name}</h4><p>{selectedBackground.feature.description}</p></div> : null}
-                    {selectedBackground.suggestedEquipment ? <div className="wizard-detail-resource"><h4>Equipamento sugerido</h4><p>{selectedBackground.suggestedEquipment}</p></div> : null}
+                  {previewBackground ? <section className="wizard-option-detail" aria-label="Detalhes do antecedente">
+                    <h3>{previewBackground.name}</h3>
+                    {previewBackground.description ? <p className="wizard-option-description">{previewBackground.description}</p> : null}
+                    {backgroundSkillNames(previewBackground).length ? <div className="wizard-detail-highlight"><strong>Perícias</strong><span>{backgroundSkillNames(previewBackground).join(' · ')}</span></div> : null}
+                    {previewBackground.toolProficiencies?.length ? <div className="wizard-detail-highlight"><strong>Ferramentas</strong><span>{previewBackground.toolProficiencies.map(id => getTool(id)?.namePt ?? id).join(' · ')}</span></div> : null}
+                    {(previewBackground.languageChoices ?? 0) > 0 ? <div className="wizard-detail-highlight"><strong>Idiomas</strong><span>{(previewBackground.languageChoices ?? 0)} à escolha</span></div> : null}
+                    {previewBackground.feature ? <div className="wizard-detail-resource"><h4>{previewBackground.feature.name}</h4><p>{previewBackground.feature.description}</p></div> : null}
+                    {previewBackground.suggestedEquipment ? <div className="wizard-detail-resource"><h4>Equipamento sugerido</h4><p>{previewBackground.suggestedEquipment}</p></div> : null}
                   </section> : null}
 
                   {/* Ferramentas à escolha por categoria (instrumento, artesão…). */}
@@ -1262,8 +1273,8 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
               </p>
               {classSubStep === 'class' ? <>
                 <h3 className="wizard-selection-title">Selecionar classe</h3>
-                <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Classe inicial">
-                  {[...(character?.classOptions ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((option) => (
+                <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Classe inicial" onPreviewIndex={index => previewGallery('class', index)}>
+                  {classCards.map((option) => (
                     <button type="button" key={option.key} aria-pressed={classKey === option.key}
                       className={`wizard-class-card${classKey === option.key ? ' is-selected' : ''}`}
                       disabled={busy} onClick={() => {
@@ -1276,9 +1287,9 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     </button>
                   ))}
                 </ChoiceGallery>
-                {selectedClass ? <>
-                  {abilitiesReady && !selectedClass.eligible && selectedClass.missing ? <p className="levelup-blocked">{selectedClass.missing}</p> : null}
-                  <ClassInformation option={selectedClass} />
+                {previewClass ? <>
+                  {abilitiesReady && selectedClass && !selectedClass.eligible && selectedClass.missing ? <p className="levelup-blocked">{selectedClass.missing}</p> : null}
+                  <ClassInformation option={previewClass} />
                 </> : null}
               </> : null}
 
@@ -1286,7 +1297,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
               {classSubStep === 'subclass' && classNeedsSubclass && selectedClass ? (
                 <div className="wizard-subclass-selection">
                   <h3 className="wizard-selection-title">Subclasse de {selectedClass.name}</h3>
-                  <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Subclasse">
+                  <ChoiceGallery className="wizard-class-grid" role="group" key={classKey} aria-label="Subclasse" onPreviewIndex={index => previewGallery('subclass', index)}>
                     {selectedClass.subclassNames.map((name) => (
                       <button type="button" key={name} className={`wizard-class-card${subclass === name ? ' is-selected' : ''}`}
                         aria-pressed={subclass === name} disabled={busy} onClick={() => setSubclass(name)}>
@@ -1294,7 +1305,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                       </button>
                     ))}
                   </ChoiceGallery>
-                  {subclass ? <ClassInformation option={selectedClass} subclass={subclass} /> : null}
+                  {previewSubclass ? <ClassInformation option={selectedClass} subclass={previewSubclass} /> : null}
                 </div>
               ) : null}
 

@@ -2,17 +2,43 @@ import { Children, cloneElement, isValidElement, useEffect, useLayoutEffect, use
 import './choice-gallery.css';
 
 /** Navegar pelo carrossel nunca altera a escolha; somente o clique no card seleciona. */
-export function ChoiceGallery({ children, className = '', ...props }: HTMLAttributes<HTMLDivElement>) {
+export function ChoiceGallery({ children, className = '', onPreviewIndex, ...props }: HTMLAttributes<HTMLDivElement> & { onPreviewIndex?: (index: number) => void }) {
   const cards = Children.toArray(children);
   const selected = cards.find(card => isValidElement<{ 'aria-pressed'?: boolean }>(card) && card.props['aria-pressed']);
   const selectedKey = isValidElement(selected) ? selected.key : null;
   const compact = cards.length >= 4;
+  const firstEnabled = cards.find(card => isValidElement<{ disabled?: boolean }>(card) && !card.props.disabled);
+  const firstEnabledKey = isValidElement(firstEnabled) ? firstEnabled.key : null;
   const selectedIndex = Math.max(0, cards.indexOf(selected!));
+  const previewCallback = useRef(onPreviewIndex);
+  previewCallback.current = onPreviewIndex;
+  const previewIndex = useRef(-1);
   const root = useRef<HTMLDivElement>(null);
   const previousSelection = useRef<string | null>(null);
+  const dragging = useRef(false);
   const gesture = useRef<{ x: number; scroll: number; pointer: number; moved: boolean } | null>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (settleTimer.current) clearTimeout(settleTimer.current); }, []);
+  useEffect(() => {
+    if (compact && !selectedKey) root.current?.querySelector<HTMLButtonElement>(':scope > button:not([disabled])')?.click();
+  }, [compact, selectedKey, firstEnabledKey]);
+  function settle() {
+    if (dragging.current) return;
+    if (gesture.current?.moved) gesture.current = null;
+    normalizeLoop();
+    const element = root.current;
+    if (!element || !compact) return;
+    const buttons = [...element.querySelectorAll<HTMLElement>(':scope > button')];
+    const center = element.scrollLeft + element.clientWidth / 2;
+    const nearest = buttons.reduce<HTMLElement | null>((best, card) => {
+      const distance = (item: HTMLElement) => Math.abs(item.offsetLeft - element.offsetLeft + item.offsetWidth / 2 - center);
+      return !best || distance(card) < distance(best) ? card : best;
+    }, null);
+    if (nearest) {
+      const left = nearest.offsetLeft - element.offsetLeft - (element.clientWidth - nearest.offsetWidth) / 2;
+      if (Math.abs(element.scrollLeft - left) > 1) element.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    }
+  }
   function normalizeLoop() {
     const element = root.current;
     if (!element) return;
@@ -38,13 +64,20 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
     const element = root.current;
     if (!element) return;
     const center = element.getBoundingClientRect().left + element.clientWidth / 2;
+    let nearestIndex = -1;
+    let nearestDistance = Infinity;
     for (const card of element.querySelectorAll<HTMLElement>(':scope > button')) {
       const rect = card.getBoundingClientRect();
       const distance = Math.abs(rect.left + rect.width / 2 - center);
+      if (distance < nearestDistance) { nearestDistance = distance; nearestIndex = Number(card.dataset.galleryIndex); }
       card.style.setProperty('--carousel-scale', String(Math.max(.62, 1.12 - distance / 700)));
       const pitch = card.offsetWidth + parseFloat(getComputedStyle(element).columnGap || '0');
       const fade = Math.max(0, distance / pitch - 1.15);
       card.style.setProperty('--carousel-opacity', String(Math.max(.08, 1 - fade * .48)));
+    }
+    if (nearestIndex >= 0 && nearestIndex !== previewIndex.current) {
+      previewIndex.current = nearestIndex;
+      previewCallback.current?.(nearestIndex);
     }
   }
   useLayoutEffect(() => {
@@ -78,7 +111,7 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
       if (settleTimer.current) clearTimeout(settleTimer.current);
       // Reposicionar cópias só depois do deslocamento; interromper o scroll suave
       // na metade do ciclo fazia a seleção oscilar entre Halfling e Humano.
-      settleTimer.current = setTimeout(normalizeLoop, 180);
+      settleTimer.current = setTimeout(settle, 180);
     }}
     onPointerDown={event => {
       if (!compact || event.button !== 0) return;
@@ -92,14 +125,18 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
       const delta = event.clientX - state.x;
       if (!state.moved && Math.abs(delta) < 6) return;
       state.moved = true;
+      dragging.current = true;
       event.currentTarget.setPointerCapture(event.pointerId);
       event.currentTarget.scrollLeft = state.scroll - delta;
       normalizeLoop();
     }}
     onPointerUp={event => {
+      dragging.current = false;
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      settleTimer.current = setTimeout(settle, 180);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     }}
-    onPointerCancel={() => { gesture.current = null; }}
+    onPointerCancel={() => { dragging.current = false; gesture.current = null; settleTimer.current = setTimeout(settle, 180); }}
     onClickCapture={event => {
       if (gesture.current?.moved) { event.preventDefault(); event.stopPropagation(); gesture.current = null; }
     }}

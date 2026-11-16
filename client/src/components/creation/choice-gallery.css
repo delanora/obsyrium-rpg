@@ -51,3 +51,8 @@
 /* Até três escolhas: uma linha fixa, sem cópias e sem gesto de arraste. */
 .wizard-overlay .choice-gallery.is-small-selection { flex-wrap: nowrap; }
 .wizard-overlay .choice-gallery.is-small-selection > button { flex: 0 1 12rem; width: calc((100% - 2rem) / 3); max-width: 12rem; }
+
+/* O mouse não altera a escala: o destaque acompanha apenas a agulha. */
+.race-selection .choice-gallery.is-compact > .race-card:hover:not(:disabled) {
+  transform: scale(var(--carousel-scale, 1));
+}
