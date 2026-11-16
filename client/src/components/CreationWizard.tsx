@@ -865,13 +865,14 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
           {step === 2 ? (
             <div className="wizard-step-body">
               <div className="wizard-identity avatar-identity">
+                <div className="avatar-identity-fields">
                 <label className="field"><span>Nome</span><input type="text" value={name} maxLength={120} onChange={event => setName(event.target.value)} /></label>
-                <AvatarEditor ref={avatarEditor} value={avatarUrl} userId={user.id} onBusy={setUploading} onError={setError} />
-                <footer className="avatar-identity-footer"><label className="field"><span>Alinhamento</span>
+                <label className="field"><span>Alinhamento</span>
                   <select value={alignment} onChange={event => setAlignment(event.target.value)}><option value="">— escolha —</option>
                     {ALIGNMENTS.map(option => <option key={option} value={option}>{option}</option>)}
                   </select>
-                </label></footer>
+                </label></div>
+                <AvatarEditor ref={avatarEditor} value={avatarUrl} userId={user.id} onBusy={setUploading} onError={setError} />
               </div>
             </div>
           ) : null}

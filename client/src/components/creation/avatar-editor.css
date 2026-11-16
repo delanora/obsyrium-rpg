@@ -1,9 +1,7 @@
 .wizard-overlay .wizard-identity.avatar-identity { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; justify-items: center; }
-.avatar-identity > .field { width: min(100%, 28rem); }
-.avatar-identity > .field:first-child { text-align: center; }
-.avatar-identity > .field:first-child input { text-align: center; font: 1.3rem var(--font-display); }
-.avatar-identity-footer { width: 100%; border-top: 1px solid #a8794066; padding-top: 1.2rem; display: flex; justify-content: center; }
-.avatar-identity-footer .field { width: min(100%, 28rem); }
+.avatar-identity-fields { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: end; }
+.avatar-identity-fields .field { min-width: 0; }
+@media (max-width: 480px) { .avatar-identity-fields { grid-template-columns: minmax(0, 1fr); gap: .6rem; } }
 .avatar-editor { display: grid; gap: .8rem; justify-items: center; width: 100%; }
 .avatar-editor-stage { width: min(22rem, 100%); aspect-ratio: 1; position: relative; touch-action: none; }
 .avatar-editor-stage.has-image { cursor: grab; }
