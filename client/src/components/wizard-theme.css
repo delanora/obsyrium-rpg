@@ -103,3 +103,4 @@
 /* Os recortes alteram apenas transparência; cores e textura vêm da arte original. */
 .class-emblem-art[data-emblem='bardo'] { mask: url('/class-icons/bardo_recorte.webp') center / 100% 100% no-repeat; }
 .class-emblem-art[data-emblem='clerigo_dominio_da_tempestade'] { mask: url('/class-icons/clerigo_dominio_da_tempestade_recorte.webp') center / 100% 100% no-repeat; }
+.wizard-class-card:has(.class-emblem-art) { padding: .25rem; }
