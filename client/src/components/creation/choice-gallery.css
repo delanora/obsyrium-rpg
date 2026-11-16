@@ -48,3 +48,6 @@
 
 .wizard-overlay .choice-gallery.is-compact > button { padding: .3rem; }
 .wizard-overlay .choice-gallery.is-rebasing > button { transition: none; }
+/* Até três escolhas: uma linha fixa, sem cópias e sem gesto de arraste. */
+.wizard-overlay .choice-gallery.is-small-selection { flex-wrap: nowrap; }
+.wizard-overlay .choice-gallery.is-small-selection > button { flex: 0 1 12rem; width: calc((100% - 2rem) / 3); max-width: 12rem; }

@@ -6,8 +6,8 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
   const cards = Children.toArray(children);
   const selected = cards.find(card => isValidElement<{ 'aria-pressed'?: boolean }>(card) && card.props['aria-pressed']);
   const selectedKey = isValidElement(selected) ? selected.key : null;
-  const compact = selectedKey !== null;
-  const selectedIndex = cards.indexOf(selected!);
+  const compact = cards.length >= 4;
+  const selectedIndex = Math.max(0, cards.indexOf(selected!));
   const root = useRef<HTMLDivElement>(null);
   const previousSelection = useRef<string | null>(null);
   const gesture = useRef<{ x: number; scroll: number; pointer: number; moved: boolean } | null>(null);
@@ -48,6 +48,7 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
     }
   }
   useLayoutEffect(() => {
+    if (!compact) return;
     const element = root.current;
     const matches = element ? [...element.querySelectorAll<HTMLElement>(`[data-gallery-index="${selectedIndex}"]`)] : [];
     const center = element ? element.scrollLeft + element.clientWidth / 2 : 0;
@@ -62,7 +63,7 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
     };
     const animate = previousSelection.current !== null && previousSelection.current !== selectedKey
       && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    previousSelection.current = selectedKey;
+    previousSelection.current = selectedKey ?? '__sem-escolha__';
     centerSelected(animate ? 'smooth' : 'auto');
     let width = element.clientWidth;
     const observer = new ResizeObserver(() => {
@@ -70,8 +71,8 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [selectedKey]);
-  return <div className={`choice-gallery-shell${compact ? ' is-compact' : ''}`}><div {...props} ref={root} className={`${className} choice-gallery${compact ? ' is-compact' : ''}`}
+  }, [selectedKey, compact]);
+  return <div className={`choice-gallery-shell${compact ? ' is-compact' : ''}`}><div {...props} ref={root} className={`${className} choice-gallery${compact ? ' is-compact' : cards.length < 4 ? ' is-small-selection' : ''}`}
     onScroll={() => {
       highlightCenter();
       if (settleTimer.current) clearTimeout(settleTimer.current);
