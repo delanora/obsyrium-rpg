@@ -22,3 +22,16 @@
 /* RGB original; as máscaras limpam apenas o halo externo de transparência. */
 .avatar-editor img[data-frame='ametista'] { mask-image: url('/avatar-frames/ametista-recorte.png'); mask-size: 100% 100%; mask-repeat: no-repeat; }
 .avatar-editor img[data-frame='esmeralda'] { mask-image: url('/avatar-frames/esmeralda-recorte.png'); mask-size: 100% 100%; mask-repeat: no-repeat; }
+/* Nome e alinhamento compartilham a mesma caixa e o mesmo acabamento. */
+.avatar-identity-fields .field { display: grid; grid-template-rows: auto 2.75rem; gap: .45rem; margin: 0; }
+.avatar-identity-fields .field > span { line-height: 1.2; color: #d9b57d; letter-spacing: .07em; }
+.avatar-identity-fields .field > input,
+.avatar-identity-fields .field > select {
+  box-sizing: border-box; display: block; width: 100%; height: 2.75rem; min-height: 2.75rem; margin: 0;
+  padding: .6rem .85rem; border: 1px solid #9d7543; border-radius: 3px;
+  background: linear-gradient(145deg, #352619e6, #1a130ee6); color: #f0dfbf;
+  font: 1rem/1.3 var(--font-body); box-shadow: inset 0 0 0 2px #120d0866, 0 1px 0 #d5a45a11;
+}
+.avatar-identity-fields .field > select { padding-right: 2rem; }
+.avatar-identity-fields .field > input:focus,
+.avatar-identity-fields .field > select:focus { border-color: #e4b76a; outline: 2px solid #d5a45a44; outline-offset: 2px; }
