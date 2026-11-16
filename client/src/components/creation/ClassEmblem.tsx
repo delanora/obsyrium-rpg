@@ -3,6 +3,7 @@ import { CLASS_PRESENTATIONS } from './classPresentation';
 
 const BASE: Record<string, string> = { barbarian: 'barbaro', bard: 'bardo', cleric: 'clerigo', druid: 'druida', fighter: 'guerreiro', monk: 'monge', paladin: 'paladino', ranger: 'patrulheiro' };
 const SUBCLASS: Record<string, string> = {
+  'paladin:devotion': 'paladino_juramento_da_devocao', 'paladin:ancients': 'paladino_juramento_dos_ancioes', 'paladin:vengeance': 'paladino_juramento_da_vinganca',
   'ranger:hunter': 'patrulheiro_cacador', 'ranger:beast-master': 'patrulheiro_mestre_das_feras',
   'barbarian:berserker': 'barbaro_caminho_do_berserker', 'barbarian:totem-warrior': 'barbaro_caminho_do_guerreiro_totemico',
   'bard:lore': 'bardo_colegio_do_saber', 'bard:valor': 'bardo_colegio_do_valor',

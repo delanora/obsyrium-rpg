@@ -15,10 +15,10 @@ for (const definition of CLASS_PRESENTATIONS) {
   }
 }
 assert.equal(bases, 8);
-assert.equal(subclasses, 21);
-assert.equal(assets.size, 29);
+assert.equal(subclasses, 24);
+assert.equal(assets.size, 32);
 for (const asset of assets) assert.ok(existsSync(resolve('client/public', asset.slice(1))), asset);
 assert.equal(classEmblemAsset('cleric', 'Domínio do Engano'), '/class-icons/clerigo_dominio_da_trapaca.webp');
 assert.equal(classEmblemAsset('bard', 'Colégio do Conhecimento'), '/class-icons/bardo_colegio_do_saber.webp');
 assert.equal(classEmblemAsset('wizard'), undefined);
-console.log('29 artes associadas sem duplicação: oito classes, vinte e uma subclasses, aliases e fallback verificados.');
+console.log('32 artes associadas sem duplicação: oito classes, vinte e quatro subclasses, aliases e fallback verificados.');
