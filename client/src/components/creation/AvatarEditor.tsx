@@ -4,7 +4,8 @@ import { Icon } from '../Icon';
 import './avatar-editor.css';
 
 const FRAMES = [{ id: 'ametista', name: 'Ametista' }, { id: 'esmeralda', name: 'Esmeralda' }, { id: 'rubi', name: 'Rubi' }, { id: 'topazio', name: 'Topázio' }, { id: 'diamante', name: 'Diamante' }, { id: 'obsidiana', name: 'Obsidiana' }, { id: 'safira', name: 'Safira' }];
-const frameUrl = (id: string) => `/avatar-frames/${id === 'esmeralda' ? 'esmeralda-v2' : id}.png`;
+const UPDATED_FRAMES = new Set(['diamante', 'esmeralda', 'obsidiana', 'safira', 'topazio']);
+const frameUrl = (id: string) => `/avatar-frames/${UPDATED_FRAMES.has(id) ? 'atualizadas/' : ''}${id}.png`;
 type Draft = { source: string; frame: string; zoom: number; x: number; y: number; result: string; dirty?: boolean };
 export interface AvatarEditorHandle { save: () => Promise<string> }
 function loadImage(src: string): Promise<HTMLImageElement> {
