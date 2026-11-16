@@ -1,3 +1,4 @@
+import { ChoiceGallery } from './creation/ChoiceGallery';
 import { getTool } from '../../../src/modules/shared/tools';
 import { useWizardMusic } from '../music/useWizardMusic';
 import './wizard-ambience.css';
@@ -950,7 +951,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                   <>
                     <p className="wizard-race-title">Selecionar Raça</p>
 
-                    <div className="race-grid" role="radiogroup" aria-label="Raça">
+                    <ChoiceGallery className="race-grid" role="radiogroup" aria-label="Raça">
                       {raceCards.map((base) => {
                         const selected = raceGroupKeyOf(base) === raceBaseKey;
                         return (
@@ -972,7 +973,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                           </button>
                         );
                       })}
-                    </div>
+                    </ChoiceGallery>
 
                     {raceBaseOption ? (
                       <div className="race-detail">
@@ -1121,7 +1122,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                   <>
                     <p className="wizard-race-title">Selecionar Sub-raça</p>
 
-                    <div className="race-grid" role="radiogroup" aria-label="Sub-raça">
+                    <ChoiceGallery className="race-grid" role="radiogroup" aria-label="Sub-raça">
                       {raceBaseSubraces.map((lineage) => {
                         const selected = selectedRace?.key === lineage.key;
                         return (
@@ -1140,7 +1141,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                           </button>
                         );
                       })}
-                    </div>
+                    </ChoiceGallery>
 
                     {/* A raça base segue visível durante a escolha da sub-raça,
                         para comparar o que a linhagem acrescenta. */}
@@ -1259,14 +1260,14 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
               {creation && creation.backgroundCatalog.length > 0 ? (
                 <>
                   <h3 className="wizard-selection-title">Selecionar antecedente</h3>
-                  <div className="wizard-class-grid" role="group" aria-label="Antecedente">
+                  <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Antecedente">
                     {[...creation.backgroundCatalog].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((option) => (
                       <button type="button" key={option.key} className={`wizard-class-card${background === option.name ? ' is-selected' : ''}`}
                         aria-pressed={background === option.name} disabled={busy} onClick={() => selectBackground(option.name)}>
                         <span className="wizard-class-emblem"><Icon name="scroll" size={64} /></span><span>{option.name}</span>
                       </button>
                     ))}
-                  </div>
+                  </ChoiceGallery>
                   {selectedBackground ? <section className="wizard-option-detail" aria-label="Detalhes do antecedente">
                     <h3>{selectedBackground.name}</h3>
                     {selectedBackground.description ? <p className="wizard-option-description">{selectedBackground.description}</p> : null}
@@ -1379,7 +1380,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
               </p>
               {classSubStep === 'class' ? <>
                 <h3 className="wizard-selection-title">Selecionar classe</h3>
-                <div className="wizard-class-grid" role="group" aria-label="Classe inicial">
+                <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Classe inicial">
                   {[...(character?.classOptions ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map((option) => (
                     <button type="button" key={option.key} aria-pressed={classKey === option.key}
                       className={`wizard-class-card${classKey === option.key ? ' is-selected' : ''}`}
@@ -1392,7 +1393,7 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
                       <span>{option.name}</span>
                     </button>
                   ))}
-                </div>
+                </ChoiceGallery>
                 {selectedClass ? <>
                   {abilitiesReady && !selectedClass.eligible && selectedClass.missing ? <p className="levelup-blocked">{selectedClass.missing}</p> : null}
                   <ClassInformation option={selectedClass} />
@@ -1403,14 +1404,14 @@ export function CreationWizard({ onCharacter, onFinished }: CreationWizardProps)
               {classSubStep === 'subclass' && classNeedsSubclass && selectedClass ? (
                 <div className="wizard-subclass-selection">
                   <h3 className="wizard-selection-title">Subclasse de {selectedClass.name}</h3>
-                  <div className="wizard-class-grid" role="group" aria-label="Subclasse">
+                  <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Subclasse">
                     {selectedClass.subclassNames.map((name) => (
                       <button type="button" key={name} className={`wizard-class-card${subclass === name ? ' is-selected' : ''}`}
                         aria-pressed={subclass === name} disabled={busy} onClick={() => setSubclass(name)}>
                         <span className="wizard-class-emblem"><Icon name={CLASS_ICONS[classKey] ?? 'star'} size={64} /></span><span>{name}</span>
                       </button>
                     ))}
-                  </div>
+                  </ChoiceGallery>
                   {subclass ? <ClassInformation option={selectedClass} subclass={subclass} /> : null}
                 </div>
               ) : null}

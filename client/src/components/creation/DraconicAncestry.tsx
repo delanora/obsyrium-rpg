@@ -1,3 +1,4 @@
+import { ChoiceGallery } from './ChoiceGallery';
 import type { RaceChoice } from '../../types';
 import { Icon } from '../Icon';
 
@@ -10,13 +11,13 @@ export function DraconicAncestry({ choice, value, disabled, onSelect }: {
   const constitution = ['green', 'silver', 'white'].includes(value);
   return <>
     <h3 className="wizard-selection-title">Ancestralidade dracônica</h3>
-    <div className="wizard-class-grid" role="group" aria-label="Ancestralidade dracônica">
+    <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Ancestralidade dracônica">
       {[...choice.options].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')).map(option => <button
         key={option.id} data-ancestry={option.id} type="button" className={`wizard-class-card${value === option.id ? ' is-selected' : ''}`}
         aria-pressed={value === option.id} disabled={disabled} onClick={() => onSelect(option.id)}>
         <span className="wizard-class-emblem"><Icon name="dragon" size={64} /></span><span>{option.label}</span>
       </button>)}
-    </div>
+    </ChoiceGallery>
     {selected ? <section className="wizard-option-detail" aria-label="Detalhes da ancestralidade">
       <h3>Draconato {selected.label}</h3>
       <p className="wizard-option-description">Sua linhagem de dragões se manifesta no sopro e na proteção contra {selected.damageType?.toLocaleLowerCase('pt-BR')}.</p>
