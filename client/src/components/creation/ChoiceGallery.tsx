@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement, useLayoutEffect, useRef, type HTMLAttributes } from 'react';
+import { Children, cloneElement, isValidElement, useEffect, useLayoutEffect, useRef, type HTMLAttributes } from 'react';
 import './choice-gallery.css';
 
 /** Navegar pelo carrossel nunca altera a escolha; somente o clique no card seleciona. */
@@ -11,7 +11,9 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
   const root = useRef<HTMLDivElement>(null);
   const previousSelection = useRef<string | null>(null);
   const gesture = useRef<{ x: number; scroll: number; pointer: number; moved: boolean } | null>(null);
-  function highlightCenter() {
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (settleTimer.current) clearTimeout(settleTimer.current); }, []);
+  function normalizeLoop() {
     const element = root.current;
     if (!element) return;
     const buttons = element.querySelectorAll<HTMLElement>(':scope > button');
@@ -25,6 +27,10 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
         if (gesture.current) gesture.current.scroll += shift;
       }
     }
+  }
+  function highlightCenter() {
+    const element = root.current;
+    if (!element) return;
     const center = element.getBoundingClientRect().left + element.clientWidth / 2;
     for (const card of element.querySelectorAll<HTMLElement>(':scope > button')) {
       const rect = card.getBoundingClientRect();
@@ -60,9 +66,16 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
     return () => observer.disconnect();
   }, [selectedKey]);
   return <div className={`choice-gallery-shell${compact ? ' is-compact' : ''}`}><div {...props} ref={root} className={`${className} choice-gallery${compact ? ' is-compact' : ''}`}
-    onScroll={highlightCenter}
+    onScroll={() => {
+      highlightCenter();
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      // Reposicionar cópias só depois do deslocamento; interromper o scroll suave
+      // na metade do ciclo fazia a seleção oscilar entre Halfling e Humano.
+      settleTimer.current = setTimeout(normalizeLoop, 180);
+    }}
     onPointerDown={event => {
       if (!compact || event.button !== 0) return;
+      if (settleTimer.current) clearTimeout(settleTimer.current);
       event.currentTarget.scrollTo({ left: event.currentTarget.scrollLeft, behavior: 'instant' });
       gesture.current = { x: event.clientX, scroll: event.currentTarget.scrollLeft, pointer: event.pointerId, moved: false };
     }}
@@ -74,6 +87,7 @@ export function ChoiceGallery({ children, className = '', ...props }: HTMLAttrib
       state.moved = true;
       event.currentTarget.setPointerCapture(event.pointerId);
       event.currentTarget.scrollLeft = state.scroll - delta;
+      normalizeLoop();
     }}
     onPointerUp={event => {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
