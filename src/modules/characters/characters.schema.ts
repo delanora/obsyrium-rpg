@@ -888,6 +888,7 @@ export const creationStepSchema = z.object({
   resetAbilities: z.boolean().optional(),
   /** Número do passo que acabou de ser concluído (1 a 9). */
   step: z.number().int().min(CREATION_FIRST_STEP).max(CREATION_LAST_STEP),
+  equipmentMethod: z.enum(['class-background', 'purchase', 'master']).optional(),
   /** Passo 1: como o personagem está sendo montado. */
   mode: z.enum(['new', 'existing']).optional(),
   /** Passo 2: identidade. */

@@ -113,6 +113,7 @@ export interface CreationStateDto {
   mode: CreationMode | null;
   /** Passo alcançado (retomada). O cliente abre o wizard aqui. */
   step: number;
+  equipmentMethod: 'class-background' | 'purchase' | 'master' | null;
   /** Rolagens de 4d6 já feitas (até seis). */
   rolls: CreationRoll[];
   /** Valores-base dos atributos (antes dos bônus raciais). */
@@ -145,7 +146,7 @@ export interface CreationStateDto {
    * perícias, quando já dá para saber o que o personagem domina.
    */
   expertiseChoices: FeatureChoiceInfo[];
-  /** Nível em que a mesa começa: o passo 8 aplica os níveis 2 até ele. */
+  /** Nível em que a mesa começa: o passo 9 aplica os níveis 2 até ele. */
   startingLevel: number;
   /** Catálogos (vazios enquanto o conteúdo não for cadastrado). */
   raceCatalog: RaceOption[];
@@ -542,6 +543,7 @@ function missingForFinalize(character: Character, draft: CreationDraft): string[
   }
 
   if (entries.length === 0) missing.push('a classe (passo 5)');
+  if (!draft.equipmentMethod) missing.push('a opção de equipamentos iniciais (passo 8)');
 
   // Clérigo/Feiticeiro/Bruxo precisam da subclasse desde o nível 1.
   const firstClass = entries[0];
@@ -609,6 +611,7 @@ async function buildState(
     creation: {
       mode: draft.mode,
       step: draft.step,
+      equipmentMethod: draft.equipmentMethod ?? null,
       rolls: draft.rolls,
       baseAbilities: draft.baseAbilities,
       skillPicks: draft.skillPicks,
@@ -1083,7 +1086,13 @@ export async function saveCreationStep(
     }
 
     case 8: {
-      // O passo 8 não tem campo próprio: ele aplica os níveis iniciais da mesa
+      if (!input.equipmentMethod) throw new HttpError('Escolha como obter os equipamentos iniciais.', 400);
+      nextDraft.equipmentMethod = input.equipmentMethod;
+      break;
+    }
+
+    case 9: {
+      // O passo 9 não tem campo próprio: ele aplica os níveis iniciais da mesa
       // pelo assistente de Level Up (ver `creationLevelUp`). Só dá para avançar
       // quando o personagem já chegou no nível inicial.
       const config = await getGameConfig();
@@ -1100,7 +1109,7 @@ export async function saveCreationStep(
     }
 
     default:
-      // O passo 9 é a revisão: quem fecha a criação é `finalizeCreation`.
+      // O passo 10 é a revisão: quem fecha a criação é `finalizeCreation`.
       break;
   }
 
@@ -1203,7 +1212,7 @@ export async function rollCreationAttribute(
   };
 }
 
-/** Passo 8: aplica um nível do assistente de Level Up durante a criação. */
+/** Passo 9: aplica um nível do assistente de Level Up durante a criação. */
 export async function creationLevelUp(actor: Actor, input: LevelUpInput): Promise<CreationState> {
   const config = await getGameConfig();
   await levelUpDraft(actor, input, config.startingLevel);
@@ -1225,7 +1234,7 @@ export async function finalizeCreation(actor: Actor): Promise<CreationState> {
 
   const config = await getGameConfig();
   const level = totalCharacterLevel(normalizeClassEntries(character.classes));
-  if (level < config.startingLevel) missing.push('os níveis iniciais da mesa (passo 8)');
+  if (level < config.startingLevel) missing.push('os níveis iniciais da mesa (passo 9)');
 
   if (missing.length > 0) {
     throw new HttpError(`Ainda falta preencher: ${missing.join(', ')}.`, 400);

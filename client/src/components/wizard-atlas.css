@@ -189,3 +189,6 @@
 .wizard-overlay .wizard .wizard-detail-resource:has(.sorcerer-ancestry),
 .wizard-overlay .wizard .sorcerer-ancestry { min-width: 0; max-width: 100%; }
 .wizard-overlay .wizard .sorcerer-ancestry .choice-gallery-shell { width: 100%; overflow: hidden; }
+
+.wizard-overlay .wizard-equipment-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) { .wizard-overlay .wizard-equipment-cards { grid-template-columns: 1fr; } }

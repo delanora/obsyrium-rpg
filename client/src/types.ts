@@ -1412,6 +1412,7 @@ export interface BackgroundOption {
 
 /** Estado do assistente devolvido pela API. */
 export interface CreationState {
+  equipmentMethod?: 'class-background' | 'purchase' | 'master' | null;
   mode: 'new' | 'existing' | null;
   step: number;
   rolls: CreationRoll[];
@@ -1460,6 +1461,7 @@ export interface CreationResponse {
 
 /** Passo concluído enviado ao servidor (`PATCH /api/characters/me/creation`). */
 export interface CreationStepRequest {
+  equipmentMethod?: 'class-background' | 'purchase' | 'master';
   resetAbilities?: boolean;
   step: number;
   mode?: 'new' | 'existing';

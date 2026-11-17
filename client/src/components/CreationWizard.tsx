@@ -1,3 +1,5 @@
+import { StartingEquipmentStep } from './creation/StartingEquipmentStep';
+import { STARTING_EQUIPMENT_LABELS, type StartingEquipmentMethod } from '../../../src/modules/shared/starting-equipment';
 import { BackgroundEmblem } from './creation/BackgroundEmblem';
 import { newId } from '../utils';
 import { ChoiceGallery } from './creation/ChoiceGallery';
@@ -58,6 +60,7 @@ const STEP_LABELS = [
   'Classe',
   'Atributos',
   'Perícias',
+  'Equipamentos iniciais',
   'Nível e progressão',
   'Revisão',
 ];
@@ -146,6 +149,8 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const [error, setError] = useState<string | null>(null);
 
   // Campos dos passos (hidratados do rascunho na abertura).
+  const [equipmentMethod, setEquipmentMethod] = useState<StartingEquipmentMethod | null>(null);
+  const [equipmentDetails, setEquipmentDetails] = useState(false);
   const [mode, setMode] = useState<'new' | 'existing' | null>(null);
   const [name, setName] = useState('');
   const [alignment, setAlignment] = useState('');
@@ -175,7 +180,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const [picks, setPicks] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
-  /** Catálogo de magias para a escolha do passo 8 (buscado uma vez). */
+  /** Catálogo de magias para a escolha do passo 9 (buscado uma vez). */
   const [catalogSpells, setCatalogSpells] = useState<CompendiumSpell[]>([]);
   const avatarEditor = useRef<AvatarEditorHandle>(null);
 
@@ -187,6 +192,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     const { creation: saved, character: sheet } = response;
 
     setMode(saved.mode);
+    setEquipmentMethod(saved.equipmentMethod ?? null);
     setName(
       sheet && sheet.name.trim().toLowerCase() !== DEFAULT_NAME ? sheet.name : '',
     );
@@ -214,7 +220,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   useEffect(() => {
     let active = true;
 
-    // O catálogo (magias do PHB) alimenta o seletor do passo 8; se falhar, o
+    // O catálogo (magias do PHB) alimenta o seletor do passo 9; se falhar, o
     // passo apenas não mostra o seletor — o resto da criação segue normal.
     fetchCompendium()
       .then((data) => {
@@ -662,6 +668,8 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
         return (skillCount === 0 || effectivePicks.length === skillCount) && expertiseReady;
       }
       case 8:
+        return equipmentMethod !== null;
+      case 9:
         return level >= startingLevel;
       default:
         return true;    }
@@ -670,6 +678,8 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   /** Corpo do passo atual enviado ao servidor. */
   function stepBody(): Record<string, unknown> {
     switch (step) {
+      case 8:
+        return { equipmentMethod };
       case 1:
         return { mode };
       case 2:
@@ -748,6 +758,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     selectedClass?.name ?? '',
     assignedCount ? `${assignedCount}/6 definidos` : '',
     effectivePicks.length ? `${effectivePicks.length}/${skillCount} escolhidas` : '',
+    equipmentMethod ? 'Opção definida' : '',
     level ? `Nível ${level}` : '',
     'Conferir personagem',
   ];
@@ -766,7 +777,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     }
   }
 
-  /** Passo 8: aplica um nível pelo assistente de Level Up da ficha. */
+  /** Passo 9: aplica um nível pelo assistente de Level Up da ficha. */
   async function applyLevelUp(request: LevelUpRequest): Promise<Character> {
     const response = await creationLevelUp(request);
     setState(response);
@@ -801,7 +812,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
           <h1>Criação de personagem</h1>
         </header>
 
-        {/* Trilha dos nove passos. */}
+        {/* Trilha das dez etapas. */}
         <ol className="wizard-track">
           {STEP_LABELS.map((label, index) => {
             const number = index + 1;
@@ -812,7 +823,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                 <button type="button" className="wizard-step-link" disabled={busy || uploading || !available}
                   aria-current={number === step ? 'step' : undefined}
                   title={`${label}${stepSummaries[index] ? `: ${stepSummaries[index]}` : ''}`}
-                  onClick={() => { if (number === 3 && step === 3) setRaceSubStep('race'); else if (number === 6 && step === 6) setAbilitySubStep('roll'); else if (number === 5 && step === 5) setClassSubStep('class'); else void navigateTo(number); }}>
+                  onClick={() => { if (number === 8 && step === 8) setEquipmentDetails(false); else if (number === 3 && step === 3) setRaceSubStep('race'); else if (number === 6 && step === 6) setAbilitySubStep('roll'); else if (number === 5 && step === 5) setClassSubStep('class'); else void navigateTo(number); }}>
                   <span className="wizard-step-number" aria-hidden="true">{number < step ? '✓' : number}</span>
                   <span className="wizard-step-copy"><span className="wizard-step-label">{label}</span>
                     {stepSummaries[index] ? <span className="wizard-step-summary">{stepSummaries[index]}</span> : null}
@@ -832,6 +843,12 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     <span>Distribuir atributos</span><strong>{assignedCount}/6 definidos</strong>
                   </button>
                 ) : null}
+                {number === 8 && equipmentMethod ? <button type="button"
+                  className={`wizard-substep-link${step === 8 && equipmentDetails ? ' current' : ''}`}
+                  aria-current={step === 8 && equipmentDetails ? 'step' : undefined} disabled={busy || uploading}
+                  onClick={() => { void navigateTo(8).then(ok => { if (ok) setEquipmentDetails(true); }); }}>
+                  <span>{STARTING_EQUIPMENT_LABELS[equipmentMethod]}</span><strong>Equipamento inicial</strong>
+                </button> : null}
                 {number === 5 && classNeedsSubclass ? (
                   <button type="button" className={`wizard-substep-link${step === 5 && classSubStep === 'subclass' ? ' current' : ''}`}
                     disabled={busy || uploading || step < 5}
@@ -1458,8 +1475,12 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
             </div>
           ) : null}
 
-          {/* --- 8. Nível e progressão -------------------------------------- */}
-          {step === 8 ? (
+          {step === 8 ? <StartingEquipmentStep method={equipmentMethod} details={equipmentDetails} disabled={busy}
+            classKey={classKey} className={selectedClass?.name ?? ''} background={selectedBackground?.name ?? background}
+            onChoose={method => { setEquipmentMethod(method); setEquipmentDetails(true); }} /> : null}
+
+          {/* --- 9. Nível e progressão -------------------------------------- */}
+          {step === 9 ? (
             <div className="wizard-step-body">
               <p className="section-note">
                 Esta mesa começa no <strong>nível {startingLevel}</strong>. O assistente aplica os
@@ -1524,8 +1545,8 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
             </div>
           ) : null}
 
-          {/* --- 9. Revisão ------------------------------------------------- */}
-          {step === 9 && character ? (
+          {/* --- 10. Revisão ------------------------------------------------- */}
+          {step === 10 && character ? (
             <div className="wizard-step-body">
               <p className="section-note">
                 Confira tudo antes de finalizar. Depois disso a montagem só muda pelo Level Up — ou

@@ -1,5 +1,6 @@
+import { normalizeEquipmentMethod, type StartingEquipmentMethod } from './starting-equipment.js';
 /**
- * Criação de personagem (assistente em 9 passos).
+ * Criação de personagem (assistente em 10 passos).
  *
  * Aqui fica o que é DADO da criação, separado das regras de ficha:
  *
@@ -34,6 +35,7 @@ export const CREATION_STEPS = [
   { id: 'class', label: 'Classe' },
   { id: 'abilities', label: 'Atributos' },
   { id: 'skills', label: 'Perícias' },
+  { id: 'equipment', label: 'Equipamentos iniciais' },
   { id: 'level', label: 'Nível e progressão' },
   { id: 'review', label: 'Revisão' },
 ] as const;
@@ -359,6 +361,8 @@ export interface CreationRoll {
 }
 
 export interface CreationDraft {
+  stepVersion?: 2;
+  equipmentMethod?: StartingEquipmentMethod | null;
   /** Nulo até o primeiro passo ser respondido. */
   mode: CreationMode | null;
   /** Passo alcançado (retomada). Sempre entre 1 e o último passo. */
@@ -397,6 +401,8 @@ export interface CreationDraft {
 
 export const EMPTY_CREATION_DRAFT: CreationDraft = {
   mode: null,
+  stepVersion: 2,
+  equipmentMethod: null,
   step: CREATION_FIRST_STEP,
   rolls: [],
   baseAbilities: {},
@@ -419,7 +425,7 @@ export function normalizeCreationDraft(input: unknown): CreationDraft {
 
   const step =
     typeof source.step === 'number' && Number.isFinite(source.step)
-      ? Math.min(CREATION_LAST_STEP, Math.max(CREATION_FIRST_STEP, Math.floor(source.step)))
+      ? Math.min(CREATION_LAST_STEP, Math.max(CREATION_FIRST_STEP, Math.floor(source.step) + (source.stepVersion !== 2 && source.step >= 8 ? 1 : 0)))
       : CREATION_FIRST_STEP;
 
   const rolls: CreationRoll[] = [];
@@ -501,6 +507,8 @@ export function normalizeCreationDraft(input: unknown): CreationDraft {
 
   return {
     mode,
+    stepVersion: 2,
+    equipmentMethod: normalizeEquipmentMethod(source.equipmentMethod),
     step,
     rolls,
     baseAbilities,
