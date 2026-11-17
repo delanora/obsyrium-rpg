@@ -14,7 +14,7 @@
   --ink-soft: #c9bda8;
 }
 .wizard-overlay .wizard-head { border-bottom: 0; margin-bottom: .8rem; }
-.wizard-overlay .wizard-head h1 { color: #ead4ac; letter-spacing: .055em; font-size: clamp(1.25rem, 2vw, 1.75rem); text-shadow: 0 2px 5px #000; }
+.wizard-overlay .wizard-head h1 { font-family: var(--font-display); font-weight: 500; color: #ead4ac; letter-spacing: .055em; font-size: clamp(1.25rem, 2vw, 1.75rem); text-shadow: 0 2px 5px #000; }
 
 /* Uma única moldura adaptável. O recorte em nove partes não estica os cantos. */
 .wizard-overlay .wizard.is-race-step > .wizard-body,
@@ -45,7 +45,7 @@
   margin: 0 0 1.2rem;
   padding: .25rem 2rem 1.8rem .1rem;
   border: 0;
-  background: url('/creation/atlas-obsidiana/divisor.webp') center bottom / min(100%, 24rem) 1.7rem no-repeat;
+  background: url('/creation/atlas-obsidiana/divisor.webp') center bottom / min(100%, 24rem) auto no-repeat;
   color: #eddbb7;
   font: 1.5rem var(--font-display);
   letter-spacing: .09em;

@@ -16,8 +16,9 @@
 .app-header-obsyrium .app-header-title h1 { margin: 0; line-height: 0; text-shadow: none; }
 .app-header-obsyrium .app-header-logo { display: block; width: 8.25rem; height: auto; max-width: 100%; filter: brightness(1.25) drop-shadow(0 1px 3px #b18a4426); }
 .app-header-obsyrium .app-header-ornament {
-  flex: 1 1 8rem; height: 1.3rem; max-width: 30rem; min-width: 0;
-  background: url('/creation/atlas-obsidiana/divisor.webp') center / contain no-repeat;
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(22vw, 21rem); height: 1.85rem;
+  background: url('/creation/atlas-obsidiana/ornamento-navbar.webp') center / contain no-repeat;
   opacity: .68; pointer-events: none;
 }
 .app-header-obsyrium .app-header-meta { justify-content: flex-end; gap: .7rem; padding: .15rem .25rem; border: 0; background: none; flex-shrink: 0; }
@@ -38,7 +39,7 @@
   border-color: #d4b47c; background: linear-gradient(#443a2b, #211e19);
   box-shadow: inset 0 1px #e4c58d50, 0 0 8px #b3873b22;
 }
-@media (max-width: 1000px) {
+@media (max-width: 1200px) {
   .app-header-obsyrium .app-header-ornament { display: none; }
 }
 @media (max-width: 760px) {
