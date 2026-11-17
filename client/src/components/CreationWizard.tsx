@@ -77,7 +77,7 @@ function raceBonusLabel(option: RaceOption): string {
     (ability) => (option.abilityBonuses?.[ability] ?? 0) !== 0,
   ).map((ability) => `${ABILITY_LABELS[ability]} ${signed(option.abilityBonuses?.[ability] ?? 0)}`);
 
-  if ((option.abilityChoice ?? 0) > 0) parts.push(`+1 à escolha (${option.abilityChoice})`);
+  if ((option.abilityChoice ?? 0) > 0) parts.push(`+${option.abilityChoiceBonus ?? 1} à escolha (${option.abilityChoice})`);
   return parts.join(' · ');
 }
 
@@ -954,7 +954,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                         {raceBaseOption && raceBaseOption.key === previewBaseRace?.key && raceChoiceNeeded > 0 ? (
                           <div className="wizard-race-choice">
                             <p className="section-note">
-                              {raceBaseOption.name} concede +1 em {raceChoiceNeeded} atributos à sua
+                              {raceBaseOption.name} concede +{raceBaseOption.abilityChoiceBonus ?? 1} em {raceChoiceNeeded} atributos à sua
                               escolha (além dos bônus fixos de{' '}
                               {raceBonusLabel(raceBaseOption) || '—'}).
                             </p>

@@ -49,7 +49,7 @@ export function raceBonusesWithChoices(
   const pick = option.abilityChoice ?? 0;
 
   for (const ability of choices.slice(0, pick)) {
-    bonuses[ability] = (bonuses[ability] ?? 0) + 1;
+    bonuses[ability] = (bonuses[ability] ?? 0) + (option.abilityChoiceBonus ?? 1);
   }
 
   return bonuses;

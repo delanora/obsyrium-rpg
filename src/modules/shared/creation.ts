@@ -105,6 +105,8 @@ export interface RaceOption {
    * validados contra `raceChoicePool`.
    */
   abilityChoice?: number;
+  /** Valor do incremento por atributo escolhido; padrão +1. */
+  abilityChoiceBonus?: number;
   /** Escolhas que a raça exige (a UI renderiza e o serviço valida). */
   choices?: RaceChoiceView[];
   /** Traços raciais (exibidos na aba Características). */
@@ -191,6 +193,7 @@ function toRaceOption(race: Race, subrace?: Subrace): RaceOption {
     subraceId: subrace?.id,
     abilityBonuses,
     abilityChoice: choiceDefinitions.filter((choice) => choice.apply === 'ability').length,
+    abilityChoiceBonus: choiceDefinitions.find(choice => choice.apply === 'ability')?.amount ?? 1,
     choices: choiceDefinitions.map((choice) => ({
       id: choice.id,
       label: choice.label,
@@ -287,7 +290,7 @@ export function racialAbilityBonuses(
   const pick = option.abilityChoice ?? 0;
   if (pick > 0) {
     for (const ability of choices.slice(0, pick)) {
-      bonuses[ability] = (bonuses[ability] ?? 0) + 1;
+      bonuses[ability] = (bonuses[ability] ?? 0) + (option.abilityChoiceBonus ?? 1);
     }
   }
 

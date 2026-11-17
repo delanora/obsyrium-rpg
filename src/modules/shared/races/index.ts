@@ -11,6 +11,7 @@ import { human } from './human.js';
 import { tiefling } from './tiefling.js';
 import { tabaxi } from './tabaxi.js';
 import { mandrake } from './mandrake.js';
+import { spirithost } from './spirithost.js';
 import type { Race, RaceChoiceDefinition, RaceTrait, Subrace } from './types.js';
 
 /**
@@ -40,6 +41,7 @@ export const RACES: readonly Race[] = [
   // Exceção personalizada explicitamente autorizada pela mesa.
   tabaxi,
   mandrake,
+  spirithost,
 ];
 
 const RACE_BY_ID: ReadonlyMap<string, Race> = new Map(RACES.map((race) => [race.id, race]));
@@ -206,10 +208,10 @@ export function raceAbilityBonuses(
   for (const definition of raceChoiceDefinitions(input.raceId)) {
     if (definition.apply !== 'ability') continue;
     const picked = choices[definition.id];
-    if (!picked) continue;
+    if (!picked || !definition.options.some(option => option.id === picked)) continue;
     if (!(ABILITY_KEYS as readonly string[]).includes(picked)) continue;
     const ability = picked as AbilityKey;
-    bonuses[ability] = (bonuses[ability] ?? 0) + 1;
+    bonuses[ability] = (bonuses[ability] ?? 0) + (definition.amount ?? 1);
   }
 
   return bonuses;

@@ -183,7 +183,7 @@ function bonusesFromOption(
   const bonuses: Partial<Record<AbilityKey, number>> = { ...(option.abilityBonuses ?? {}) };
   const take = option.abilityChoice ?? 0;
   for (const ability of choices.slice(0, take)) {
-    bonuses[ability] = (bonuses[ability] ?? 0) + 1;
+    bonuses[ability] = (bonuses[ability] ?? 0) + (option.abilityChoiceBonus ?? 1);
   }
   return bonuses;
 }
@@ -229,8 +229,9 @@ async function bonusesForCharacter(
     raceId: character.raceId,
     subraceId: character.subraceId,
   });
+  const choiceBonus = RACE_CATALOG.find(option => option.raceId === character.raceId && (option.subraceId ?? null) === (character.subraceId ?? null))?.abilityChoiceBonus ?? 1;
   for (const ability of abilityChoices) {
-    bonuses[ability] = (bonuses[ability] ?? 0) + 1;
+    bonuses[ability] = (bonuses[ability] ?? 0) + choiceBonus;
   }
   return bonuses;
 }
@@ -732,7 +733,7 @@ export async function saveCreationStep(
         }
         if (choices.length !== required) {
           throw new HttpError(
-            `${option.name} concede +1 em ${required} atributos à sua escolha — escolha exatamente esse tanto.`,
+            `${option.name} concede +${option.abilityChoiceBonus ?? 1} em ${required} atributos à sua escolha — escolha exatamente esse tanto.`,
             400,
           );
         }

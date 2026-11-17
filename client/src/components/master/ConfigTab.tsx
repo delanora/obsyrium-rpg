@@ -65,7 +65,7 @@ function raceBenefits(race: CompendiumRace): string {
   const fixed = bonusLabel(race.abilityBonuses);
   if (fixed) parts.push(fixed);
   if (race.abilityChoice > 0) {
-    parts.push(`${formatModifier(1)} em ${race.abilityChoice} atributo(s) à escolha`);
+    parts.push(`${formatModifier(race.abilityChoiceBonus ?? 1)} em ${race.abilityChoice} atributo(s) à escolha`);
   }
   return parts.join(' · ') || 'Sem bônus de atributo cadastrados';
 }

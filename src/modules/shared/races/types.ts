@@ -105,6 +105,8 @@ export interface RaceChoiceDefinition {
   label: string;
   /** O que a escolha concede, quando resolvido (ver `RaceChoiceApply`). */
   apply?: RaceChoiceApply;
+  /** Incremento por escolha de atributo; padrão +1. */
+  amount?: number;
   /**
    * Opções da escolha. `damageType` é o tipo de dano associado à opção, quando
    * houver (ex.: a cor do Draconato) — pelos 13 tipos canônicos de

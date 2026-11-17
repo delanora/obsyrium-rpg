@@ -290,6 +290,12 @@ const MANDRAKE_FACE = <>
   <path d="M12 8V3M12 6C8 6 6 4 6 2c4 0 6 1 6 4Zm0-1c0-3 3-4 6-3-1 3-3 4-6 4M9 11l1 1m5-1-1 1m-4 3h4M8 20l-1 2m5-4v4m4-2 1 2" />
 </>;
 
+/** Símbolo espectral provisório; o Spirithost é vivo, não uma caveira. */
+const SPIRITHOST_FACE = <>
+  <path d="M6 20V9a6 6 0 0 1 12 0v11l-3-2-3 2-3-2-3 2Z" />
+  <path d="m8 9 2 1m6-1-2 1m-4 4c1 1 3 1 4 0M4 8 2 10m18-2 2 2M4 15l-2 2m18-2 2 2" />
+</>;
+
 /** Rosto genérico (raças personalizadas ou id desconhecido). */
 const GENERIC_FACE: ReactNode = FACE;
 
@@ -318,7 +324,7 @@ export function RaceFaceIcon({ option, size = 30, className }: RaceFaceIconProps
   if (asset) return <img className={`race-face race-face-asset${className ? ` ${className}` : ''}`}
     src={`/race-icons/${asset}.webp`} width={size} height={size} alt="" aria-hidden="true" decoding="async" draggable={false} />;
   // A sub-raça tem prioridade; sem id conhecido, cai no rosto genérico.
-  const node = option.raceId === 'mandrake' ? MANDRAKE_FACE : option.raceId === 'tabaxi' ? TABAXI_FACE : FACES[option.subraceId ?? option.raceId] ?? GENERIC_FACE;
+  const node = option.raceId === 'spirithost' ? SPIRITHOST_FACE : option.raceId === 'mandrake' ? MANDRAKE_FACE : option.raceId === 'tabaxi' ? TABAXI_FACE : FACES[option.subraceId ?? option.raceId] ?? GENERIC_FACE;
   return (
     <svg
       className={className ? `race-face ${className}` : 'race-face'}

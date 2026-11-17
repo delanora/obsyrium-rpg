@@ -93,6 +93,7 @@ function toRace(race: RaceOption): CompendiumRaceDto {
     description: race.description ?? null,
     abilityBonuses: { ...(race.abilityBonuses ?? {}) },
     abilityChoice: race.abilityChoice ?? 0,
+    abilityChoiceBonus: race.abilityChoiceBonus ?? 1,
   };
 }
 

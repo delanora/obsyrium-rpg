@@ -1230,6 +1230,7 @@ export interface CompendiumRace {
   abilityBonuses: Partial<Record<AbilityKey, number>>;
   /** Quantos atributos à escolha ganham +1 (Meio-Elfo: 2; 0 = nenhum). */
   abilityChoice: number;
+  abilityChoiceBonus?: number;
 }
 
 /** Um antecedente do compêndio. */
@@ -1354,6 +1355,8 @@ export interface RaceOption {
   abilityBonuses?: Partial<Record<AbilityKey, number>>;
   /** Quantos atributos à escolha ganham +1 (Meio-Elfo: 2). */
   abilityChoice?: number;
+  /** Valor do incremento por atributo escolhido; padrão +1. */
+  abilityChoiceBonus?: number;
   /** Escolhas que a raça exige. */
   choices?: RaceChoice[];
   /** Traços raciais (exibidos na aba Características). */

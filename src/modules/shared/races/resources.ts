@@ -180,6 +180,10 @@ const MANDRAKE: RacialResourceDefinition[] = [
 const MANDRAKE_AUTUMN = MANDRAKE.map(resource => resource.spellId === 'goodberry' ? { ...resource, minLevel: 1 } : resource);
 
 const CATALOG: Readonly<Record<string, readonly RacialResourceDefinition[]>> = {
+  spirithost: [
+    { id: 'spirithost-spirit-speech', name: 'Fala dos Espíritos', max: 1, recharge: 'long', actionType: 'manual', actionLabel: 'Marcar uso', traitId: 'spirithost-spirit-speech', spellId: 'speak-with-dead', notes: 'Uma pergunta; sem componente material. Exceções resolvidas pelo Mestre.' },
+    { id: 'spirithost-translucence', name: 'Translucidez', max: 1, recharge: 'short', actionType: 'bonus-action', actionLabel: 'Marcar uso', traitId: 'spirithost-translucence', notes: 'Invisibilidade, término e custo de ação bônus são resolvidos pelo Mestre nesta entrega.' },
+  ],
   mandrake: MANDRAKE,
   'mandrake/mandrake-spring': MANDRAKE,
   'mandrake/mandrake-summer': MANDRAKE,

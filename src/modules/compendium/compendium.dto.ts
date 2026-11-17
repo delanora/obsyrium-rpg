@@ -63,6 +63,7 @@ export interface CompendiumRaceDto {
   abilityBonuses: Partial<Record<AbilityKey, number>>;
   /** Quantos atributos à escolha ganham +1 (Meio-Elfo: 2; 0 = nenhum). */
   abilityChoice: number;
+  abilityChoiceBonus?: number;
 }
 
 /** Um dos 13 antecedentes do Livro do Jogador. */
