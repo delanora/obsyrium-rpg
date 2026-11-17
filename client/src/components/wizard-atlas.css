@@ -22,11 +22,22 @@
   position: relative;
   padding: 1.65rem 1.8rem 1.8rem;
   border: 1px solid transparent;
-  border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 18px / 0 stretch;
+  isolation: isolate;
   border-radius: 0;
-  background: radial-gradient(ellipse at 50% 0, rgb(122 94 50 / 11%), transparent 50%), linear-gradient(135deg, rgb(13 15 19 / 91%), rgb(10 11 14 / 88%));
+  background: none;
   box-shadow: 0 16px 48px rgb(0 0 0 / 30%);
   color: var(--atlas-text);
+}
+/* Só o fundo é recortado: diálogos fixos e cards arrastados não são cortados. */
+.wizard-overlay .wizard > .wizard-body::before {
+  content: ''; position: absolute; inset: 1px; z-index: -1; pointer-events: none;
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  background: radial-gradient(ellipse at 50% 0, rgb(122 94 50 / 11%), transparent 50%), linear-gradient(135deg, rgb(13 15 19 / 91%), rgb(10 11 14 / 88%));
+}
+.wizard-overlay .wizard > .wizard-body::after {
+  content: ''; position: absolute; inset: -1px; z-index: -1; pointer-events: none;
+  border: 1px solid transparent;
+  border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 18px / 0 stretch;
 }
 .wizard-overlay .wizard.is-race-step .wizard-body > h2,
 .wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2 {
@@ -139,10 +150,11 @@
 }
 .wizard-overlay .wizard .btn-primary:hover:not(:disabled) { filter: brightness(1.17); }
 .wizard-overlay .wizard .btn:not(.btn-primary) { background: #1b1e23cc; border-color: #8b744a; }
-.wizard-overlay .wizard .wizard-actions { border-color: var(--atlas-line); background: #101318cf; box-shadow: none; }
+.wizard-overlay .wizard .wizard-actions { justify-content: center; padding: .4rem 0; border: 0; background: none; box-shadow: none; }
 @media(max-width:760px) {
+  .wizard-overlay .wizard > .wizard-body::after { border-image-width: 15px; }
   .wizard-overlay .wizard.is-race-step > .wizard-body,
-  .wizard-overlay .wizard:not(.is-race-step) > .wizard-body { padding: 1.2rem .85rem; border-image-width: 15px; }
+  .wizard-overlay .wizard:not(.is-race-step) > .wizard-body { padding: 1.2rem .85rem; }
   .wizard-overlay .wizard.is-race-step .wizard-body > h2,
   .wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2 { font-size: 1.13rem; padding: .15rem 1.5rem 1.4rem 0; margin-bottom: .8rem; letter-spacing: .05em; }
   .wizard-overlay .wizard :is(.wizard-option-detail, .race-detail) { padding: 1.1rem .8rem; }
