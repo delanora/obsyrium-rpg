@@ -1,13 +1,18 @@
 /* Obsidiana e latão: acabamento do atlas, preservando a marca original. */
 .app-header.app-header-obsyrium {
   gap: .35rem 1.2rem; padding: .2rem 1.25rem;
-  border-top: 1px solid #86603a; border-bottom: 1px solid #b58a50;
+  width: 100%; box-sizing: border-box; isolation: isolate;
+  border: 0; background: none; box-shadow: none;
+}
+/* O fundo acompanha os cantos; fora da moldura, a página continua visível. */
+.app-header.app-header-obsyrium::after {
+  content: ''; position: absolute; inset: 1px; pointer-events: none; z-index: -2;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
   background: radial-gradient(ellipse at 18% 0, #90704414, transparent 55%), linear-gradient(115deg, #141516, #090b0d 52%, #181715);
-  box-shadow: inset 0 1px #d6b67c1c, inset 0 -3px #04050680, 0 6px 18px -10px #000;
 }
 /* A moldura fica em uma camada própria para o controle de volume abrir livremente. */
 .app-header-obsyrium::before {
-  content: ''; position: absolute; inset: 3px; pointer-events: none;
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: -1;
   border: 1px solid transparent;
   border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 9px / 0 stretch;
   opacity: .65;
@@ -54,3 +59,5 @@
   .app-header-obsyrium .user-chip { min-width: 0; flex: 1; font-size: .75rem; }
   .app-header-obsyrium .header-actions { flex-shrink: 0; }
 }
+
+.app-shell.theme-master .app-header.app-header-obsyrium { background: none; border: 0; box-shadow: none; }
