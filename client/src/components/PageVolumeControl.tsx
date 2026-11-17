@@ -38,7 +38,7 @@ export function PageVolumeControl() {
       aria-haspopup="dialog" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}>
       <Icon name={silent ? 'mute' : 'volume'} size={15} />
     </button>
-    {open ? <div className="page-volume-panel" ref={panel} style={{ '--page-volume-offset': `${offset}px` } as CSSProperties} id={id} role="dialog" aria-label="Controle de volume">
+    {open ? <div className="page-volume-panel" ref={panel} style={{ '--page-volume-offset': `${offset}px`, '--page-volume-progress': `${Math.round(settings.volume * 100)}%` } as CSSProperties} id={id} role="dialog" aria-label="Controle de volume">
       <label htmlFor={`${id}-range`}>Volume da página <output>{Math.round(settings.volume * 100)}%</output></label>
       <input id={`${id}-range`} ref={slider} type="range" min="0" max="100" step="1"
         value={Math.round(settings.volume * 100)} aria-valuetext={`${Math.round(settings.volume * 100)} por cento`}
