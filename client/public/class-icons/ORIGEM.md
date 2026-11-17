@@ -15,3 +15,5 @@ As associações usam os identificadores do catálogo do projeto. Por exemplo, S
 `Bruxo.zip` acrescenta Bruxo e seus três patronos, com a mesma normalização proporcional em 512px. A associação considera a arte: `bruxo_infero` (chamas e figura infernal) representa O Corruptor; `bruxo_corruptor` (olho cósmico) representa O Grande Antigo; `bruxo_arquifada` representa Arquifada. Os nomes do catálogo PHB permanecem preservados.
 
 `Ladino.zip` acrescenta Ladino, Ladrão, Assassino e Trapaceiro Arcano, normalizados proporcionalmente em 512px, com transparência e acabamento original preservados.
+
+`Obsyrium_Mago_PHB2014_9_Icones.zip` acrescenta Mago e as oito escolas do PHB 2014, normalizados proporcionalmente em 512px, com transparência e efeitos coloridos originais preservados.

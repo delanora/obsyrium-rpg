@@ -1,8 +1,17 @@
 import { Icon, type IconName } from '../Icon';
 import { CLASS_PRESENTATIONS } from './classPresentation';
 
-const BASE: Record<string, string> = { barbarian: 'barbaro', bard: 'bardo', cleric: 'clerigo', druid: 'druida', fighter: 'guerreiro', monk: 'monge', paladin: 'paladino', ranger: 'patrulheiro', sorcerer: 'feiticeiro', warlock: 'bruxo', rogue: 'ladino' };
+const BASE: Record<string, string> = { barbarian: 'barbaro', bard: 'bardo', cleric: 'clerigo', druid: 'druida', fighter: 'guerreiro', monk: 'monge', paladin: 'paladino', ranger: 'patrulheiro', sorcerer: 'feiticeiro', warlock: 'bruxo', rogue: 'ladino', wizard: 'mago' };
 const SUBCLASS: Record<string, string> = {
+  'wizard:abjuration': 'mago_escola_de_abjuracao',
+  'wizard:divination': 'mago_escola_de_adivinhacao',
+  'wizard:conjuration': 'mago_escola_de_conjuracao',
+  'wizard:enchantment': 'mago_escola_de_encantamento',
+  'wizard:evocation': 'mago_escola_de_evocacao',
+  'wizard:illusion': 'mago_escola_de_ilusao',
+  'wizard:necromancy': 'mago_escola_de_necromancia',
+  'wizard:transmutation': 'mago_escola_de_transmutacao',
+
   'rogue:thief': 'ladino_ladrao', 'rogue:assassin': 'ladino_assassino', 'rogue:arcane-trickster': 'ladino_trapaceiro_arcano',
   'warlock:archfey': 'bruxo_arquifada', 'warlock:fiend': 'bruxo_infero', 'warlock:great-old-one': 'bruxo_corruptor',
   'sorcerer:draconic': 'feiticeiro_linhagem_draconica', 'sorcerer:wild-magic': 'feiticeiro_magia_selvagem',
