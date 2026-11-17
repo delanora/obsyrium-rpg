@@ -308,6 +308,9 @@ interface RaceFaceIconProps {
 
 /** Artes fornecidas pelo usuário; os IDs permanecem os mesmos do catálogo PHB. */
 export const RACE_ICON_ASSETS: Readonly<Record<string, string>> = {
+  spirithost: 'spirithost', mandrake: 'mandrake',
+  'mandrake-spring': 'mandrake_primavera', 'mandrake-summer': 'mandrake_verao',
+  'mandrake-autumn': 'mandrake_outono', 'mandrake-winter': 'mandrake_inverno',
   tabaxi: 'tabaxi', 'tabaxi-lion': 'tabaxi_leao', 'tabaxi-leopard': 'tabaxi_leopardo',
   'tabaxi-panther': 'tabaxi_pantera', 'tabaxi-tiger': 'tabaxi_tigre',
   dragonborn: 'draconato', elf: 'elfo', dwarf: 'anao', human: 'humano', halfling: 'halfling',
