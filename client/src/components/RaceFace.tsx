@@ -284,6 +284,12 @@ const TABAXI_FACE = <>
   <path d="m7 11 3 1m7-1-3 1m-4 3 2 1 2-1m-2 1v2m-5-3-4-1m4 3-4 1m14-3 4-1m-4 3 4 1" />
 </>;
 
+/** Rosto vegetal provisório para a Mandrágora, sem depender de arte externa. */
+const MANDRAKE_FACE = <>
+  <path d="M12 7C7 7 5 10 6 15l2 5 4-2 4 2 2-5c1-5-1-8-6-8Z" />
+  <path d="M12 8V3M12 6C8 6 6 4 6 2c4 0 6 1 6 4Zm0-1c0-3 3-4 6-3-1 3-3 4-6 4M9 11l1 1m5-1-1 1m-4 3h4M8 20l-1 2m5-4v4m4-2 1 2" />
+</>;
+
 /** Rosto genérico (raças personalizadas ou id desconhecido). */
 const GENERIC_FACE: ReactNode = FACE;
 
@@ -312,7 +318,7 @@ export function RaceFaceIcon({ option, size = 30, className }: RaceFaceIconProps
   if (asset) return <img className={`race-face race-face-asset${className ? ` ${className}` : ''}`}
     src={`/race-icons/${asset}.webp`} width={size} height={size} alt="" aria-hidden="true" decoding="async" draggable={false} />;
   // A sub-raça tem prioridade; sem id conhecido, cai no rosto genérico.
-  const node = option.raceId === 'tabaxi' ? TABAXI_FACE : FACES[option.subraceId ?? option.raceId] ?? GENERIC_FACE;
+  const node = option.raceId === 'mandrake' ? MANDRAKE_FACE : option.raceId === 'tabaxi' ? TABAXI_FACE : FACES[option.subraceId ?? option.raceId] ?? GENERIC_FACE;
   return (
     <svg
       className={className ? `race-face ${className}` : 'race-face'}

@@ -172,7 +172,19 @@ const DROW: RacialResourceDefinition[] = [
  * Raças personalizadas (CustomRace) ainda NÃO modelam recursos — ver limitação
  * no relatório.
  */
+/** O PDF define descanso longo explicitamente; não é conversão de uso diário. */
+const MANDRAKE: RacialResourceDefinition[] = [
+  { id: 'mandrake-goodberry', name: 'Baga Abençoada', max: 1, recharge: 'long', minLevel: 3, actionType: 'manual', traitId: 'mandrake-root-magic', spellId: 'goodberry' },
+  { id: 'mandrake-barkskin', name: 'Pele de Árvore', max: 1, recharge: 'long', minLevel: 5, actionType: 'manual', traitId: 'mandrake-root-magic', spellId: 'barkskin' },
+];
+const MANDRAKE_AUTUMN = MANDRAKE.map(resource => resource.spellId === 'goodberry' ? { ...resource, minLevel: 1 } : resource);
+
 const CATALOG: Readonly<Record<string, readonly RacialResourceDefinition[]>> = {
+  mandrake: MANDRAKE,
+  'mandrake/mandrake-spring': MANDRAKE,
+  'mandrake/mandrake-summer': MANDRAKE,
+  'mandrake/mandrake-autumn': MANDRAKE_AUTUMN,
+  'mandrake/mandrake-winter': MANDRAKE,
   dragonborn: DRAGONBORN,
   'half-orc': HALF_ORC,
   tiefling: TIEFLING,

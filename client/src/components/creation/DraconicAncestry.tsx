@@ -38,6 +38,7 @@ export function DraconicAncestry({ choice, value, disabled, onSelect, baseDescri
 
 export function racialTraitSummary(id: string, description: string): string {
   const summaries: Record<string, string> = {
+    'mandrake-root-magic': 'Você conhece Clava Mágica, usando Sabedoria, e pode aplicá-la a um dos próprios membros, tratando-o como uma clava em vez de um ataque desarmado.',
     'infernal-legacy': 'Você conhece Taumaturgia e usa Carisma para conjurá-la.',
     'drow-magic': 'Você conhece Luzes Dançantes e usa Carisma para conjurá-la.',
     'draconic-ancestry': 'Sua ancestralidade determina o dano do sopro e sua resistência. Você fala Comum e Dracônico.',
