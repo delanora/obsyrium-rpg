@@ -48,6 +48,8 @@ export function AuthPage() {
       <div className="auth-card">
         <h1><img className="auth-logo" src="/brand/obsyrium-nome.png" alt="Obsyrium" width={2172} height={724} /></h1>
 
+        <div className="auth-ornament" aria-hidden="true" />
+
         <div className="tabs">
           <button
             type="button"

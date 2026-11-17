@@ -15,7 +15,7 @@
 .auth-page .auth-card::after { content: ''; position: absolute; inset: -1px; z-index: -1; pointer-events: none; border: 1px solid transparent; border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 18px / 0 stretch; }
 .auth-page .auth-card h1 { margin: 0; line-height: 0; text-shadow: none; }
 .auth-logo { display: block; width: 100%; max-width: 330px; height: auto; margin: 0 auto; filter: brightness(1.35) drop-shadow(0 2px 7px #ac8e4726); }
-.auth-subtitle { margin: 1.35rem 0 0; padding-top: 1.8rem; color: #bfae8f; font: italic 1rem var(--font-body); background: url('/creation/atlas-obsidiana/ornamento-navbar.webp') center top / 11rem auto no-repeat; }
+.auth-subtitle { margin: 1.1rem 0 0; color: #bfae8f; font: italic 1rem var(--font-body); }
 .auth-page .tabs { margin-bottom: 1.3rem; border-bottom: 1px solid #95733d55; gap: .5rem; }
 .auth-page .tab { color: #a99a80; font-family: var(--font-display); padding: .6rem .4rem; transition: color .18s, background .18s; }
 .auth-page .tab.active { color: #ead5ac; border-bottom-color: #ba955d; background: linear-gradient(transparent, #a57c3620); }
@@ -31,3 +31,5 @@
 
 /* Mantém o fundo de obsidiana também nos campos preenchidos pelo navegador. */
 .auth-page .auth-card .field input:autofill { box-shadow: inset 0 0 0 1000px #1b1d21; -webkit-text-fill-color: #eddfc4; caret-color: #eddfc4; }
+
+.auth-ornament { height: 1.6rem; margin: .4rem 0 1.3rem; background: url('/creation/atlas-obsidiana/ornamento-navbar.webp') center / 11rem auto no-repeat; }
