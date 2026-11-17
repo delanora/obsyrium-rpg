@@ -1,0 +1,113 @@
+/* Identidade compartilhada. Cores de dano, condições, vida e alertas conservam seu significado. */
+:root[data-theme='dark'] {
+  --bg: #101114; --bg-2: #090b0e;
+  --surface: #181b20; --surface-2: #1e2127; --surface-3: #25282e; --surface-4: #2e3036;
+  --ink: #e9ddc6; --ink-soft: #beb29c; --ink-faint: #938873;
+  --line: #5d503a; --line-strong: #897049;
+  --gold: #c09b60; --gold-deep: #9d7b45; --gold-bright: #e6c997;
+  --gold-hair: #b18a4a59; --glow: #bf985b38;
+  --leather: #101216; --leather-2: #202229; --leather-deep: #090b0e;
+  --font-title: var(--font-display);
+}
+:root[data-theme='dark'] body {
+  background: radial-gradient(ellipse at 10% 0, #71604516, transparent 48%), radial-gradient(ellipse at 90% 95%, #40382712, transparent 55%), linear-gradient(135deg, #111318, #090b0e);
+  background-attachment: fixed;
+}
+/* Seções repetidas recebem somente contorno fino, sem acumular ornamentos. */
+:root[data-theme='dark'] :is(.sheet-section, .master-list, .combat-panel, .combat-turn-panel, .config-panel, .music-panel, .inv-panel, .bag-panel, .master-fab-panel) {
+  border-color: var(--line); border-radius: 4px;
+  background: linear-gradient(135deg, #191c21f5, #101216f5);
+  box-shadow: inset 0 1px #d3b67b0b, 0 8px 24px -18px #000b;
+}
+:root[data-theme='dark'] .section-header {
+  background: linear-gradient(105deg, #b58e4b0f, #15181e 70%);
+  border-bottom-color: #9c7e4538; box-shadow: none;
+}
+:root[data-theme='dark'] .section-header::after { border-top-width: 1px; border-color: #a8834240; }
+:root[data-theme='dark'] :is(.section-header h2, .detail-head h2, .page-title, .modal h2, .detail-modal-title) {
+  font-family: var(--font-display); color: #e2c99e; font-weight: 500; letter-spacing: .055em;
+}
+/* Janelas maiores recebem os cantos do atlas; blocos internos permanecem discretos. */
+:root[data-theme='dark'] :is(.detail-modal, .modal, .short-rest-modal, .long-rest-modal, .levelup-modal) {
+  border: 1px solid transparent;
+  border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 12px / 0 stretch;
+  border-radius: 0; background-color: #12151a;
+  background-image: radial-gradient(ellipse at 50% 0, #9d7b3b12, transparent 48%), linear-gradient(135deg, #191c21, #101217);
+  box-shadow: 0 22px 70px #0009;
+}
+:root[data-theme='dark'] :is(.delete-dialog, .combat-risk-dialog) { border-color: var(--danger); }
+:root[data-theme='dark'] :is(.detail-modal-head, .item-modal-head, .inv-panel-head, .music-panel-head) {
+  background: linear-gradient(100deg, #ac86400d, #11151a); border-bottom-color: #a080443d;
+}
+:root[data-theme='dark'] :is(.tabs-inline, .sheet-tabs) { border-bottom-color: #96744166; }
+:root[data-theme='dark'] :is(.tab, .sheet-tab) { font-family: var(--font-display); }
+:root[data-theme='dark'] :is(.tab.active, .sheet-tab.active) {
+  color: #ebd3aa; border-bottom-color: #c5a066;
+  background: linear-gradient(transparent, #b8914b18); text-shadow: 0 1px 4px #000;
+}
+:root[data-theme='dark'] :is(.character-card, .creature-card, .item-card, .region-card) {
+  background: linear-gradient(120deg, #202329, #15181e); border-color: #82704b55;
+}
+:root[data-theme='dark'] :is(.character-card.active, .creature-card.active, .item-card.active, .region-card.active) {
+  border-color: #be995d; background: linear-gradient(110deg, #b38c3f20, #171b21);
+  box-shadow: inset 3px 0 #be995d, 0 0 12px #ab874315;
+}
+/* Campos de texto e seleção. Controles de cor, alcance, dados e mapas conservam sua geometria. */
+:root[data-theme='dark'] :is(input:not([type]), input[type='text'], input[type='password'], input[type='email'], input[type='number'], input[type='search'], input[type='url'], textarea, select):not(:where(.dice-stage *, .dice-remote-stage *)) {
+  color: #eadfc9; background-color: #1b1e24;
+  background-image: linear-gradient(#22252be0, #171a20e0);
+  border-color: #94774685; box-shadow: inset 0 1px #d2b37215;
+}
+:root[data-theme='dark'] :is(input, textarea, select):not(:where(.dice-stage *, .dice-remote-stage *))::placeholder { color: #9d9484; }
+:root[data-theme='dark'] :is(input, textarea, select):not(:where(.dice-stage *, .dice-remote-stage *)):focus-visible { outline: 1px solid #c4a16b; outline-offset: 2px; }
+:root[data-theme='dark'] .btn:not(.btn-primary):not(.btn-danger) {
+  background: linear-gradient(#2b2b2b, #191b20); border-color: #9577498c;
+  box-shadow: inset 0 1px #d6b87715; color: #e2d4b9;
+}
+:root[data-theme='dark'] .btn:not(.btn-danger):hover { border-color: #c6a36b; box-shadow: inset 0 1px #d5b77720, 0 0 10px #ae874b22; }
+:root[data-theme='dark'] .btn-primary:not(.btn-danger) {
+  color: #f0dfbd; background: linear-gradient(#3c352a, #211f1c); border-color: #bf995e;
+  box-shadow: inset 0 1px #e0c48a30, inset 0 0 0 2px #080b0e50;
+}
+:root[data-theme='dark'] .btn-danger { color: #ef9b91; border-color: #a85e55; background: linear-gradient(#40282a, #251b20); }
+/* Cartela reservada à ação principal dos diálogos. */
+:root[data-theme='dark'] :is(.modal-actions, .detail-modal-actions) > .btn-primary:not(.btn-danger) {
+  border: 1px solid transparent; border-radius: 0;
+  border-image: url('/creation/atlas-obsidiana/botao.webp') 18 38 fill / 10px 20px / 0 stretch;
+  background: none;
+}
+:root[data-theme='dark'] :is(.sheet-table th, .items-table th) { background: #b08a4110; color: #d6bd94; border-bottom-color: #a481454d; }
+:root[data-theme='dark'] :is(.sheet-table td, .items-table td) { border-bottom-color: #8c734329; }
+:root[data-theme='dark'] .combat-panel { border-color: #a98a50; }
+:root[data-theme='dark'] .combat-turn-panel { border-color: #8d774c8c; }
+:root[data-theme='dark'] .combat-panel :is(.section-header, .combat-header) { background-color: #14171c; }
+/* Conserva os ornamentos já ajustados no login e no wizard. */
+:root[data-theme='dark'] :is(.auth-page, .wizard-overlay) .btn-primary { background: none; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme='dark'] :is(.btn, .character-card, .tab, .sheet-tab) { transition: none; }
+}
+/* O salão do Mestre recebe uma peça principal; atalhos mantêm contornos simples. */
+:root[data-theme='dark'] .home-hero {
+  background: radial-gradient(ellipse at 50% 0, #9d7b3b15, transparent 65%), linear-gradient(135deg, #1c1f25, #101217);
+  border: 1px solid transparent; border-radius: 0;
+  border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 15px / 0 stretch;
+  box-shadow: 0 12px 32px -20px #000b;
+}
+:root[data-theme='dark'] .home-hero::before { border: 0; }
+:root[data-theme='dark'] .home-title { color: #e5d1ad; font-family: var(--font-display); font-weight: 500; }
+:root[data-theme='dark'] .home-card { background: linear-gradient(130deg, #22252b, #14171c); border-color: #8e744b66; box-shadow: inset 0 1px #cfb27b10; }
+:root[data-theme='dark'] .home-card:hover { border-color: #b5925b; box-shadow: 0 5px 20px -12px #b08a4140; }
+:root[data-theme='dark'] .home-section-title::after { background: linear-gradient(90deg, #b9965766, transparent); }
+/* Interior das duas bandejas preservado; apenas botões e contorno externo acompanham o tema. */
+:root[data-theme='dark'] :is(.dice-stage, .dice-remote-stage, .dice-spectator-preview, .ability-tray) {
+  --surface: #221811; --surface-2: #2b1f16; --surface-3: #35261b; --surface-4: #402d20;
+  --ink: #ecdcbd; --ink-soft: #c3ab86; --ink-faint: #8d7859;
+  --line: #4a3826; --line-strong: #6f5637;
+  --gold: #e0b83f; --gold-deep: #b8912a; --gold-bright: #f6d977;
+  --gold-hair: rgba(224,184,63,.38); --glow: rgba(246,217,119,.5);
+  --leather: #0f0a07; --leather-2: #2a1c14; --leather-deep: #070403;
+  --font-title: 'MedievalSharp', 'Cinzel', Georgia, serif;
+}
+:root[data-theme='dark'] .dice-stage { border-color: #a78a55; }
+:root[data-theme='dark'] .dice-stage :is(.dice-mode, .dice-pick, .dice-head-close) { border-color: #a18452; }
+:root[data-theme='dark'] .wizard-overlay .dice-stage { --ink: #f1e5cf; }
