@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../auth';
-import { Icon } from './Icon';
+import './auth-page.css';
 
 type Mode = 'login' | 'register';
 
@@ -46,13 +46,8 @@ export function AuthPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-crest">
-          <span className="auth-crest-swords">
-            <Icon name="sword" size={32} />
-            <Icon name="sword" size={32} />
-          </span>
-        </div>
-        <h1>Codex do Aventureiro</h1>
+        <h1><img className="auth-logo" src="/brand/obsyrium-nome.png" alt="Obsyrium" width={2172} height={724} /></h1>
+        <p className="auth-subtitle">Sua próxima história começa aqui</p>
 
         <div className="tabs">
           <button
