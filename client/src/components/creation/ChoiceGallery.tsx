@@ -70,7 +70,7 @@ export function ChoiceGallery({ children, className = '', onPreviewIndex, ...pro
       const rect = card.getBoundingClientRect();
       const distance = Math.abs(rect.left + rect.width / 2 - center);
       if (distance < nearestDistance) { nearestDistance = distance; nearestIndex = Number(card.dataset.galleryIndex); }
-      card.style.setProperty('--carousel-scale', String(Math.max(.62, 1.12 - distance / 700)));
+      card.style.setProperty('--carousel-scale', String(Math.max(.62, 1.12 - distance / 700) + .14 * Math.max(0, 1 - distance / card.offsetWidth)));
       const pitch = card.offsetWidth + parseFloat(getComputedStyle(element).columnGap || '0');
       const fade = Math.max(0, distance / pitch - 1.15);
       card.style.setProperty('--carousel-opacity', String(Math.max(.08, 1 - fade * .48)));

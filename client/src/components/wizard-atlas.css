@@ -165,3 +165,13 @@
 /* Ancora o botão no próprio painel, sem depender da altura da trilha lateral. */
 .wizard-overlay .wizard > .wizard-body:has(> .wizard-actions) { margin-bottom: 4rem; }
 .wizard-overlay .wizard .wizard-body > .wizard-actions { position: absolute; top: calc(100% + .45rem); bottom: auto; left: 0; right: 0; padding: 0; }
+
+/* Seleção no carrossel: luz no alfa da arte, sem desenhar outro círculo. */
+.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected {
+  border-color: transparent; background: transparent; box-shadow: none;
+}
+.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected::before,
+.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected::after { display: none; }
+.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected :is(.race-face, .class-emblem-art, .wizard-class-emblem > .icon) {
+  filter: drop-shadow(0 0 3px #ebc56e88) drop-shadow(0 0 8px #c89b3c55);
+}
