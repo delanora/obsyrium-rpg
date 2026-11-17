@@ -796,6 +796,10 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const previewClass = classCards[galleryPreview.class ?? -1] ?? selectedClass;
   const previewLineage = (raceBaseSubraces.length >= 4 ? raceBaseSubraces[galleryPreview.subrace ?? -1] : null) ?? selectedRace ?? raceBaseOption;
   const previewSubclass = (selectedClass && selectedClass.subclassNames.length >= 4 ? selectedClass.subclassNames[galleryPreview.subclass ?? -1] : null) ?? subclass;
+  const selectedDragonAncestor = classKey === 'sorcerer' && subclass === 'Linhagem Dracônica'
+    ? featureChoices.find(item => item.featureId === 'dragon-ancestor')?.options.find(option =>
+      option.key === (choicePicks['dragon-ancestor']?.[0] ?? featureChoices.find(item => item.featureId === 'dragon-ancestor')?.chosen[0]))?.name
+    : undefined;
 
   if (loading) {
     return (
@@ -854,7 +858,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     disabled={busy || uploading || step < 5}
                     aria-current={step === 5 && classSubStep === 'subclass' ? 'step' : undefined}
                     onClick={() => { void navigateTo(5).then(ok => { if (ok) setClassSubStep('subclass'); }); }}>
-                    <span>Subclasse</span><strong>{subclass || 'Selecionar'}</strong>
+                    <span>{selectedDragonAncestor ? 'Ancestral dracônico' : 'Subclasse'}</span><strong>{selectedDragonAncestor ? `Dragão ${selectedDragonAncestor}` : subclass || 'Selecionar'}</strong>
                   </button>
                 ) : null}
               </li>
