@@ -47,7 +47,6 @@ export function AuthPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h1><img className="auth-logo" src="/brand/obsyrium-nome.png" alt="Obsyrium" width={2172} height={724} /></h1>
-        <p className="auth-subtitle">Sua próxima história começa aqui</p>
 
         <div className="tabs">
           <button
@@ -119,6 +118,7 @@ export function AuthPage() {
             {busy ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
         </form>
+        <p className="auth-subtitle">Sua próxima história começa aqui</p>
       </div>
     </div>
   );
