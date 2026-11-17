@@ -1,3 +1,4 @@
+import { BackgroundEmblem } from './creation/BackgroundEmblem';
 import { newId } from '../utils';
 import { ChoiceGallery } from './creation/ChoiceGallery';
 import { getTool } from '../../../src/modules/shared/tools';
@@ -1165,7 +1166,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     {backgroundCards.map((option) => (
                       <button type="button" key={option.key} className={`wizard-class-card${background === option.name ? ' is-selected' : ''}`}
                         aria-pressed={background === option.name} disabled={busy} onClick={() => selectBackground(option.name)}>
-                        <span className="wizard-class-emblem"><Icon name="scroll" size={64} /></span><span>{option.name}</span>
+                        <span className="wizard-class-emblem"><BackgroundEmblem backgroundKey={option.key} /></span><span>{option.name}</span>
                       </button>
                     ))}
                   </ChoiceGallery>
