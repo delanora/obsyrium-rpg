@@ -20,3 +20,5 @@ O restante do atlas não é repetido como decoração. Painéis internos e naveg
 Ponto de retorno: tag `codex/wizard-antes-repaginacao-20261116`, commit `5788e6c`. A repaginada deve permanecer em commit isolado para que “volta como era” reverta somente esta mudança visual, preservando outros trabalhos.
 
 Revisão de 17/11/2026: o divisor ganhou margem vertical para preservar a ponta inferior. O cabeçalho usa uma peça distinta, extraída com a mesma máscara de transparência já preparada, sem regenerar a textura original.
+
+O cabeçalho usa também `ornamento-navbar-amplo.webp` (recorte 53, 880, 1430, 140), com a gema central em x=768 do atlas. O recorte fica simétrico em torno dessa gema; CSS oculta os divisores e cantos vizinhos, conservando o arabesco inferior solicitado.

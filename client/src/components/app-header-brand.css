@@ -22,9 +22,10 @@
 .app-header-obsyrium .app-header-logo { display: block; width: 8.25rem; height: auto; max-width: 100%; filter: brightness(1.25) drop-shadow(0 1px 3px #b18a4426); }
 .app-header-obsyrium .app-header-ornament {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: min(22vw, 21rem); height: 1.85rem;
-  background: url('/creation/atlas-obsidiana/ornamento-navbar.webp') center / contain no-repeat;
-  opacity: .68; pointer-events: none;
+  width: min(42vw, 42rem); height: 2.6rem;
+  background: url('/creation/atlas-obsidiana/ornamento-navbar-amplo.webp') center / contain no-repeat;
+  clip-path: polygon(0 35%, 44% 35%, 49% 0, 51% 0, 56% 35%, 100% 35%, 100% 100%, 0 100%);
+  opacity: .82; pointer-events: none;
 }
 .app-header-obsyrium .app-header-meta { justify-content: flex-end; gap: .7rem; padding: .15rem .25rem; border: 0; background: none; flex-shrink: 0; }
 .app-header-obsyrium .connection { padding-right: .7rem; border-right: 1px solid #a9834940; }
