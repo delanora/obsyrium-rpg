@@ -14,13 +14,13 @@ for (const definition of CLASS_PRESENTATIONS) {
     if (asset) { subclasses++; assets.add(asset); }
   }
 }
-assert.equal(bases, 10);
-assert.equal(subclasses, 29);
-assert.equal(assets.size, 39);
+assert.equal(bases, 11);
+assert.equal(subclasses, 32);
+assert.equal(assets.size, 43);
 for (const asset of assets) assert.ok(existsSync(resolve('client/public', asset.slice(1))), asset);
 assert.equal(classEmblemAsset('cleric', 'Domínio do Engano'), '/class-icons/clerigo_dominio_da_trapaca.webp');
 assert.equal(classEmblemAsset('bard', 'Colégio do Conhecimento'), '/class-icons/bardo_colegio_do_saber.webp');
 assert.equal(classEmblemAsset('warlock', 'O Corruptor'), '/class-icons/bruxo_infero.webp');
 assert.equal(classEmblemAsset('warlock', 'O Grande Antigo'), '/class-icons/bruxo_corruptor.webp');
 assert.equal(classEmblemAsset('wizard'), undefined);
-console.log('39 artes associadas sem duplicação: dez classes, vinte e nove subclasses, aliases e fallback verificados.');
+console.log('43 artes associadas sem duplicação: onze classes, trinta e duas subclasses, aliases e fallback verificados.');

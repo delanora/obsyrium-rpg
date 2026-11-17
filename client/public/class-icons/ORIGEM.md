@@ -13,3 +13,5 @@ As associações usam os identificadores do catálogo do projeto. Por exemplo, S
 `Feiticeiro.zip` acrescenta a classe Feiticeiro e as origens Linhagem Dracônica e Magia Selvagem, com fontes de 1254px e a mesma normalização proporcional em 512px.
 
 `Bruxo.zip` acrescenta Bruxo e seus três patronos, com a mesma normalização proporcional em 512px. A associação considera a arte: `bruxo_infero` (chamas e figura infernal) representa O Corruptor; `bruxo_corruptor` (olho cósmico) representa O Grande Antigo; `bruxo_arquifada` representa Arquifada. Os nomes do catálogo PHB permanecem preservados.
+
+`Ladino.zip` acrescenta Ladino, Ladrão, Assassino e Trapaceiro Arcano, normalizados proporcionalmente em 512px, com transparência e acabamento original preservados.
