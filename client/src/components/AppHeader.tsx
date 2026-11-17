@@ -28,6 +28,8 @@ export function AppHeader({ connection, lastEventAt, user }: AppHeaderProps) {
         </h1>
       </div>
 
+      <span className="app-header-ornament" aria-hidden="true" />
+
       <div className="app-header-meta">
         <span
           className={`connection ${connection}`}
