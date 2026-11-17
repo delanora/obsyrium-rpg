@@ -10,7 +10,7 @@ export function outerIconAura(src: string): Promise<string> {
 }
 async function render(src: string): Promise<string> {
   const image = new Image(); image.src = src; await image.decode();
-  const size = 256, padding = 28, side = size + padding * 2;
+  const size = 256, padding = 40, side = size + padding * 2;
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = side;
   const ctx = canvas.getContext('2d')!;
   const scale = size / Math.max(image.width, image.height);
@@ -36,8 +36,8 @@ async function render(src: string): Promise<string> {
   ctx.putImageData(pixels, 0, 0);
   const glow = document.createElement('canvas'); glow.width = glow.height = side;
   const output = glow.getContext('2d')!;
-  output.filter = 'blur(8px)'; output.globalAlpha = .55; output.drawImage(canvas, 0, 0);
-  output.filter = 'blur(3px)'; output.globalAlpha = .4; output.drawImage(canvas, 0, 0);
+  output.filter = 'blur(14px)'; output.globalAlpha = .42; output.drawImage(canvas, 0, 0);
+  output.filter = 'blur(6px)'; output.globalAlpha = .38; output.drawImage(canvas, 0, 0);
   output.filter = 'none'; output.globalAlpha = 1;
   const result = output.getImageData(0, 0, side, side);
   for (let i = 0; i < exterior.length; i++) if (!exterior[i]) result.data[i * 4 + 3] = 0;
