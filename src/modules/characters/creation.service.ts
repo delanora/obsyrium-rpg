@@ -560,7 +560,7 @@ function missingForFinalize(character: Character, draft: CreationDraft): string[
       firstDefinition,
       1,
       choices,
-      '',
+      firstClass?.subclass ?? '',
       {},
       ['expertise'],
     )) {
@@ -619,7 +619,7 @@ async function buildState(
       skillChoice: creationSkillChoice(entries),
       raceSkillKeys,
       featureChoices: firstDefinition
-        ? featureChoiceInfo(firstDefinition, classChoices, '', {}, 1).filter(
+        ? featureChoiceInfo(firstDefinition, classChoices, entries[0]?.subclass ?? '', {}, 1).filter(
             (info) => info.level === 1 && info.apply !== 'expertise',
           )
         : [],
@@ -970,12 +970,16 @@ export async function saveCreationStep(
         }
         // A Expertise é adiada para o passo das perícias (as opções só existem
         // depois que o personagem escolhe o que domina).
+        const currentChoices = keepsClass ? { ...stored.choices } : {};
+        // Durante a criação, o ancestral pode ser trocado ao retornar ao carrossel.
+        // A nova chave continua sendo validada pelo mesmo resolvedor de escolhas.
+        if (input.choices?.['dragon-ancestor']) delete currentChoices['dragon-ancestor'];
         const choices = resolveFeatureChoices(
           definition,
           1,
           input.choices ?? {},
-          keepsClass ? stored.choices : {},
-          '',
+          currentChoices,
+          subclass,
           {},
           ['expertise'],
         );

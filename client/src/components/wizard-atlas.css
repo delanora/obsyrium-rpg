@@ -180,3 +180,12 @@
   pointer-events: none; z-index: -1;
 }
 .wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected :is(.race-face, .class-emblem-art, .wizard-class-emblem > .icon) { filter: none; }
+
+/* Escolha de ancestral dentro da característica: versão compacta da mesma galeria. */
+.wizard-overlay .wizard .sorcerer-ancestry .choice-gallery.is-compact { gap: .8rem; padding-inline: calc(50% - 2.75rem); }
+.wizard-overlay .wizard .sorcerer-ancestry .choice-gallery.is-compact > button { flex-basis: 5.5rem; width: 5.5rem; min-width: 5.5rem; }
+.sorcerer-ancestry-caption { text-align: center; color: #cfb582; margin: .2rem 0 .7rem; }
+.wizard-overlay .wizard .wizard-option-detail:has(.sorcerer-ancestry),
+.wizard-overlay .wizard .wizard-detail-resource:has(.sorcerer-ancestry),
+.wizard-overlay .wizard .sorcerer-ancestry { min-width: 0; max-width: 100%; }
+.wizard-overlay .wizard .sorcerer-ancestry .choice-gallery-shell { width: 100%; overflow: hidden; }

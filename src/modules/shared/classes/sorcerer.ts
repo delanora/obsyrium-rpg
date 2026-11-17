@@ -137,7 +137,19 @@ const SORCERER_SUBCLASSES: SubclassDefinition[] = [
         name: 'Ancestral Dracônico',
         level: 1,
         description:
-          'Escolha um tipo de dragão (Negro/Ácido, Azul/Elétrico, Branco/Frio, Bronze/Elétrico, Cobre/Ácido, Latão/Fogo, Ouro/Fogo, Prata/Frio, Verde/Veneno, Vermelho/Fogo). Você pode falar, ler e escrever Dracônico e dobra o bônus de proficiência em testes de Carisma ao interagir com dragões.',
+          'Escolha seu ancestral dragão. Você pode falar, ler e escrever Dracônico e dobra o bônus de proficiência em testes de Carisma ao interagir com dragões.',
+        choice: { count: 1, prompt: 'Ancestral Dracônico', options: [
+          { key: 'black', name: 'Negro', description: 'Ácido' },
+          { key: 'blue', name: 'Azul', description: 'Elétrico' },
+          { key: 'white', name: 'Branco', description: 'Frio' },
+          { key: 'bronze', name: 'Bronze', description: 'Elétrico' },
+          { key: 'copper', name: 'Cobre', description: 'Ácido' },
+          { key: 'brass', name: 'Latão', description: 'Fogo' },
+          { key: 'gold', name: 'Ouro', description: 'Fogo' },
+          { key: 'silver', name: 'Prata', description: 'Frio' },
+          { key: 'green', name: 'Verde', description: 'Veneno' },
+          { key: 'red', name: 'Vermelho', description: 'Fogo' },
+        ] },
       },
       {
         id: 'draconic-resilience',

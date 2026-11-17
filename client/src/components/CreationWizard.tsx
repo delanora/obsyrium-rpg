@@ -594,13 +594,13 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     );
     // A Expertise fica de fora daqui: ela é pedida no passo das perícias, quando
     // já dá para saber o que o personagem domina.
-    return (selectedClass.featureChoices ?? [])
+    return [...(selectedClass.featureChoices ?? []), ...(selectedClass.subclassChoices ?? []).filter(item => item.subclass === subclass && item.level === 1)]
       .filter((item) => item.apply !== 'expertise')
       .map((item) => ({
         ...item,
         chosen: stored.get(item.featureId) ?? [],
       }));
-  }, [selectedClass, classKey, character?.classes, creation?.featureChoices]);
+  }, [selectedClass, classKey, character?.classes, creation?.featureChoices, subclass]);
 
   /**
    * Expertise do nível 1 (Ladino): pedida junto das perícias, com as opções
@@ -1315,13 +1315,16 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                       </button>
                     ))}
                   </ChoiceGallery>
-                  {previewSubclass ? <ClassInformation option={selectedClass} subclass={previewSubclass} /> : null}
+                  {previewSubclass ? <ClassInformation option={selectedClass} subclass={previewSubclass} dragonAncestry={previewSubclass === subclass ? {
+                    value: choicePicks['dragon-ancestor']?.[0] ?? featureChoices.find(item => item.featureId === 'dragon-ancestor')?.chosen[0] ?? '',
+                    disabled: busy, onChange: value => setChoicePicks(current => ({ ...current, 'dragon-ancestor': [value] })),
+                  } : undefined} /> : null}
                 </div>
               ) : null}
 
               {/* Escolhas de característica do nível 1 (Estilo de Luta, Inimigo
                   Favorito, Explorador Nato). */}
-              {featureChoices.map((item) => (
+              {featureChoices.filter(item => item.featureId !== 'dragon-ancestor').map((item) => (
                 <div className="wizard-subclass" key={item.featureId}>
                   <h3 className="subsection-title">
                     {item.prompt} de {selectedClass?.name}
