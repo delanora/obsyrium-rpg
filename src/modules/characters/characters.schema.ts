@@ -878,6 +878,9 @@ const creationAbilitiesSchema = z.record(
 /** Pedido de rolagem de atributo (`restart` começa a lista de seis de novo). */
 export const creationRollRequestSchema = z.object({
   restart: z.boolean().optional(),
+  retryIndex: z.number().int().min(0).max(5).optional(),
+  expectedVersion: z.number().int().min(0).optional(),
+  operationId: z.string().min(1).max(120).optional(),
 });
 
 export const creationStepSchema = z.object({

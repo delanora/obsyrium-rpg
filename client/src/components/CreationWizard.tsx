@@ -1,3 +1,4 @@
+import { newId } from '../utils';
 import { ChoiceGallery } from './creation/ChoiceGallery';
 import { getTool } from '../../../src/modules/shared/tools';
 import { useWizardMusic } from '../music/useWizardMusic';
@@ -164,6 +165,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const [backgroundLanguageChoices, setBackgroundLanguageChoices] = useState<string[]>([]);
   const [classKey, setClassKey] = useState('');
   const [subclass, setSubclass] = useState('');
+  const [abilitySubStep, setAbilitySubStep] = useState<'roll' | 'assign'>('roll');
   const [classSubStep, setClassSubStep] = useState<'class' | 'subclass'>('class');
   /** Escolhas de característica do passo 5 (Estilo de Luta, Inimigo Favorito). */
   const [choicePicks, setChoicePicks] = useState<Record<string, string[]>>({});
@@ -270,14 +272,14 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
   /** Rolagem de atributo do passo 6 (o dado é sorteado no servidor). */
   const rollAttribute = useCallback(
-    async (restart: boolean): Promise<CreationRoll | null> => {
-      const response = await rollCreationAttribute(restart);
+    async (restart: boolean, retryIndex?: number): Promise<CreationRoll | null> => {
+      const response = await rollCreationAttribute(restart, retryIndex, state?.character?.version, newId());
       setState(response);
       if (response.character) onCharacter(response.character);
-      if (restart) setAssigned({});
+      if (restart || retryIndex !== undefined) setAssigned({});
       return response.roll ? { dice: response.roll.dice, dropped: response.roll.dropped } : null;
     },
-    [onCharacter],
+    [onCharacter, state?.character?.version],
   );
 
   /* --- O que cada passo exige para poder avançar ------------------------- */
@@ -808,7 +810,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                 <button type="button" className="wizard-step-link" disabled={busy || uploading || !available}
                   aria-current={number === step ? 'step' : undefined}
                   title={`${label}${stepSummaries[index] ? `: ${stepSummaries[index]}` : ''}`}
-                  onClick={() => { if (number === 3 && step === 3) setRaceSubStep('race'); else if (number === 5 && step === 5) setClassSubStep('class'); else void navigateTo(number); }}>
+                  onClick={() => { if (number === 3 && step === 3) setRaceSubStep('race'); else if (number === 6 && step === 6) setAbilitySubStep('roll'); else if (number === 5 && step === 5) setClassSubStep('class'); else void navigateTo(number); }}>
                   <span className="wizard-step-number" aria-hidden="true">{number < step ? '✓' : number}</span>
                   <span className="wizard-step-copy"><span className="wizard-step-label">{label}</span>
                     {stepSummaries[index] ? <span className="wizard-step-summary">{stepSummaries[index]}</span> : null}
@@ -820,6 +822,12 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     aria-current={step === 3 && raceSubStep === 'subrace' ? 'step' : undefined}
                     onClick={() => { void navigateTo(3).then(ok => { if (ok) setRaceSubStep('subrace'); }); }}>
                     <span>{draconicChoice ? 'Ancestralidade' : 'Sub-raça'}</span><strong>{draconicChoice ? draconicChoice.options.find(option => option.id === raceChoices[draconicChoice.id])?.label ?? 'Selecionar' : selectedRace?.subraceId ? subraceName(selectedRace) : 'Selecionar'}</strong>
+                  </button>
+                ) : null}
+                {number === 6 && mode === 'new' && (creation?.rolls.length ?? 0) === 6 ? (
+                  <button type="button" className={`wizard-substep-link${step === 6 && abilitySubStep === 'assign' ? ' current' : ''}`}
+                    disabled={busy || step < 6 || (creation?.rolls ?? []).some(roll => roll.dice.reduce((sum, die, i) => i === roll.dropped ? sum : sum + die, 0) < 8)} onClick={() => { void navigateTo(6).then(ok => { if (ok) setAbilitySubStep('assign'); }); }}>
+                    <span>Distribuir atributos</span><strong>{assignedCount}/6 definidos</strong>
                   </button>
                 ) : null}
                 {number === 5 && classNeedsSubclass ? (
@@ -1333,6 +1341,8 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
           {step === 6 && mode ? (
             <AbilityStep
               mode={mode}
+              subStep={abilitySubStep}
+              onSubStep={setAbilitySubStep}
               rolls={creation?.rolls ?? []}
               assigned={assigned}
               racialBonus={racialBonus}

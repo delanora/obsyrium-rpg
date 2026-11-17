@@ -64,10 +64,10 @@ export async function saveCreationStep(request: CreationStepRequest): Promise<Cr
  * resultado entra no rascunho (para distribuir depois) e no histórico do mestre.
  * `restart` recomeça os seis valores.
  */
-export async function rollCreationAttribute(restart = false): Promise<CreationResponse> {
+export async function rollCreationAttribute(restart = false, retryIndex?: number, expectedVersion?: number, operationId?: string): Promise<CreationResponse> {
   return api<CreationResponse>('/api/characters/me/creation/roll', {
     method: 'POST',
-    body: { restart },
+    body: { restart, retryIndex, expectedVersion, operationId },
   });
 }
 

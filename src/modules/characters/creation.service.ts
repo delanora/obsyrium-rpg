@@ -483,6 +483,7 @@ function validateAbilities(
 
     // Os seis valores distribuídos têm de ser EXATAMENTE os seis rolados.
     const rolled = [...rollValues(draft.rolls)].sort((a, b) => a - b);
+    if (rolled.some(value => value < 8)) throw new HttpError('Você tirou menos que 8. Repita essa rolagem antes de distribuir.', 400);
     const chosen = ABILITY_KEYS.map((ability) => base[ability] ?? 0).sort((a, b) => a - b);
     if (rolled.some((value, index) => value !== chosen[index])) {
       throw new HttpError('Distribua exatamente os seis valores rolados, um por atributo.', 400);
@@ -512,6 +513,7 @@ function missingForFinalize(character: Character, draft: CreationDraft): string[
   const entries = normalizeClassEntries(character.classes);
 
   if (draft.mode === null) missing.push('o tipo de personagem (passo 1)');
+  if (draft.mode === 'new' && rollValues(draft.rolls).some(value => value < 8)) missing.push('repetir os resultados de atributos menores que 8 (passo 6)');
   if (!character.name.trim() || character.name.trim().toLowerCase() === DEFAULT_CHARACTER_NAME) {
     missing.push('o nome (passo 2)');
   }
@@ -1131,43 +1133,62 @@ export async function rollCreationAttribute(
   input: CreationRollRequestInput,
 ): Promise<CreationState & { roll: CreationRoll & { value: number } }> {
   const character = await requireDraft(actor);
-  const draft = normalizeCreationDraft(character.creationDraft);
+  const { saved, entry } = await prisma.$transaction(async tx => {
+    // Serializa as seis posições e as repetições antes de sortear qualquer dado.
+    await tx.$queryRaw`SELECT id FROM characters WHERE id = ${character.id} FOR UPDATE`;
+    const current = await tx.character.findUniqueOrThrow({ where: { id: character.id } });
+    const fingerprint = JSON.stringify({ restart: !!input.restart, retryIndex: input.retryIndex ?? null });
+    if (input.operationId) {
+      const previous = await tx.characterOperation.findUnique({ where: { characterId_operationId: { characterId: current.id, operationId: input.operationId } } });
+      if (previous) {
+        if (previous.type !== 'CREATION_ATTRIBUTE_ROLL' || previous.requestFingerprint !== fingerprint) throw new HttpError('Identificador de operação já usado.', 409, 'IDEMPOTENCY_KEY_REUSED');
+        return { saved: current, entry: previous.result as unknown as CreationRoll };
+      }
+    }
+    if (input.expectedVersion !== undefined && current.version !== input.expectedVersion) throw new HttpError('A ficha mudou. Atualize antes de rolar novamente.', 409, 'CONFLICT');
+    if (current.creationFinalized) throw new HttpError('A criação já foi finalizada.', 409);
+    const draft = normalizeCreationDraft(current.creationDraft);
+    if (draft.mode !== 'new') throw new HttpError('Rolagens de atributos disponíveis apenas para personagem novo.', 400);
+    if (input.retryIndex !== undefined && (input.restart || !draft.rolls[input.retryIndex] || rollValues([draft.rolls[input.retryIndex]])[0] >= 8)) {
+      throw new HttpError('Só é permitido repetir individualmente um resultado menor que 8.', 400);
+    }
 
-  const rolls = input.restart ? [] : [...draft.rolls];
-  if (rolls.length >= CREATION_ABILITY_COUNT) {
-    throw new HttpError(
-      'Os seis valores já foram rolados — use "rolar novamente" para começar de novo.',
-      409,
+    const rolls = input.restart ? [] : [...draft.rolls];
+    if (input.retryIndex === undefined && rolls.length >= CREATION_ABILITY_COUNT) {
+      throw new HttpError(
+        'Os seis valores já foram rolados — use "rolar novamente" para começar de novo.',
+        409,
+      );
+    }
+
+    const roll = await rollTableDice(
+      {
+        userId: actor.userId,
+        username: actor.username,
+        displayName: actor.displayName,
+        // A rolagem de criação é sempre do jogador: nunca é privada (o `private`
+        // nem é enviado), então o papel não interfere em nada.
+        role: 'PLAYER',
+      },
+      {
+        dice: Array.from({ length: CREATION_ROLL_DICE }, () => ({ sides: 6 })),
+        kind: 'creation',
+        label: CREATION_ROLL_LABEL,
+      },
     );
-  }
 
-  const roll = await rollTableDice(
-    {
-      userId: actor.userId,
-      username: actor.username,
-      displayName: actor.displayName,
-      // A rolagem de criação é sempre do jogador: nunca é privada (o `private`
-      // nem é enviado), então o papel não interfere em nada.
-      role: 'PLAYER',
-    },
-    {
-      dice: Array.from({ length: CREATION_ROLL_DICE }, () => ({ sides: 6 })),
-      kind: 'creation',
-      label: CREATION_ROLL_LABEL,
-    },
-  );
+    const dice = roll.dice.map((die) => die.value);
+    const entry: CreationRoll = { dice, dropped: lowestIndex(dice) };
+    if (input.retryIndex === undefined) rolls.push(entry);
+    else rolls[input.retryIndex] = entry;
 
-  const dice = roll.dice.map((die) => die.value);
-  const entry: CreationRoll = { dice, dropped: lowestIndex(dice) };
-  rolls.push(entry);
-
-  const saved = await prisma.character.update({
-    where: { userId: actor.userId },
-    data: {
-      creationDraft: { ...draft, rolls } as unknown as Prisma.InputJsonValue,
-      version: { increment: 1 },
-    },
-  });
+    const nextDraft = { ...draft, rolls, ...((input.restart || input.retryIndex !== undefined) ? { baseAbilities: {} } : {}) };
+    const updated = await tx.character.updateMany({ where: { id: current.id, version: current.version }, data: { creationDraft: nextDraft as unknown as Prisma.InputJsonValue, version: { increment: 1 } } });
+    if (!updated.count) throw new HttpError('A ficha mudou durante a rolagem.', 409, 'CONFLICT');
+    const saved = await tx.character.findUniqueOrThrow({ where: { id: current.id } });
+    if (input.operationId) await tx.characterOperation.create({ data: { characterId: current.id, operationId: input.operationId, type: 'CREATION_ATTRIBUTE_ROLL', requestFingerprint: fingerprint, result: entry as unknown as Prisma.InputJsonValue } });
+    return { saved, entry };
+  }, { timeout: 15000 });
 
   const config = await getGameConfig();
 

@@ -1,82 +1,116 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { ABILITY_KEYS, ABILITY_LABELS, formatModifier } from '../../dnd';
-import { Die3D } from '../../dice/Die3D';
-import type { AbilityKey, CreationRoll } from '../../types';
+import { CommonDicePool } from '../../dice/CommonDicePool';
+import { CommonTrayFrame } from '../../dice/CommonTrayFrame';
+import { rollAnimationMs } from '../../dice/rollAnimation';
+import '../../dice/common-tray.css';
+import './ability-step.css';
+import type { AbilityKey, CreationRoll, DiceRollDto } from '../../types';
 import { Icon } from '../Icon';
 
-/** Mesma duração da queda dos dados da janela de rolagem. */
-const TUMBLE_MS = 1150;
-
-/** Valor de uma rolagem de 4d6: a soma sem o dado descartado. */
-function rollValue(roll: CreationRoll): number {
-  return roll.dice.reduce((sum, value, index) => (index === roll.dropped ? sum : sum + value), 0);
-}
-
-/** Quantas vezes um valor rolado foi usado na distribuição. */
-function usedCount(assigned: Partial<Record<AbilityKey, number>>, value: number): number {
-  return ABILITY_KEYS.filter((ability) => assigned[ability] === value).length;
-}
-
+const POOL = Array.from({ length: 4 }, () => ({ sides: 6, locked: true }));
+export const rollValue = (roll: CreationRoll) => roll.dice.reduce((sum, value, index) => index === roll.dropped ? sum : sum + value, 0);
+type SubStep = 'roll' | 'assign';
 interface AbilityStepProps {
-  mode: 'new' | 'existing';
-  /** Rolagens já feitas (guardadas no rascunho do servidor). */
-  rolls: CreationRoll[];
-  /** Valor-BASE atribuído a cada atributo. */
+  mode: 'new' | 'existing'; rolls: CreationRoll[];
   assigned: Partial<Record<AbilityKey, number>>;
-  /** Bônus racial da raça escolhida (mostrado no valor final). */
   racialBonus: Partial<Record<AbilityKey, number>>;
-  /** Rola 4d6 no servidor e devolve a rolagem nova. */
-  onRoll: (restart: boolean) => Promise<CreationRoll | null>;
+  onRoll: (restart: boolean, retryIndex?: number) => Promise<CreationRoll | null>;
   onAssign: (ability: AbilityKey, value: number | null) => void;
+  subStep: SubStep; onSubStep: (step: SubStep) => void;
   disabled?: boolean;
 }
 
-/**
- * Passo 6 — Atributos.
- *
- * "Personagem novo": o jogador rola 4d6 descartando o menor, seis vezes, com o
- * MESMO mecanismo da janela de dados (o dado é sorteado no servidor) e distribui
- * os seis resultados entre os atributos como quiser. "Personagem existente":
- * digita os valores direto (1 a 20).
- *
- * As rolagens ficam guardadas no rascunho: dá para fechar o navegador, voltar
- * depois e distribuir os valores já rolados.
- */
-export function AbilityStep({
-  mode,
-  rolls,
-  assigned,
-  racialBonus,
-  onRoll,
-  onAssign,
-  disabled = false,
-}: AbilityStepProps) {
+/** A bandeja só anima resultados autoritativos; distribuir não gera dados novos. */
+export function AbilityStep({ mode, rolls, assigned, racialBonus, onRoll, onAssign, subStep, onSubStep, disabled = false }: AbilityStepProps) {
   const [rolling, setRolling] = useState(false);
-  const [animating, setAnimating] = useState<CreationRoll | null>(null);
-  const [restarting, setRestarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [result, setResult] = useState<DiceRollDto | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [dragging, setDragging] = useState<{ index: number; x: number; y: number } | null>(null);
+  const gesture = useRef<{ index: number; x: number; y: number; moved: boolean } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  const previousCount = useRef(rolls.length);
+  const retrying = useRef<number | undefined>(undefined);
+  const [restarting, setRestarting] = useState(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (timer.current) clearTimeout(timer.current); }; }, []);
+  const assignedIndices = useRef<Partial<Record<AbilityKey, number>>>({});
   const values = rolls.map(rollValue);
-  const lastIndex = rolls.length - 1;
-
-  async function roll(restart: boolean): Promise<void> {
-    setRolling(true);
-    setError(null);
-
-    try {
-      const result = await onRoll(restart);
-      if (!result) return;
-      // A queda é local: o valor já veio do servidor.
-      setAnimating(result);
-      window.setTimeout(() => setAnimating(null), TUMBLE_MS);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao rolar os dados.');
-    } finally {
-      setRolling(false);
-      setRestarting(false);
-    }
+  // Identidade por índice: dois resultados iguais continuam sendo dois cards.
+  const placements = new Map<number, AbilityKey>();
+  for (const ability of ABILITY_KEYS) {
+    const index = assignedIndices.current[ability];
+    if (index !== undefined && values[index] === assigned[ability] && !placements.has(index)) placements.set(index, ability);
   }
-
+  for (const ability of ABILITY_KEYS) {
+    if ([...placements.values()].includes(ability)) continue;
+    const index = values.findIndex((value, index) => value === assigned[ability] && !placements.has(index));
+    if (index >= 0) { placements.set(index, ability); assignedIndices.current[ability] = index; }
+  }
+  const last = rolls[rolls.length - 1];
+  const restingResult = useMemo<DiceRollDto | null>(() => last ? {
+    id: `creation-saved-${rolls.length}`, actorUserId: '', clientId: null, actorName: '', kind: 'creation', label: 'Atributos',
+    dice: last.dice.map((value, index) => ({ sides: 6, value, dropped: index === last.dropped })),
+    total: rollValue(last), bonus: 0, advantage: false, disadvantage: false, isPrivate: true, crit: false, lucky: false, at: '',
+  } : null, [last, rolls.length]);
+  async function roll(restart = false, retryIndex?: number) {
+    if (pending.current || disabled) return;
+    pending.current = true; previousCount.current = restart ? 0 : rolls.length; retrying.current = retryIndex; setResult(null);
+    setRolling(true); setError(null); setSelected(null); onSubStep('roll');
+    try {
+      const entry = await onRoll(restart, retryIndex);
+      if (!mounted.current) return;
+      if (!entry) { setRolling(false); pending.current = false; return; }
+      setResult({ ...restingResult, id: `creation-animation-${Date.now()}`, actorUserId: '', actorName: '', clientId: null, kind: 'creation', label: 'Atributos',
+        dice: entry.dice.map((value, index) => ({ sides: 6, value, dropped: index === entry.dropped })), total: rollValue(entry), bonus: 0,
+        advantage: false, disadvantage: false, isPrivate: true, crit: false, lucky: false, at: '' });
+      timer.current = setTimeout(() => {
+        pending.current = false; setRolling(false); setRestarting(false);
+        if ((restart ? 1 : retryIndex !== undefined ? rolls.length : rolls.length + 1) === 6 && rollValue(entry) >= 8 && rolls.every((item, index) => index === retryIndex || rollValue(item) >= 8)) onSubStep('assign');
+      }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : rollAnimationMs());
+    } catch (err) { setError(err instanceof Error ? err.message : 'Falha ao rolar.'); setRolling(false); pending.current = false; }
+  }
+  function assign(index: number, ability: AbilityKey) {
+    if (disabled || rolling || rolls.length !== 6 || values.some(value => value < 8)) return;
+    const source = placements.get(index);
+    if (source === ability) { setSelected(null); return; }
+    if (source) {
+      const previous = [...placements].find(([, placed]) => placed === ability)?.[0];
+      if (previous === undefined) delete assignedIndices.current[source];
+      else assignedIndices.current[source] = previous;
+      onAssign(source, assigned[ability] ?? null);
+    }
+    assignedIndices.current[ability] = index;
+    onAssign(ability, values[index]); setSelected(null);
+  }
+  function release(event: PointerEvent<HTMLButtonElement>) {
+    const current = gesture.current;
+    if (current?.moved) {
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-ability-target]');
+      if (target) assign(current.index, target.dataset.abilityTarget as AbilityKey);
+    }
+    setDragging(null);
+    // Mantém moved até o clique sintetizado, para soltar não selecionar outra peça.
+  }
+  function token(index: number, interactive = true) {
+    const source = placements.get(index);
+    return <button type="button" key={index} className={`ability-value-card${selected === index ? ' is-selected' : ''}`}
+      disabled={disabled || rolling || !interactive} aria-pressed={selected === index}
+      aria-label={`Rolagem ${index + 1}: ${values[index]}${source ? `, ${ABILITY_LABELS[source]}` : ''}`}
+      onPointerDown={event => { if (event.button === 0) gesture.current = { index, x: event.clientX, y: event.clientY, moved: false }; }}
+      onPointerMove={event => {
+        const current = gesture.current;
+        if (!current || current.index !== index || event.buttons === 0) return;
+        if (!current.moved && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 6) return;
+        current.moved = true; event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging({ index, x: event.clientX, y: event.clientY });
+      }} onPointerUp={release} onPointerCancel={() => { gesture.current = null; setDragging(null); }}
+      onClick={() => { if (!gesture.current?.moved) setSelected(index); gesture.current = null; }}>
+      <strong>{values[index]}</strong><small>{rolls[index].dice.map((die, i) => <span key={i} className={i === rolls[index].dropped ? 'is-dropped' : ''}>{die} </span>)}</small>
+    </button>;
+  }
   if (mode === 'existing') {
     return (
       <div className="wizard-step-body">
@@ -111,161 +145,41 @@ export function AbilityStep({
       </div>
     );
   }
-
-  return (
-    <div className="wizard-step-body">
-      <p className="section-note">
-        Role 4d6 descartando o menor dado, seis vezes — um valor por atributo. Os valores ficam
-        guardados e você distribui como quiser. As rolagens não avisam a mesa, mas entram no
-        histórico do mestre.
-      </p>
-
-      {/* A mesa de rolagem: um palco escuro (pergaminho noturno) onde os dados
-          caem, com os controles na cabeceira e o resultado em destaque. */}
-      <div className="wizard-roll-stage">
-        <div className="wizard-roll-stage-head">
-          <span className="wizard-roll-count">
-            rolagens <strong>{rolls.length}</strong>
-            <small>/6</small>
-          </span>
-
-          <div className="wizard-roll-bar">
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={disabled || rolling || rolls.length >= 6}
-              onClick={() => void roll(false)}
-            >
-              <Icon name="die" size={15} />{' '}
-              {rolling ? 'rolando...' : `rolar 4d6 (${rolls.length}/6)`}
-            </button>
-
-            {rolls.length > 0 ? (
-              <button
-                type="button"
-                className="btn btn-small"
-                disabled={disabled || rolling || !restarting}
-                onClick={() => void roll(true)}
-              >
-                {restarting ? 'confirmar: rolar os seis de novo' : 'rolar novamente'}
-              </button>
-            ) : null}
-
-            {rolls.length > 0 && !restarting && rolls.length < 6 ? (
-              <button type="button" className="btn btn-small" onClick={() => setRestarting(true)}>
-                começar de novo
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="wizard-dice">
-          {animating ? (
-            <>
-              {animating.dice.map((_, index) => (
-                <Die3D key={`t-${index}`} sides={6} value={null} reveal={false} tumbling />
-              ))}
-              <span className="wizard-dice-hint">rolando os 4d6...</span>
-            </>
-          ) : lastIndex >= 0 ? (
-            <>
-              {rolls[lastIndex].dice.map((value, index) => (
-                <Die3D
-                  key={`s-${index}`}
-                  sides={6}
-                  value={value}
-                  reveal
-                  dropped={index === rolls[lastIndex].dropped}
-                />
-              ))}
-              <span className="wizard-dice-hint">
-                <span className="wizard-dice-dropped">
-                  descartado <s>{rolls[lastIndex].dice[rolls[lastIndex].dropped]}</s>
-                </span>
-                <span className="wizard-dice-total">
-                  <small>valor</small>
-                  <strong>{values[lastIndex]}</strong>
-                </span>
-              </span>
-            </>
-          ) : (
-            <span className="wizard-dice-hint">Nenhuma rolagem ainda — use "rolar 4d6".</span>
-          )}
-        </div>
+  const distributing = subStep === 'assign' && rolls.length === 6 && values.every(value => value >= 8) && !rolling;
+  return <div className="wizard-step-body ability-step">
+    <p className="section-note">{distributing ? 'Arraste os valores para os atributos. Você também pode clicar em um valor e depois no atributo. Troque valores arrastando entre os campos.' : 'Role os quatro D6 seis vezes. Em cada rolagem, o menor dado é descartado e os outros três formam um valor.'}</p>
+    {!distributing ? <>
+      <div className="dice-stage is-standard-roll ability-tray" aria-label="Bandeja de atributos com quatro D6 fixos">
+        <div className={`dice-ring${rolling ? ' is-rolling' : ''}`}><div className="dice-ring-inner"><div className="dice-ring-floor">
+          <CommonDicePool pool={POOL} result={result ?? restingResult} rolling={rolling && result !== null} settled={!rolling || result === null} extraD20={0} />
+        </div></div><CommonTrayFrame /></div>
+        <button type="button" className="btn btn-primary" disabled={disabled || rolling || rolls.length >= 6} onClick={() => void roll()}>
+          <Icon name="die" size={18} /> {rolling ? 'Rolando...' : `Rolar 4d6 · ${rolls.length}/6`}
+        </button>
       </div>
-
-      {/* Os seis valores: os já distribuídos aparecem marcados. */}
-      <ul className="wizard-roll-list">
-        {values.map((value, index) => {
-          const used = usedCount(assigned, value) > 0;
-          return (
-            <li key={`v-${index}`} className={used ? 'wizard-roll used' : 'wizard-roll'}>
-              <span className="wizard-roll-value">{value}</span>
-              <span className="wizard-roll-dice">
-                {rolls[index].dice.map((die, dieIndex) => (
-                  <span
-                    key={`d-${dieIndex}`}
-                    className={dieIndex === rolls[index].dropped ? 'die dropped' : 'die'}
-                  >
-                    {die}
-                  </span>
-                ))}
-              </span>
-              {used ? <span className="tag">em uso</span> : null}
-            </li>
-          );
-        })}
-        {Array.from({ length: Math.max(0, 6 - values.length) }, (_, index) => (
-          <li key={`empty-${index}`} className="wizard-roll empty">
-            —
-          </li>
-        ))}
-      </ul>
-
-      {/* Distribuição: cada valor só pode ir para um atributo. */}
-      <h3 className="subsection-title">Distribuir os valores</h3>
-      <div className="grid grid-3 wizard-abilities">
-        {ABILITY_KEYS.map((ability) => {
-          const bonus = racialBonus[ability] ?? 0;
-          const base = assigned[ability];
-          return (
-            <label className="field" key={ability}>
-              <span>
-                {ABILITY_LABELS[ability]}
-                {bonus ? ` (+${bonus} da raça)` : ''}
-              </span>
-              <select
-                value={base === undefined ? '' : String(base)}
-                disabled={disabled}
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  onAssign(ability, raw === '' ? null : Number(raw));
-                }}
-              >
-                <option value="">— escolha —</option>
-                {/* Cada rolagem é uma opção: repetidos aparecem uma vez por rolagem. */}
-                {values.map((value, index) => {
-                  const taken =
-                    usedCount(assigned, value) >=
-                    values.filter((item) => item === value).length;
-                  const mine = base === value;
-                  return (
-                    <option key={`o-${index}`} value={value} disabled={taken && !mine}>
-                      {value} (dados {rolls[index].dice.join(', ')})
-                    </option>
-                  );
-                })}
-              </select>
-              <small className="muted">
-                total {base === undefined ? '—' : base + bonus} · modificador{' '}
-                {formatModifier(Math.floor(((base ?? 10) + bonus - 10) / 2))}
-              </small>
-            </label>
-          );
-        })}
+      <div className="ability-roll-bank" aria-label="Resultados das seis rolagens">
+        {Array.from({ length: 6 }, (_, index) => <div key={index} className="ability-roll-entry">
+          {index < (rolling ? previousCount.current : rolls.length) && !(rolling && index === retrying.current) ? token(index, false) : <span className="ability-value-card is-empty">—</span>}
+          {!rolling && values[index] < 8 ? <><small className="ability-low-result">Você tirou menos que 8. Pode rolar de novo.</small><button type="button" className="btn btn-small" disabled={disabled} onClick={() => void roll(false, index)}>Repetir rolagem {index + 1}</button></> : null}
+        </div>)}
       </div>
-
-      {error ? <p className="form-error">{error}</p> : null}
-    </div>
-  );
+      {rolls.length === 6 && values.every(value => value >= 8) && !rolling ? <button type="button" className="btn" onClick={() => onSubStep('assign')}>Distribuir valores</button> : null}
+      {rolls.length > 0 && !rolling ? <button type="button" className="btn btn-small" disabled={disabled} onClick={() => { if (restarting) void roll(true); else setRestarting(true); }}>{restarting ? 'Confirmar: recomeçar as seis rolagens' : 'Recomeçar rolagens'}</button> : null}
+    </> : <>
+      <h3 className="wizard-selection-title">Distribuir atributos</h3>
+      <div className="ability-roll-bank" aria-label="Valores disponíveis">{values.map((_, index) => !placements.has(index) ? token(index) : null)}{placements.size === 6 ? <p className="section-note">Todos os valores distribuídos.</p> : null}</div>
+      {values.some(value => value < 8) ? <p className="ability-low-result">Você tirou menos que 8. Pode rolar de novo: volte em Atributos na lateral e repita somente essa rolagem.</p> : null}
+      <div className="ability-targets">{ABILITY_KEYS.map(ability => {
+        const index = [...placements].find(([, placed]) => placed === ability)?.[0];
+        const base = assigned[ability], bonus = racialBonus[ability] ?? 0;
+        return <section className="ability-target" key={ability} data-ability-target={ability}>
+          <h4>{ABILITY_LABELS[ability]}</h4>
+          {index === undefined ? <button type="button" className="ability-empty-target" disabled={disabled} data-ability-target={ability} onClick={() => { if (selected !== null) assign(selected, ability); }} aria-label={`Atribuir valor a ${ABILITY_LABELS[ability]}`}>+</button> : <div data-ability-target={ability}>{token(index)}<button type="button" className="btn btn-small" disabled={disabled} onClick={() => { delete assignedIndices.current[ability]; onAssign(ability, null); }} aria-label={`Remover valor de ${ABILITY_LABELS[ability]}`}>Remover</button></div>}
+          <small>{bonus ? `${bonus > 0 ? '+' : ''}${bonus} da raça · ` : ''}total {base === undefined ? '—' : base + bonus} · modificador {formatModifier(Math.floor(((base ?? 10) + bonus - 10) / 2))}</small>
+        </section>;
+      })}</div>
+    </>}
+    {dragging ? <span className="ability-drag-ghost" style={{ left: dragging.x, top: dragging.y }}>{values[dragging.index]}</span> : null}
+    {error ? <p className="form-error" role="alert">{error}</p> : null}
+  </div>;
 }
