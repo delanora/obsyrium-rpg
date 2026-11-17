@@ -278,6 +278,12 @@ const FACES: Record<string, ReactNode> = {
   ),
 };
 
+/** Símbolo felino provisório; preserva o estilo vetorial dos fallbacks. */
+const TABAXI_FACE = <>
+  <path d="M5 11 4 3l6 4h4l6-4-1 8c1 6-3 10-7 10S4 17 5 11Z" />
+  <path d="m7 11 3 1m7-1-3 1m-4 3 2 1 2-1m-2 1v2m-5-3-4-1m4 3-4 1m14-3 4-1m-4 3 4 1" />
+</>;
+
 /** Rosto genérico (raças personalizadas ou id desconhecido). */
 const GENERIC_FACE: ReactNode = FACE;
 
@@ -304,7 +310,7 @@ export function RaceFaceIcon({ option, size = 30, className }: RaceFaceIconProps
   if (asset) return <img className={`race-face race-face-asset${className ? ` ${className}` : ''}`}
     src={`/race-icons/${asset}.webp`} width={size} height={size} alt="" aria-hidden="true" decoding="async" draggable={false} />;
   // A sub-raça tem prioridade; sem id conhecido, cai no rosto genérico.
-  const node = FACES[option.subraceId ?? option.raceId] ?? GENERIC_FACE;
+  const node = option.raceId === 'tabaxi' ? TABAXI_FACE : FACES[option.subraceId ?? option.raceId] ?? GENERIC_FACE;
   return (
     <svg
       className={className ? `race-face ${className}` : 'race-face'}

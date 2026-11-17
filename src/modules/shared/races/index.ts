@@ -9,6 +9,7 @@ import { halfOrc } from './half-orc.js';
 import { halfling } from './halfling.js';
 import { human } from './human.js';
 import { tiefling } from './tiefling.js';
+import { tabaxi } from './tabaxi.js';
 import type { Race, RaceChoiceDefinition, RaceTrait, Subrace } from './types.js';
 
 /**
@@ -35,6 +36,8 @@ export const RACES: readonly Race[] = [
   halfElf,
   halfOrc,
   tiefling,
+  // Exceção personalizada explicitamente autorizada pela mesa.
+  tabaxi,
 ];
 
 const RACE_BY_ID: ReadonlyMap<string, Race> = new Map(RACES.map((race) => [race.id, race]));
