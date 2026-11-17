@@ -3,6 +3,11 @@ import { ChoiceGallery } from './ChoiceGallery';
 import type { RaceChoice } from '../../types';
 import { Icon } from '../Icon';
 
+export const DRACONIC_ANCESTRY_ART: Record<string, string> = {
+  black: 'preta', blue: 'azul', green: 'verde', red: 'vermelha', white: 'branca',
+  brass: 'latao', bronze: 'bronze', copper: 'cobre', gold: 'ouro', silver: 'prata',
+};
+
 /** Apresentação PHB 2014; a escolha continua no contrato racial existente. */
 export function DraconicAncestry({ choice, value, disabled, onSelect, baseDescription, bonusLabel }: {
   baseDescription?: string; bonusLabel: string;
@@ -20,7 +25,9 @@ export function DraconicAncestry({ choice, value, disabled, onSelect, baseDescri
       {options.map(option => <button
         key={option.id} data-ancestry={option.id} type="button" className={`wizard-class-card${value === option.id ? ' is-selected' : ''}`}
         aria-pressed={value === option.id} disabled={disabled} onClick={() => onSelect(option.id)}>
-        <span className="wizard-class-emblem"><Icon name="dragon" size={64} /></span><span>{option.label}</span>
+        <span className="wizard-class-emblem">{DRACONIC_ANCESTRY_ART[option.id]
+          ? <img className="class-emblem-art" src={`/race-icons/draconato_ancestralidade_${DRACONIC_ANCESTRY_ART[option.id]}.webp`} width={512} height={512} alt="" aria-hidden="true" draggable={false} decoding="async" />
+          : <Icon name="dragon" size={64} />}</span><span>{option.label}</span>
       </button>)}
     </ChoiceGallery>
     {selected ? <section className="wizard-option-detail" aria-label="Detalhes da ancestralidade">
