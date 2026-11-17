@@ -296,6 +296,8 @@ interface RaceFaceIconProps {
 
 /** Artes fornecidas pelo usuário; os IDs permanecem os mesmos do catálogo PHB. */
 export const RACE_ICON_ASSETS: Readonly<Record<string, string>> = {
+  tabaxi: 'tabaxi', 'tabaxi-lion': 'tabaxi_leao', 'tabaxi-leopard': 'tabaxi_leopardo',
+  'tabaxi-panther': 'tabaxi_pantera', 'tabaxi-tiger': 'tabaxi_tigre',
   dragonborn: 'draconato', elf: 'elfo', dwarf: 'anao', human: 'humano', halfling: 'halfling',
   gnome: 'gnomo', 'half-elf': 'meio_elfo', 'half-orc': 'meio_orc', tiefling: 'tiefling',
   'hill-dwarf': 'anao_colina', 'mountain-dwarf': 'anao_montanha',
