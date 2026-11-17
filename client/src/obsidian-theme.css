@@ -88,12 +88,16 @@
 }
 /* O salão do Mestre recebe uma peça principal; atalhos mantêm contornos simples. */
 :root[data-theme='dark'] .home-hero {
-  background: radial-gradient(ellipse at 50% 0, #9d7b3b15, transparent 65%), linear-gradient(135deg, #1c1f25, #101217);
+  background: none; isolation: isolate;
   border: 1px solid transparent; border-radius: 0;
   border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 15px / 0 stretch;
   box-shadow: 0 12px 32px -20px #000b;
 }
-:root[data-theme='dark'] .home-hero::before { border: 0; }
+:root[data-theme='dark'] .home-hero::before {
+  inset: 1px; border: 0; border-radius: 0; z-index: -1;
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
+  background: radial-gradient(ellipse at 50% 0, #9d7b3b15, transparent 65%), linear-gradient(135deg, #1c1f25, #101217);
+}
 :root[data-theme='dark'] .home-title { color: #e5d1ad; font-family: var(--font-display); font-weight: 500; }
 :root[data-theme='dark'] .home-card { background: linear-gradient(130deg, #22252b, #14171c); border-color: #8e744b66; box-shadow: inset 0 1px #cfb27b10; }
 :root[data-theme='dark'] .home-card:hover { border-color: #b5925b; box-shadow: 0 5px 20px -12px #b08a4140; }
