@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './page-scrollbar.css';
 
 /** Rolagem da página sobreposta; painéis internos conservam suas barras nativas. */
 export function PageScrollbar() {
+  const [host, setHost] = useState<Element | null>(null);
+  useEffect(() => {
+    // A barra compartilha a camada do cabeçalho, inclusive no wizard isolado.
+    const locate = () => setHost(document.querySelector('.app-shell') ?? document.body);
+    const observer = new MutationObserver(locate);
+    observer.observe(document.getElementById('root')!, { childList: true, subtree: true });
+    locate();
+    return () => observer.disconnect();
+  }, []);
   const track = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: number; y: number; scroll: number } | null>(null);
   const [metrics, setMetrics] = useState({ top: 0, height: 0, max: 0, scroll: 0 });
@@ -28,9 +38,9 @@ export function PageScrollbar() {
       window.removeEventListener('scroll', measure); window.removeEventListener('resize', measure);
     };
   }, []);
-  if (!metrics.max) return null;
+  if (!metrics.max || !host) return null;
   const moveTo = (value: number) => window.scrollTo({ top: Math.max(0, Math.min(metrics.max, value)), behavior: 'instant' });
-  return <div className="page-scrollbar" ref={track} role="scrollbar" aria-label="Rolagem da página"
+  return createPortal(<div className="page-scrollbar" ref={track} role="scrollbar" aria-label="Rolagem da página"
     aria-controls="root" aria-orientation="vertical" aria-valuemin={0} aria-valuemax={Math.round(metrics.max)}
     aria-valuenow={Math.round(metrics.scroll)} tabIndex={0}
     onKeyDown={event => {
@@ -57,5 +67,5 @@ export function PageScrollbar() {
     onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}
     onLostPointerCapture={() => { drag.current = null; }}>
     <span className="page-scrollbar-thumb" style={{ height: metrics.height, transform: `translateY(${metrics.top}px)` }} />
-  </div>;
+  </div>, host);
 }
