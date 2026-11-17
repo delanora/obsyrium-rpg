@@ -1,3 +1,4 @@
+import { PageScrollbar } from './components/PageScrollbar';
 import { AuthProvider, useAuth } from './auth';
 import { AuthPage } from './components/AuthPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -24,6 +25,7 @@ export function App() {
       <AuthProvider>
         <LightboxProvider>
           <Shell />
+          <PageScrollbar />
         </LightboxProvider>
       </AuthProvider>
     </ErrorBoundary>

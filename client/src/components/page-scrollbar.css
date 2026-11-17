@@ -1,0 +1,13 @@
+/* Oculta apenas a barra do documento, sem mudar a rolagem por roda, toque ou teclado. */
+html.has-page-scrollbar { scrollbar-width: none; }
+html.has-page-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+.page-scrollbar { position: fixed; inset: 0 0 0 auto; width: 10px; z-index: 35; background: transparent; touch-action: none; outline: none; }
+.page-scrollbar-thumb { display: block; position: absolute; top: 0; right: 2px; width: 5px; border-radius: 9px; background: #b49a6c66; box-shadow: 0 0 2px #080a0c55; pointer-events: none; transition: background .15s, width .15s; }
+.page-scrollbar:is(:hover, :focus-visible) .page-scrollbar-thumb { width: 7px; background: #c6aa78b8; }
+.page-scrollbar:focus-visible { outline: 1px solid #c6aa78; outline-offset: -1px; }
+@media (forced-colors: active) {
+  html.has-page-scrollbar { scrollbar-width: auto; }
+  html.has-page-scrollbar::-webkit-scrollbar { width: auto; height: auto; }
+  .page-scrollbar { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .page-scrollbar-thumb { transition: none; } }
