@@ -1,5 +1,6 @@
 import { Children, cloneElement, isValidElement, useEffect, useLayoutEffect, useRef, type HTMLAttributes } from 'react';
 import './choice-gallery.css';
+import { outerIconAura } from './outerIconAura';
 
 /** Navegar pelo carrossel nunca altera a escolha; somente o clique no card seleciona. */
 export function ChoiceGallery({ children, className = '', onPreviewIndex, ...props }: HTMLAttributes<HTMLDivElement> & { onPreviewIndex?: (index: number) => void }) {
@@ -22,6 +23,19 @@ export function ChoiceGallery({ children, className = '', onPreviewIndex, ...pro
   useEffect(() => {
     if (compact && !selectedKey) root.current?.querySelector<HTMLButtonElement>(':scope > button:not([disabled])')?.click();
   }, [compact, selectedKey, firstEnabledKey]);
+  useEffect(() => {
+    if (!compact) return;
+    let cancelled = false;
+    const buttons = root.current?.querySelectorAll<HTMLElement>(':scope > button.is-selected');
+    for (const button of buttons ?? []) {
+      const image = button.querySelector<HTMLImageElement>('img.race-face-asset, img.class-emblem-art');
+      if (!image) continue;
+      void outerIconAura(image.src).then(url => {
+        if (!cancelled) button.style.setProperty('--outer-icon-aura', `url("${url}")`);
+      }).catch(() => { /* Sem halo se a arte não puder ser lida; seleção continua funcional. */ });
+    }
+    return () => { cancelled = true; };
+  }, [compact, selectedKey]);
   function settle() {
     if (dragging.current) return;
     if (gesture.current?.moved) gesture.current = null;
