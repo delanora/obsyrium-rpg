@@ -27,3 +27,16 @@ for (const definition of CLASS_PRESENTATIONS) {
 }
 assert.equal(CLASS_PRESENTATIONS.length, 12);
 console.log(`Consulta de criação: 12 classes e ${subclasses} subclasses com benefícios iniciais visíveis; equipamentos reservados à etapa própria.`);
+
+const { FeatureChoiceField } = await import('../src/components/FeatureChoiceField');
+const { ALL_FIGHTING_STYLES, PALADIN_FIGHTING_STYLES, RANGER_FIGHTING_STYLES } = await import('../../src/modules/shared/classes/fighting-styles');
+for (const [classKey, styles] of [['fighter', ALL_FIGHTING_STYLES], ['paladin', PALADIN_FIGHTING_STYLES], ['ranger', RANGER_FIGHTING_STYLES]] as const) {
+  const content = renderToStaticMarkup(<FeatureChoiceField info={{ featureId: `${classKey}-fighting-style`, name: 'Estilo de Luta', prompt: 'Estilo de Luta', count: 1, allowRepeat: false, options: styles.map(option => ({ ...option, description: option.description ?? '' })), chosen: [] }} values={['dueling']} onChange={() => {}} />);
+  assert.ok(content.includes('fighting-style-selector'));
+  assert.ok(content.includes('sorcerer-ancestry-caption'));
+  assert.ok(!content.includes('choice-options'));
+  const caption = content.slice(content.indexOf('sorcerer-ancestry-caption'));
+  assert.ok(caption.includes('Duelismo'));
+  assert.ok(!caption.includes('Arquearia'));
+}
+console.log('Estilos marciais: carrossel compartilhado e apenas a descrição consultada, sem lista duplicada.');

@@ -1,0 +1,26 @@
+/* O mesmo seletor compacto funciona na criação e na subida de nível. */
+.fighting-style-selector { min-width: 0; max-width: 100%; }
+.fighting-style-selector .choice-gallery-shell { width: 100%; overflow: hidden; }
+.fighting-style-selector .choice-gallery.is-compact {
+  position: relative; display: flex; flex-wrap: nowrap; justify-content: flex-start;
+  overflow-x: auto; overflow-y: hidden; padding: 1.4rem calc(50% - 2.75rem);
+  gap: .8rem; cursor: grab; touch-action: pan-y; scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.fighting-style-selector .choice-gallery.is-compact::-webkit-scrollbar { display: none; }
+.fighting-style-selector .choice-gallery.is-compact > button {
+  position: relative; flex: 0 0 5.5rem; width: 5.5rem; min-width: 5.5rem;
+  padding: .3rem; user-select: none;
+  opacity: var(--carousel-opacity, 1); transform: scale(var(--carousel-scale, 1));
+  transition: transform .16s ease-out, opacity .16s ease-out;
+}
+.fighting-style-selector .choice-gallery.is-rebasing > button { transition: none; }
+.fighting-style-selector .choice-gallery > button > span:last-child {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.fighting-style-selector .wizard-class-emblem { width: 100%; height: auto; aspect-ratio: 1; }
+.fighting-style-selector .wizard-class-emblem .icon { width: 85%; height: 85%; }
+.fighting-style-selector .sorcerer-ancestry-caption { text-align: center; color: #cfb582; margin: .2rem 0 .7rem; }
+@media (prefers-reduced-motion: reduce) {
+  .fighting-style-selector .choice-gallery.is-compact > button { transition: none; }
+}

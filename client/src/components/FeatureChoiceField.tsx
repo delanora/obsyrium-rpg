@@ -1,3 +1,4 @@
+import { FightingStyleChoice } from './creation/FightingStyleChoice';
 import type { ActiveClassFeature, FeatureChoiceInfo } from '../types';
 
 /**
@@ -28,6 +29,10 @@ export function FeatureChoiceField({
     const next = [...current];
     next[index] = next[index] === key ? '' : key;
     onChange(next);
+  }
+
+  if (info.featureId.endsWith('fighting-style') && info.count === 1) {
+    return <FightingStyleChoice options={info.options} control={{ value: values[0] ?? '', disabled, onChange: value => onChange([value]) }} />;
   }
 
   return (

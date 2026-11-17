@@ -1328,7 +1328,10 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                 </ChoiceGallery>
                 {previewClass ? <>
                   {abilitiesReady && selectedClass && !selectedClass.eligible && selectedClass.missing ? <p className="levelup-blocked">{selectedClass.missing}</p> : null}
-                  <ClassInformation option={previewClass} />
+                  <ClassInformation option={previewClass} fightingStyle={previewClass.key === classKey ? {
+                    value: choicePicks[`${classKey}-fighting-style`]?.[0] ?? featureChoices.find(item => item.featureId === `${classKey}-fighting-style`)?.chosen[0] ?? '',
+                    disabled: busy, onChange: value => setChoicePicks(current => ({ ...current, [`${classKey}-fighting-style`]: [value] })),
+                  } : undefined} />
                 </> : null}
               </> : null}
 
@@ -1353,7 +1356,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
               {/* Escolhas de característica do nível 1 (Estilo de Luta, Inimigo
                   Favorito, Explorador Nato). */}
-              {featureChoices.filter(item => item.featureId !== 'dragon-ancestor').map((item) => (
+              {featureChoices.filter(item => item.featureId !== 'dragon-ancestor' && !item.featureId.endsWith('fighting-style')).map((item) => (
                 <div className="wizard-subclass" key={item.featureId}>
                   <h3 className="subsection-title">
                     {item.prompt} de {selectedClass?.name}
