@@ -1584,13 +1584,12 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
           ) : null}
 
           {error ? <p className="form-error">{error}</p> : null}
+          {step === LAST_STEP ? <footer className="wizard-actions">
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void finish()}>
+              <Icon name="scroll" size={15} /> {busy ? 'finalizando...' : 'Finalizar criação'}
+            </button>
+          </footer> : null}
         </div>
-
-        {step === LAST_STEP ? <footer className="wizard-actions">
-          <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void finish()}>
-            <Icon name="scroll" size={15} /> {busy ? 'finalizando...' : 'Finalizar criação'}
-          </button>
-        </footer> : null}
       </div>
     </div>
   );

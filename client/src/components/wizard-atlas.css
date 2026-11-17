@@ -161,3 +161,7 @@
   .wizard-overlay .wizard :is(.wizard-option-detail, .race-detail) > h3 { font-size: 1rem; padding-inline: .3rem; }
   .wizard-overlay .wizard :is(.wizard-selection-title, .wizard-race-title) { font-size: 1rem; }
 }
+
+/* Ancora o botão no próprio painel, sem depender da altura da trilha lateral. */
+.wizard-overlay .wizard > .wizard-body:has(> .wizard-actions) { margin-bottom: 4rem; }
+.wizard-overlay .wizard .wizard-body > .wizard-actions { position: absolute; top: calc(100% + .45rem); bottom: auto; left: 0; right: 0; padding: 0; }
