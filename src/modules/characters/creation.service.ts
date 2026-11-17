@@ -1,3 +1,7 @@
+import { equipmentArtwork, equipmentProduct, normalizeEquipmentDraft, resolveEquipmentPlan, STARTING_WEALTH, type EquipmentDraft } from '../shared/creation-equipment.js';
+import { normalizeCoins } from '../shared/coins.js';
+import { inventoryListSchema } from './characters.schema.js';
+import { randomUUID } from 'node:crypto';
 import type { Character, Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../lib/http-error.js';
@@ -75,6 +79,7 @@ import {
   createCharacter,
   levelUpDraft,
   setCreationFinalized,
+  publishChange,
   toSheetDto,
   updateDraftSheet,
   type Actor,
@@ -113,6 +118,8 @@ export interface CreationStateDto {
   mode: CreationMode | null;
   /** Passo alcançado (retomada). O cliente abre o wizard aqui. */
   step: number;
+  equipment?: EquipmentDraft;
+  equipmentDelivered?: boolean;
   equipmentMethod: 'class-background' | 'purchase' | 'master' | null;
   /** Rolagens de 4d6 já feitas (até seis). */
   rolls: CreationRoll[];
@@ -612,6 +619,8 @@ async function buildState(
       mode: draft.mode,
       step: draft.step,
       equipmentMethod: draft.equipmentMethod ?? null,
+      equipment: draft.equipment,
+      equipmentDelivered: draft.equipmentDelivered,
       rolls: draft.rolls,
       baseAbilities: draft.baseAbilities,
       skillPicks: draft.skillPicks,
@@ -1088,6 +1097,10 @@ export async function saveCreationStep(
     case 8: {
       if (!input.equipmentMethod) throw new HttpError('Escolha como obter os equipamentos iniciais.', 400);
       nextDraft.equipmentMethod = input.equipmentMethod;
+      const previousEquipment = normalizeEquipmentDraft(draft.equipment);
+      nextDraft.equipment = { ...normalizeEquipmentDraft(input.equipment ?? previousEquipment), wealth: previousEquipment.wealth };
+      const entries = normalizeClassEntries(character.classes);
+      if (!draft.equipmentDelivered) resolveEquipmentPlan(input.equipmentMethod, entries[0]?.classKey ?? '', findBackground(character.background)?.key ?? '', nextDraft.equipment, character.proficiencies as {armor?:string[];weapons?:string[]});
       break;
     }
 
@@ -1222,33 +1235,242 @@ export async function creationLevelUp(actor: Actor, input: LevelUpInput): Promis
 }
 
 /**
- * Passo 9: fecha a criação (`creationFinalized = true`).
+ * Passo 10: fecha a criação (`creationFinalized = true`).
  *
  * Antes de fechar, confere que nenhum passo ficou para trás — a mensagem lista o
  * que falta, em vez de aceitar uma ficha pela metade.
  */
-export async function finalizeCreation(actor: Actor): Promise<CreationState> {
-  const character = await requireDraft(actor);
-  const draft = normalizeCreationDraft(character.creationDraft);
-  const missing = missingForFinalize(character, draft);
-
+export async function finalizeCreation(
+  actor: Actor,
+  input: { expectedVersion: number; operationId: string },
+): Promise<CreationState> {
   const config = await getGameConfig();
-  const level = totalCharacterLevel(normalizeClassEntries(character.classes));
-  if (level < config.startingLevel) missing.push('os níveis iniciais da mesa (passo 9)');
-
-  if (missing.length > 0) {
-    throw new HttpError(`Ainda falta preencher: ${missing.join(', ')}.`, 400);
-  }
-
-  await setCreationFinalized(
-    { userId: actor.userId, username: actor.username },
-    actor,
-    true,
-    { creationDraft: { ...draft, step: CREATION_LAST_STEP } as unknown as Prisma.InputJsonValue },
+  const response = await prisma.$transaction(
+    async (tx) => {
+      const initial = await tx.character.findUnique({ where: { userId: actor.userId } });
+      if (!initial) throw new HttpError('Esta ficha ainda não foi criada.', 404);
+      await tx.$queryRaw`SELECT id FROM characters WHERE id = ${initial.id} FOR UPDATE`;
+      const character = await tx.character.findUniqueOrThrow({ where: { id: initial.id } });
+      const previous = await tx.characterOperation.findUnique({
+        where: {
+          characterId_operationId: { characterId: character.id, operationId: input.operationId },
+        },
+      });
+      if (previous) {
+        if (previous.type !== 'CREATION_FINALIZE' || previous.requestFingerprint !== '{}')
+          throw new HttpError('Identificador de operação já usado.', 409, 'IDEMPOTENCY_KEY_REUSED');
+        return previous.result as unknown as CreationState;
+      }
+      if (character.creationFinalized) return buildState(actor, character, config.startingLevel);
+      if (character.version !== input.expectedVersion)
+        throw new HttpError('A ficha mudou. Atualize antes de finalizar.', 409, 'CONFLICT');
+      const draft = normalizeCreationDraft(character.creationDraft);
+      const missing = missingForFinalize(character, draft);
+      const entries = normalizeClassEntries(character.classes);
+      if (totalCharacterLevel(entries) < config.startingLevel)
+        missing.push('os níveis iniciais da mesa (passo 9)');
+      if (missing.length) throw new HttpError(`Ainda falta preencher: ${missing.join(', ')}.`, 400);
+      const receiptId = `creation-equipment:${character.id}`;
+      const receipt = await tx.characterOperation.findUnique({
+        where: { characterId_operationId: { characterId: character.id, operationId: receiptId } },
+      });
+      const applyEquipment =
+        !receipt && !draft.equipmentDelivered && draft.equipmentMethod !== 'master';
+      if (receipt && (receipt.type !== 'CREATION_EQUIPMENT_GRANT' || receipt.requestFingerprint !== '{}')) {
+        throw new HttpError('Identificador de concessão já usado.', 409, 'IDEMPOTENCY_KEY_REUSED');
+      }
+      let inventory = inventoryListSchema.parse(character.inventory),
+        coins = normalizeCoins(character.coins);
+      if (!receipt && !draft.equipmentDelivered) {
+        const plan = resolveEquipmentPlan(
+          draft.equipmentMethod,
+          entries[0]?.classKey ?? '',
+          findBackground(character.background)?.key ?? '',
+          normalizeEquipmentDraft(draft.equipment),
+          character.proficiencies as { armor?: string[]; weapons?: string[] },
+        );
+        const images = await tx.item.findMany({
+          select: { id: true, name: true, category: true, imageUrl: true, details: true },
+        });
+        const added = plan.grants.map((grant) => {
+          const product = equipmentProduct(grant.id)!;
+          const art = equipmentArtwork(product, images);
+          return {
+            id: randomUUID(),
+            name: product.name,
+            description: product.description,
+            quantity: grant.quantity,
+            weight: product.weight,
+            category: product.category,
+            details: product.details,
+            imageUrl: art?.imageUrl ?? '',
+            itemId: '',
+            slot: null,
+          };
+        });
+        if (inventory.length + added.length > 300)
+          throw new HttpError(
+            'Não há espaço para todos os itens iniciais. Combine com o Mestre.',
+            400,
+          );
+        inventory = inventoryListSchema.parse([...inventory, ...added]);
+        const cp = plan.remainingCp;
+        coins = {
+          ...coins,
+          gp: coins.gp + Math.floor(cp / 100),
+          sp: coins.sp + Math.floor((cp % 100) / 10),
+          cp: coins.cp + (cp % 10),
+        };
+        await tx.characterOperation.create({
+          data: {
+            characterId: character.id,
+            operationId: receiptId,
+            type: 'CREATION_EQUIPMENT_GRANT',
+            requestFingerprint: '{}',
+            result: {
+              method: draft.equipmentMethod,
+              grants: plan.grants,
+              remainingCp: cp,
+            } as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      const data = {
+        creationFinalized: true,
+        ...(applyEquipment
+          ? {
+              inventory: inventory as unknown as Prisma.InputJsonValue,
+              coins: coins as unknown as Prisma.InputJsonValue,
+            }
+          : {}),
+        creationDraft: {
+          ...draft,
+          step: CREATION_LAST_STEP,
+          equipmentDelivered: true,
+        } as unknown as Prisma.InputJsonValue,
+        version: { increment: 1 },
+      };
+      const changed = await tx.character.updateMany({
+        where: { id: character.id, version: input.expectedVersion },
+        data,
+      });
+      if (!changed.count)
+        throw new HttpError('A ficha mudou. Atualize antes de finalizar.', 409, 'CONFLICT');
+      const saved = await tx.character.findUniqueOrThrow({ where: { id: character.id } });
+      const result = await buildState(actor, saved, config.startingLevel);
+      await tx.characterOperation.create({
+        data: {
+          characterId: character.id,
+          operationId: input.operationId,
+          type: 'CREATION_FINALIZE',
+          requestFingerprint: '{}',
+          result: result as unknown as Prisma.InputJsonValue,
+        },
+      });
+      return result;
+    },
+    { timeout: 20000 },
   );
-
   const saved = await prisma.character.findUniqueOrThrow({ where: { userId: actor.userId } });
-  return buildState(actor, saved, config.startingLevel);
+  await publishChange(actor, saved, {
+    creationFinalized: true,
+    inventory: saved.inventory,
+    coins: saved.coins,
+  });
+  return response;
+}
+
+/** Riqueza é rolada uma única vez por classe, no servidor e com idempotência. */
+export async function rollCreationWealth(
+  actor: Actor,
+  input: { expectedVersion: number; operationId: string },
+): Promise<CreationState> {
+  const config = await getGameConfig();
+  const response = await prisma.$transaction(
+    async (tx) => {
+      const initial = await tx.character.findUniqueOrThrow({ where: { userId: actor.userId } });
+      await tx.$queryRaw`SELECT id FROM characters WHERE id = ${initial.id} FOR UPDATE`;
+      const current = await tx.character.findUniqueOrThrow({ where: { id: initial.id } });
+      const previous = await tx.characterOperation.findUnique({
+        where: {
+          characterId_operationId: { characterId: current.id, operationId: input.operationId },
+        },
+      });
+      if (previous) {
+        if (previous.type !== 'CREATION_WEALTH_ROLL' || previous.requestFingerprint !== '{}')
+          throw new HttpError('Identificador de operação já usado.', 409, 'IDEMPOTENCY_KEY_REUSED');
+        return previous.result as unknown as CreationState;
+      }
+      if (current.version !== input.expectedVersion)
+        throw new HttpError('A ficha mudou. Atualize antes de rolar.', 409, 'CONFLICT');
+      if (current.creationFinalized) throw new HttpError('A criação já foi finalizada.', 409);
+      const draft = normalizeCreationDraft(current.creationDraft),
+        classKey = normalizeClassEntries(current.classes)[0]?.classKey ?? '',
+        rule = STARTING_WEALTH[classKey];
+      if (draft.equipmentDelivered)
+        throw new HttpError('Os equipamentos iniciais desta ficha já foram tratados.', 409);
+      if (!rule) throw new HttpError('Escolha a classe antes de rolar a riqueza.', 400);
+      const key = `creation-wealth:${classKey}`;
+      const stored = await tx.characterOperation.findUnique({
+        where: { characterId_operationId: { characterId: current.id, operationId: key } },
+      });
+      if (stored && (stored.type !== 'CREATION_WEALTH_RESULT' || stored.requestFingerprint !== classKey)) {
+      throw new HttpError('Identificador de riqueza já usado.', 409, 'IDEMPOTENCY_KEY_REUSED');
+    }
+    let wealth = stored?.result as unknown as EquipmentDraft['wealth'];
+      if (!wealth) {
+        const roll = await rollTableDice(
+          { ...actor, role: 'PLAYER' },
+          {
+            dice: Array.from({ length: rule.count }, () => ({ sides: 4 })),
+            kind: 'creation',
+            label: 'Riqueza inicial',
+          },
+        );
+        const dice = roll.dice.map((die) => die.value);
+        wealth = { classKey, dice, gold: dice.reduce((sum, n) => sum + n, 0) * rule.multiplier };
+        await tx.characterOperation.create({
+          data: {
+            characterId: current.id,
+            operationId: key,
+            type: 'CREATION_WEALTH_RESULT',
+            requestFingerprint: classKey,
+            result: wealth as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      const next = {
+        ...draft,
+        equipmentMethod: 'purchase',
+        equipment: { ...normalizeEquipmentDraft(draft.equipment), wealth },
+      };
+      const changed = await tx.character.updateMany({
+        where: { id: current.id, version: input.expectedVersion },
+        data: {
+          creationDraft: next as unknown as Prisma.InputJsonValue,
+          version: { increment: 1 },
+        },
+      });
+      if (!changed.count)
+        throw new HttpError('A ficha mudou. Atualize antes de rolar.', 409, 'CONFLICT');
+      const saved = await tx.character.findUniqueOrThrow({ where: { id: current.id } }),
+        result = await buildState(actor, saved, config.startingLevel);
+      await tx.characterOperation.create({
+        data: {
+          characterId: current.id,
+          operationId: input.operationId,
+          type: 'CREATION_WEALTH_ROLL',
+          requestFingerprint: '{}',
+          result: result as unknown as Prisma.InputJsonValue,
+        },
+      });
+      return result;
+    },
+    { timeout: 20000 },
+  );
+  const saved = await prisma.character.findUniqueOrThrow({ where: { userId: actor.userId } });
+  await publishChange(actor, saved, { creationDraft: saved.creationDraft });
+  return response;
 }
 
 /**
@@ -1271,6 +1493,8 @@ export async function reopenCreation(characterId: string, master: Actor): Promis
 
   const draft = normalizeCreationDraft(character.creationDraft);
   const seeded: CreationDraft = {
+    ...draft,
+    equipmentDelivered: draft.equipmentDelivered || character.creationFinalized,
     mode: draft.mode ?? 'existing',
     step: CREATION_FIRST_STEP,
     rolls: draft.rolls,

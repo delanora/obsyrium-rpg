@@ -1,3 +1,5 @@
+import { normalizeEquipmentDraft, resolveEquipmentPlan, type EquipmentDraft } from '../../../src/modules/shared/creation-equipment';
+import { EquipmentReview } from './creation/equipmentUi';
 import { StartingEquipmentStep } from './creation/StartingEquipmentStep';
 import { STARTING_EQUIPMENT_LABELS, type StartingEquipmentMethod } from '../../../src/modules/shared/starting-equipment';
 import { BackgroundEmblem } from './creation/BackgroundEmblem';
@@ -17,6 +19,7 @@ import {
   fetchCreationState,
   finalizeCreation,
   rollCreationAttribute,
+  rollCreationWealth,
   saveCreationStep,
 } from '../creationApi';
 import {
@@ -149,6 +152,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const [error, setError] = useState<string | null>(null);
 
   // Campos dos passos (hidratados do rascunho na abertura).
+  const [equipmentDraft, setEquipmentDraft] = useState<EquipmentDraft>(normalizeEquipmentDraft(null));
   const [equipmentMethod, setEquipmentMethod] = useState<StartingEquipmentMethod | null>(null);
   const [equipmentDetails, setEquipmentDetails] = useState(false);
   const [mode, setMode] = useState<'new' | 'existing' | null>(null);
@@ -193,6 +197,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
     setMode(saved.mode);
     setEquipmentMethod(saved.equipmentMethod ?? null);
+    setEquipmentDraft(normalizeEquipmentDraft(saved.equipment));
     setName(
       sheet && sheet.name.trim().toLowerCase() !== DEFAULT_NAME ? sheet.name : '',
     );
@@ -668,7 +673,8 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
         return (skillCount === 0 || effectivePicks.length === skillCount) && expertiseReady;
       }
       case 8:
-        return equipmentMethod !== null;
+        if (creation?.equipmentDelivered) return true;
+        try { resolveEquipmentPlan(equipmentMethod,classKey,selectedBackground?.key ?? '',equipmentDraft,character?.proficiencies ?? {});return true; } catch { return false; }
       case 9:
         return level >= startingLevel;
       default:
@@ -679,7 +685,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   function stepBody(): Record<string, unknown> {
     switch (step) {
       case 8:
-        return { equipmentMethod };
+        return { equipmentMethod: creation?.equipmentDelivered ? equipmentMethod ?? 'master' : equipmentMethod, equipment: {selections:equipmentDraft.selections,cart:equipmentDraft.cart} };
       case 1:
         return { mode };
       case 2:
@@ -768,7 +774,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     setError(null);
 
     try {
-      const response = await finalizeCreation();
+      const response = await finalizeCreation(character!.version,newId());
       if (response.character) onFinished(response.character);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao finalizar a criação.');
@@ -784,6 +790,9 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     if (response.character) onCharacter(response.character);
     return response.character as Character;
   }
+
+  let equipmentReview: ReturnType<typeof resolveEquipmentPlan> | null = null;
+  try { equipmentReview = resolveEquipmentPlan(equipmentMethod,classKey,selectedBackground?.key ?? '',equipmentDraft,character?.proficiencies ?? {}); } catch { /* A etapa 8 mostra o que ainda falta escolher. */ }
 
   const racialBonus = useMemo(
     () => raceBonusesWithChoices(selectedRace, abilityChoices),
@@ -1199,7 +1208,6 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     {previewBackground.toolProficiencies?.length ? <div className="wizard-detail-highlight"><strong>Ferramentas</strong><span>{previewBackground.toolProficiencies.map(id => getTool(id)?.namePt ?? id).join(' · ')}</span></div> : null}
                     {(previewBackground.languageChoices ?? 0) > 0 ? <div className="wizard-detail-highlight"><strong>Idiomas</strong><span>{(previewBackground.languageChoices ?? 0)} à escolha</span></div> : null}
                     {previewBackground.feature ? <div className="wizard-detail-resource"><h4>{previewBackground.feature.name}</h4><p>{previewBackground.feature.description}</p></div> : null}
-                    {previewBackground.suggestedEquipment ? <div className="wizard-detail-resource"><h4>Equipamento sugerido</h4><p>{previewBackground.suggestedEquipment}</p></div> : null}
                   </section> : null}
 
                   {/* Ferramentas à escolha por categoria (instrumento, artesão…). */}
@@ -1481,6 +1489,15 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
           {step === 8 ? <StartingEquipmentStep method={equipmentMethod} details={equipmentDetails} disabled={busy}
             classKey={classKey} className={selectedClass?.name ?? ''} background={selectedBackground?.name ?? background}
+            backgroundId={selectedBackground?.key ?? ''} proficiencies={character?.proficiencies ?? {}}
+            draft={equipmentDraft} delivered={creation?.equipmentDelivered ?? false} onChange={setEquipmentDraft}
+            onWealth={async () => {
+              if (!character) throw new Error('Escolha sua classe primeiro.');
+              const response=await rollCreationWealth(character.version,newId());setState(response);
+              if(response.character)onCharacter(response.character);
+              const saved=normalizeEquipmentDraft(response.creation.equipment);
+              setEquipmentDraft(current=>({...current,wealth:saved.wealth}));return saved;
+            }}
             onChoose={method => { setEquipmentMethod(method); setEquipmentDetails(true); }} /> : null}
 
           {/* --- 9. Nível e progressão -------------------------------------- */}
@@ -1604,6 +1621,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                   </strong>
                 </li>
               </ul>
+              {!creation?.equipmentDelivered && equipmentReview ? <EquipmentReview rows={equipmentReview.grants} remainingCp={equipmentReview.remainingCp}/> : null}
 
               {creation && creation.missing.length > 0 ? (
                 <p className="form-error">Ainda falta: {creation.missing.join(', ')}.</p>
@@ -1613,7 +1631,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
           {error ? <p className="form-error">{error}</p> : null}
           {step === LAST_STEP ? <footer className="wizard-actions">
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void finish()}>
+            <button type="button" className="btn btn-primary" disabled={busy || (!creation?.equipmentDelivered && !equipmentReview)} onClick={() => void finish()}>
               <Icon name="scroll" size={15} /> {busy ? 'finalizando...' : 'Finalizar criação'}
             </button>
           </footer> : null}

@@ -71,7 +71,7 @@ export async function rollCreationAttribute(restart = false, retryIndex?: number
   });
 }
 
-/** Passo 8: aplica um nível pelo assistente de Level Up, sem depender do mestre. */
+/** Passo 9: aplica um nível pelo assistente de Level Up, sem depender do mestre. */
 export async function creationLevelUp(request: LevelUpRequest): Promise<CreationResponse> {
   return api<CreationResponse>('/api/characters/me/creation/level-up', {
     method: 'POST',
@@ -79,9 +79,9 @@ export async function creationLevelUp(request: LevelUpRequest): Promise<Creation
   });
 }
 
-/** Passo 9: fecha a criação. */
-export async function finalizeCreation(): Promise<CreationResponse> {
-  return api<CreationResponse>('/api/characters/me/creation/finalize', { method: 'POST' });
+/** Passo 10: entrega o conjunto escolhido e fecha a criação atomicamente. */
+export async function finalizeCreation(expectedVersion: number, operationId: string): Promise<CreationResponse> {
+  return api<CreationResponse>('/api/characters/me/creation/finalize', { method: 'POST', body: { expectedVersion, operationId } });
 }
 
 /** Devolve a ficha de um jogador ao assistente (exclusivo do mestre). */
@@ -91,4 +91,8 @@ export async function reopenCreation(characterId: string): Promise<Character> {
     { method: 'POST' },
   );
   return character;
+}
+
+export async function rollCreationWealth(expectedVersion:number,operationId:string):Promise<CreationResponse> {
+ return api<CreationResponse>('/api/characters/me/creation/wealth',{method:'POST',body:{expectedVersion,operationId}});
 }

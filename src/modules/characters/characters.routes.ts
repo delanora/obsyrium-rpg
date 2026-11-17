@@ -3,6 +3,7 @@ import { authenticate, requireRole } from '../auth/auth.middleware.js';
 import {
   createCharacterSchema,
   creationRollRequestSchema,
+  creationEquipmentOperationSchema,
   creationStepSchema,
   eldritchMasterSchema,
   giveCoinsSchema,
@@ -57,6 +58,7 @@ import {
   getCreationState,
   reopenCreation,
   rollCreationAttribute,
+  rollCreationWealth,
   saveCreationStep,
 } from './creation.service.js';
 
@@ -195,6 +197,13 @@ charactersRouter.post('/me/creation/level-up', authenticate, async (req, res) =>
   res.json(await creationLevelUp(actorFrom(req), parsed.data));
 });
 
+/** POST /me/creation/wealth: riqueza inicial rolada e guardada pelo servidor. */
+charactersRouter.post('/me/creation/wealth', authenticate, async (req,res)=>{
+  const parsed=creationEquipmentOperationSchema.safeParse(req.body??{});
+  if(!parsed.success){res.status(400).json({error:'VALIDATION_ERROR',issues:parsed.error.flatten().fieldErrors});return;}
+  res.json(await rollCreationWealth(actorFrom(req),parsed.data));
+});
+
 /**
  * POST /api/characters/me/creation/finalize — último passo do assistente.
  *
@@ -202,7 +211,9 @@ charactersRouter.post('/me/creation/level-up', authenticate, async (req, res) =>
  * para trás. Dali em diante o jogador só mexe no estado de jogo.
  */
 charactersRouter.post('/me/creation/finalize', authenticate, async (req, res) => {
-  res.json(await finalizeCreation(actorFrom(req)));
+  const parsed = creationEquipmentOperationSchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({error:'VALIDATION_ERROR',issues:parsed.error.flatten().fieldErrors});return; }
+  res.json(await finalizeCreation(actorFrom(req),parsed.data));
 });
 
 /**

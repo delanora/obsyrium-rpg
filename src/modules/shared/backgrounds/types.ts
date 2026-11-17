@@ -8,8 +8,8 @@ import type { ToolCategory } from '../tools/types.js';
  * O que cada antecedente concede entra na ficha pelo assistente (passo 4):
  * as duas perícias, as ferramentas (fixas e/ou escolhidas por categoria),
  * os idiomas à escolha e a característica narrativa. O EQUIPAMENTO INICIAL é
- * só texto informativo (`suggestedEquipment`) — nada é adicionado ao inventário
- * automaticamente.
+ * descrito em `suggestedEquipment` para consulta legada. As concessões da
+ * criação usam o catálogo estruturado `shared/creation-equipment.ts`.
  */
 
 /** A característica narrativa do antecedente (aparece na aba Características). */
@@ -55,7 +55,7 @@ export interface Background {
   feature: BackgroundFeature;
   /**
    * Equipamento inicial sugerido — TEXTO informativo, visível só ao mestre.
-   * NUNCA é adicionado ao inventário automaticamente.
+   * Não é interpretado como lista de itens; a criação usa grants estruturados.
    */
   suggestedEquipment?: string;
 }

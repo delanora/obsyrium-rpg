@@ -883,12 +883,15 @@ export const creationRollRequestSchema = z.object({
   operationId: z.string().min(1).max(120).optional(),
 });
 
+export const creationEquipmentOperationSchema = z.object({ expectedVersion: expectedVersionSchema, operationId: operationIdSchema });
+
 export const creationStepSchema = z.object({
   /** Limpa só a distribuição ao retornar antes dos atributos, preservando os dados rolados. */
   resetAbilities: z.boolean().optional(),
-  /** Número do passo que acabou de ser concluído (1 a 9). */
+  /** Número do passo que acabou de ser concluído (1 a 10). */
   step: z.number().int().min(CREATION_FIRST_STEP).max(CREATION_LAST_STEP),
   equipmentMethod: z.enum(['class-background', 'purchase', 'master']).optional(),
+  equipment: z.object({ selections: z.record(z.string().max(200), z.string().max(200)).refine(value => Object.keys(value).length <= 80), cart: z.array(z.object({ id: z.string().max(200), quantity: z.number().int().min(1).max(999) })).max(150) }).optional(),
   /** Passo 1: como o personagem está sendo montado. */
   mode: z.enum(['new', 'existing']).optional(),
   /** Passo 2: identidade. */

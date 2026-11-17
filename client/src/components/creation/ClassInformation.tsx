@@ -2,7 +2,7 @@ import { SorcererAncestry, type DragonAncestryControl } from './SorcererAncestry
 import type { ClassOption } from '../../types';
 import { ABILITY_LABELS, SKILLS } from '../../dnd';
 import type { ClassFeatureDefinition } from '../../../../src/modules/shared/classes/types';
-import { CLASS_PRESENTATIONS, CLASS_STARTING_EQUIPMENT } from './classPresentation';
+import { CLASS_PRESENTATIONS } from './classPresentation';
 
 function FeatureInformation({ features, dragonAncestry }: { features: ClassFeatureDefinition[]; dragonAncestry?: DragonAncestryControl }) {
   return <>{features.map(feature => <article className="wizard-detail-resource" key={feature.id}>
@@ -37,10 +37,7 @@ export function ClassInformation({ option, subclass, dragonAncestry }: { option:
     {proficiencies ? <>{([['Armaduras', proficiencies.armor], ['Armas', proficiencies.weapons], ['Ferramentas', proficiencies.tools]] as const).map(([label, values]) => values.length ? <div className="wizard-detail-highlight" key={label}><strong>{label}</strong><span>{values.join(' · ')}</span></div> : null)}</> : null}
     <h4 className="wizard-information-heading">Benefícios no 1º nível</h4>
     <FeatureInformation features={features.filter(feature => feature.level <= 1)} dragonAncestry={dragonAncestry} />
-    {!subclass ? <div className="wizard-detail-resource"><h4>Equipamento inicial da classe</h4>
-      <p className="section-note">As alternativas abaixo compõem o equipamento inicial, além do antecedente. Esta consulta não adiciona itens ao inventário.</p>
-      <ul className="wizard-information-list">{(CLASS_STARTING_EQUIPMENT[option.key] ?? []).map(text => <li key={text}>{text}</li>)}</ul>
-    </div> : null}
+
 
   </section>;
 }

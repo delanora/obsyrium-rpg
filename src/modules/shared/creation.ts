@@ -1,3 +1,4 @@
+import { normalizeEquipmentDraft, type EquipmentDraft } from './creation-equipment.js';
 import { normalizeEquipmentMethod, type StartingEquipmentMethod } from './starting-equipment.js';
 /**
  * Criação de personagem (assistente em 10 passos).
@@ -361,6 +362,8 @@ export interface CreationRoll {
 }
 
 export interface CreationDraft {
+  equipment?: EquipmentDraft;
+  equipmentDelivered?: boolean;
   stepVersion?: 2;
   equipmentMethod?: StartingEquipmentMethod | null;
   /** Nulo até o primeiro passo ser respondido. */
@@ -509,6 +512,8 @@ export function normalizeCreationDraft(input: unknown): CreationDraft {
     mode,
     stepVersion: 2,
     equipmentMethod: normalizeEquipmentMethod(source.equipmentMethod),
+    equipment: normalizeEquipmentDraft(source.equipment),
+    equipmentDelivered: source.equipmentDelivered === true,
     step,
     rolls,
     baseAbilities,

@@ -1,3 +1,4 @@
+import type { EquipmentDraft } from '../../src/modules/shared/creation-equipment';
 import type { CombatDuelDto } from '../../src/modules/shared/duels';
 export type { CombatDuelDto } from '../../src/modules/shared/duels';
 import type { HostilityPromptDto } from '../../src/modules/shared/hostility';
@@ -1412,6 +1413,8 @@ export interface BackgroundOption {
 
 /** Estado do assistente devolvido pela API. */
 export interface CreationState {
+  equipment?: EquipmentDraft;
+  equipmentDelivered?: boolean;
   equipmentMethod?: 'class-background' | 'purchase' | 'master' | null;
   mode: 'new' | 'existing' | null;
   step: number;
@@ -1461,6 +1464,7 @@ export interface CreationResponse {
 
 /** Passo concluído enviado ao servidor (`PATCH /api/characters/me/creation`). */
 export interface CreationStepRequest {
+  equipment?: Pick<EquipmentDraft, 'selections' | 'cart'>;
   equipmentMethod?: 'class-background' | 'purchase' | 'master';
   resetAbilities?: boolean;
   step: number;
