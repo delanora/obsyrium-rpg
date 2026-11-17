@@ -7,6 +7,7 @@ import './wizard-ambience.css';
 import './race-icons.css';
 import './wizard-layout.css';
 import './wizard-theme.css';
+import './wizard-atlas.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchCompendium } from '../gameApi';
 import {

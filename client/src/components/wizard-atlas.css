@@ -1,0 +1,151 @@
+/* Repaginada isolada e reversível: checkpoint codex/wizard-antes-repaginacao-20261116. */
+.wizard-overlay .wizard {
+  --atlas-line: rgb(180 139 73 / 35%);
+  --atlas-text: #e9dcc7;
+  --atlas-surface: rgb(12 14 18 / 90%);
+  --gold: #c7a15d;
+  --gold-bright: #f0d49c;
+  --surface: #16191ee6;
+  --surface-2: #20242be6;
+  --surface-3: #282b32e6;
+  --surface-4: #31343ae6;
+  --line: rgb(180 139 73 / 22%);
+  --line-strong: rgb(180 139 73 / 45%);
+  --ink-soft: #c9bda8;
+}
+.wizard-overlay .wizard-head { border-bottom: 0; margin-bottom: .8rem; }
+.wizard-overlay .wizard-head h1 { color: #ead4ac; letter-spacing: .055em; font-size: clamp(1.25rem, 2vw, 1.75rem); text-shadow: 0 2px 5px #000; }
+
+/* Uma única moldura adaptável. O recorte em nove partes não estica os cantos. */
+.wizard-overlay .wizard.is-race-step > .wizard-body,
+.wizard-overlay .wizard:not(.is-race-step) > .wizard-body {
+  position: relative;
+  padding: 1.65rem 1.8rem 1.8rem;
+  border: 1px solid transparent;
+  border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 18px / 0 stretch;
+  border-radius: 0;
+  background: radial-gradient(ellipse at 50% 0, rgb(122 94 50 / 11%), transparent 50%), linear-gradient(135deg, rgb(13 15 19 / 91%), rgb(10 11 14 / 88%));
+  box-shadow: 0 16px 48px rgb(0 0 0 / 30%);
+  color: var(--atlas-text);
+}
+.wizard-overlay .wizard.is-race-step .wizard-body > h2,
+.wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2 {
+  position: relative;
+  margin: 0 0 1.2rem;
+  padding: .25rem 2rem 1.8rem .1rem;
+  border: 0;
+  background: url('/creation/atlas-obsidiana/divisor.webp') center bottom / min(100%, 24rem) 1.7rem no-repeat;
+  color: #eddbb7;
+  font: 1.5rem var(--font-display);
+  letter-spacing: .09em;
+  line-height: 1.4;
+}
+.wizard-overlay .wizard.is-race-step .wizard-body > h2::after,
+.wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2::after {
+  left: auto; right: .15rem; top: .25rem; transform: none;
+  width: 1.2rem; height: 1.6rem; clip-path: none;
+  background: url('/creation/atlas-obsidiana/gema.webp') center / contain no-repeat;
+  filter: none;
+}
+.wizard-overlay .wizard-step-body { padding-top: .2rem; }
+.wizard-overlay .section-note { color: #c4b8a2; line-height: 1.65; }
+
+/* A navegação permanece leve; apenas a etapa atual recebe luz. */
+.wizard-overlay .wizard-track { padding-top: .4rem; }
+.wizard-overlay .wizard .wizard-step-number {
+  background: #111317; border-color: #8f7649; box-shadow: inset 0 0 0 3px #0b0c10;
+  color: #bba681; width: 1.9rem; height: 1.9rem;
+}
+.wizard-overlay .wizard .wizard-step-chip.current .wizard-step-number { background: #29271f; border-color: #e0bd79; box-shadow: 0 0 10px #bd91442e, inset 0 0 0 3px #101115; color: #f5deb0; }
+.wizard-overlay .wizard .wizard-step-chip.done .wizard-step-number { background: #15181b; color: #d7bd8d; }
+.wizard-overlay .wizard-step-summary { color: #c3ad87; }
+.wizard-overlay .current .wizard-step-summary { color: #ebcf98; }
+.wizard-overlay .wizard-substep-link { border-color: #806840; }
+.wizard-overlay .wizard-substep-link.current { border-color: #d0ad69; color: #efdbb6; }
+
+/* As informações têm bordas simples, para não disputar com o painel externo. */
+.wizard-overlay .wizard :is(.wizard-option-detail, .race-detail) {
+  border: 1px solid var(--atlas-line);
+  border-radius: 3px;
+  background: linear-gradient(135deg, rgb(24 25 29 / 87%), rgb(12 14 18 / 90%));
+  box-shadow: inset 0 1px 0 rgb(226 195 136 / 5%);
+  padding: 1.4rem;
+  margin-top: 1.8rem;
+}
+.wizard-overlay .wizard :is(.wizard-option-detail, .race-detail) > h3 {
+  position: relative;
+  justify-self: center;
+  max-width: 100%; min-width: min(13rem, 90%);
+  box-sizing: border-box;
+  margin: -2.65rem auto .2rem;
+  padding: .2rem .65rem;
+  border: 12px solid transparent;
+  border-image: url('/creation/atlas-obsidiana/cartela.webp') 14 25 fill / 12px 22px / 0 stretch;
+  background: none; clip-path: none;
+  color: #ead3a6; font: 1.15rem var(--font-display);
+  line-height: 1.35; text-align: center; letter-spacing: .05em;
+}
+.wizard-overlay .wizard :is(.wizard-detail-highlight, .race-bonus) {
+  background: rgb(151 118 62 / 8%);
+  border-color: var(--atlas-line);
+  color: #dfd1b8;
+  box-shadow: none;
+}
+.wizard-overlay .wizard :is(.wizard-detail-highlight strong, .race-bonus strong, .race-trait-line strong, .wizard-detail-resource h4) { color: #d6b57b; }
+.wizard-overlay .wizard :is(.wizard-selection-title, .wizard-race-title) { color: #e2c99f; letter-spacing: .09em; font-size: 1.2rem; }
+.wizard-overlay .wizard :is(.wizard-subclass, .wizard-race-choice, .wizard-class-detail) { background: rgb(17 20 24 / 75%); border-color: var(--atlas-line); box-shadow: none; }
+
+/* As artes já trazem molduras: retira os aros codados redundantes. */
+.wizard-overlay .wizard :is(.wizard-class-card:has(.class-emblem-art), .race-card:has(.race-face-asset)) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.wizard-overlay .wizard .race-card:has(.race-face-asset)::before,
+.wizard-overlay .wizard .race-card:has(.race-face-asset)::after { display: none; }
+.wizard-overlay .wizard :is(.wizard-class-card:has(.class-emblem-art), .race-card:has(.race-face-asset)).is-selected {
+  border-color: rgb(223 190 126 / 65%);
+  box-shadow: 0 0 14px rgb(207 159 68 / 17%);
+  background: radial-gradient(circle, rgb(166 125 56 / 10%), transparent 70%);
+}
+.wizard-overlay .wizard .choice-gallery-shell.is-compact::before {
+  width: .8rem; height: 1.1rem; clip-path: none; filter: none;
+  background: url('/creation/atlas-obsidiana/gema.webp') center / contain no-repeat;
+}
+
+/* Identidade, formulários e atributos compartilham o mesmo fundo de obsidiana. */
+.wizard-overlay .wizard :is(input:not([type='range']):not([type='checkbox']):not([type='radio']), select, textarea) {
+  background: linear-gradient(135deg, #20232bdc, #101217eb); color: #eadac0; border-color: #887144;
+}
+.wizard-overlay .wizard :is(input, select, textarea):focus-visible { outline-color: #d3ad66; }
+.wizard-overlay .wizard .wizard-mode-card { background: linear-gradient(145deg, #22252bd9, #101216e6); border-color: #6f6046; box-shadow: inset 0 0 0 3px #111318; }
+.wizard-overlay .wizard .wizard-mode-card.is-selected { border-color: #d5b270; background: radial-gradient(ellipse at top, #b48d3b18, transparent 70%), #191c20de; box-shadow: 0 0 15px #b98a3626, inset 0 0 0 3px #181a20; }
+.wizard-overlay .wizard .avatar-editor-frames button[aria-pressed='true'] { background: #99804415; border-color: #bfa06a; box-shadow: 0 0 8px #b98a3620; }
+.wizard-overlay .wizard :is(.ability-value-card, .ability-target) { background: linear-gradient(140deg, #22252bde, #101216eb); border-color: #8e7449; }
+.wizard-overlay .wizard .ability-value-card { box-shadow: inset 0 0 0 3px #b4955914; }
+.wizard-overlay .wizard :is(.ability-empty-target, .ability-value-card.is-selected) { border-color: #c4a267; }
+
+.wizard-overlay .wizard .avatar-editor-add { background: radial-gradient(circle, #34373f66, #111419e6); box-shadow: inset 0 0 0 4px #111419, inset 0 0 0 5px #a78a514d; }
+.wizard-overlay .wizard .race-selection .race-card:not(:has(.race-face-asset)),
+.wizard-overlay .wizard .wizard-class-card:not(:has(.class-emblem-art)) { background: linear-gradient(145deg, #252930de, #12151ae6); border-color: #8b744a; box-shadow: inset 0 0 0 3px #111419; }
+
+/* O atlas aparece nas ações principais; botões secundários continuam discretos. */
+.wizard-overlay .wizard .btn-primary {
+  border: 12px solid transparent;
+  border-image: url('/creation/atlas-obsidiana/botao.webp') 16 25 fill / 12px 22px / 0 stretch;
+  padding: .25rem .75rem;
+  color: #f0d49c;
+  background: none; box-shadow: none;
+}
+.wizard-overlay .wizard .btn-primary:hover:not(:disabled) { filter: brightness(1.17); }
+.wizard-overlay .wizard .btn:not(.btn-primary) { background: #1b1e23cc; border-color: #8b744a; }
+.wizard-overlay .wizard .wizard-actions { border-color: var(--atlas-line); background: #101318cf; box-shadow: none; }
+@media(max-width:760px) {
+  .wizard-overlay .wizard.is-race-step > .wizard-body,
+  .wizard-overlay .wizard:not(.is-race-step) > .wizard-body { padding: 1.2rem .85rem; border-image-width: 15px; }
+  .wizard-overlay .wizard.is-race-step .wizard-body > h2,
+  .wizard-overlay .wizard:not(.is-race-step) .wizard-body > h2 { font-size: 1.13rem; padding: .15rem 1.5rem 1.4rem 0; margin-bottom: .8rem; letter-spacing: .05em; }
+  .wizard-overlay .wizard :is(.wizard-option-detail, .race-detail) { padding: 1.1rem .8rem; }
+  .wizard-overlay .wizard :is(.wizard-option-detail, .race-detail) > h3 { font-size: 1rem; padding-inline: .3rem; }
+  .wizard-overlay .wizard :is(.wizard-selection-title, .wizard-race-title) { font-size: 1rem; }
+}
