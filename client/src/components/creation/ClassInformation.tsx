@@ -7,7 +7,8 @@ function FeatureInformation({ features }: { features: ClassFeatureDefinition[] }
   return <>{features.map(feature => <article className="wizard-detail-resource" key={feature.id}>
     <h4>{feature.name} <small>· nível {feature.level}</small></h4>
     <p>{feature.description}</p>
-    {feature.choice ? <><p className="section-note">{feature.choice.prompt ?? feature.name} · {feature.choice.count ?? 1} escolha(s)</p>
+    {/* As opções de Expertise já são apresentadas na etapa de perícias. */}
+    {feature.choice && feature.id !== 'expertise' ? <><p className="section-note">{feature.choice.prompt ?? feature.name} · {feature.choice.count ?? 1} escolha(s)</p>
       <ul className="wizard-information-list">{feature.choice.options.filter(option => !option.requiresLevel || option.requiresLevel <= 1).map(option => <li key={option.key}>
         <strong>{option.name}</strong>{option.description ? ` — ${option.description}` : ''}{option.requiresLevel ? ` (a partir do nível ${option.requiresLevel})` : ''}{option.requiresPact ? ` · requer Pacto: ${option.requiresPact}` : ''}
       </li>)}</ul></> : null}
