@@ -63,20 +63,20 @@ export const CreationSpellSelection = forwardRef<CreationSpellSelectionHandle, {
       <span>Bônus de ataque<strong>{limits.attackBonus === null ? '—' : formatModifier(limits.attackBonus)}</strong></span>
       <span>CD de magia<strong>{limits.saveDC ?? '—'}</strong></span>
     </div>
-    <header className="creation-spell-heading"><h3>{mode === 'cantrips' ? 'Seus truques' : 'Suas magias de 1º nível'}</h3><strong aria-live="polite">{chosen.length}/{limit}</strong></header>
-    <p className="section-note">{mode === 'cantrips' ? 'Pequenos feitos de magia que não gastam espaços.' : preparesFromList ? 'Escolha as magias que deseja deixar preparadas para começar sua aventura.' : limits.grimoireSize !== null ? 'Monte seu grimório e marque quais magias estarão preparadas.' : 'Escolha as magias que seu personagem conhece.'} As escolhas são guardadas ao sair desta subetapa.</p>
-    <label className="field"><span>Buscar por nome ou escola</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} /></label>
+    <header className="creation-spell-heading"><h3 className="wizard-selection-title">{mode === 'cantrips' ? 'Seus truques' : 'Suas magias de 1º nível'}</h3></header>
+    <p className="section-note creation-spell-subtitle">{mode === 'cantrips' ? 'Pequenos feitos de magia que não gastam espaços.' : preparesFromList ? 'Escolha as magias que deseja deixar preparadas para começar sua aventura.' : limits.grimoireSize !== null ? 'Monte seu grimório e marque quais magias estarão preparadas.' : 'Escolha as magias que seu personagem conhece.'} As escolhas são guardadas ao sair desta subetapa.</p>
+    <label className="field creation-spell-search"><input type="search" aria-label="Buscar por nome ou escola" placeholder="Buscar por nome ou escola" value={query} onChange={event => setQuery(event.target.value)} /></label>
     <div className="creation-spell-workspace"><div className="creation-spell-cards" role="group" aria-label="Catálogo de magias">
       {visible.map(spell => <button type="button" key={spell.key} className={`creation-spell-card${selection.has(spell.key) ? ' is-selected' : ''}`} aria-pressed={selection.has(spell.key)} disabled={busy || disabled}
         onMouseEnter={() => setPreview(spell.key)} onFocus={() => setPreview(spell.key)} onClick={() => toggle(spell)}>
         <Icon name={SCHOOL_ICONS[spell.school] ?? 'book'} size={30}/><strong>{spell.name}</strong><small>{spell.school}</small>{selection.has(spell.key) ? <span className="creation-spell-chosen"><Icon name="check" size={13}/></span> : null}
       </button>)}
       {!visible.length ? <p>Nenhuma magia encontrada.</p> : null}
-    </div>{detail ? <aside className="creation-spell-detail" aria-live="polite"><h4>{detail.name}</h4><p className="section-note">{detail.school}{detail.ritual ? ' · Ritual' : ''}{detail.concentration ? ' · Concentração' : ''}</p>
+    </div><aside className="creation-spell-detail" aria-live="polite"><output className="creation-spell-count" aria-label={`${mode === 'cantrips' ? 'Truques escolhidos' : 'Magias escolhidas'}: ${chosen.length} de ${limit}`}>{chosen.length}/{limit}</output>{detail ? <><h4>{detail.name}</h4><p className="section-note">{detail.school}{detail.ritual ? ' · Ritual' : ''}{detail.concentration ? ' · Concentração' : ''}</p>
       <dl><div><dt>Conjuração</dt><dd>{detail.castingTime}</dd></div><div><dt>Alcance</dt><dd>{detail.range}</dd></div><div><dt>Duração</dt><dd>{detail.duration}</dd></div><div><dt>Componentes</dt><dd>{detail.components}</dd></div></dl>
       <p className="creation-spell-description">{detail.description}</p>
       <button type="button" className="btn btn-small" disabled={busy || disabled} onClick={() => toggle(detail)}>{selection.has(detail.key) ? 'Remover escolha' : 'Escolher esta magia'}</button>
-    </aside> : null}</div>
+    </> : <p className="section-note creation-spell-no-detail">Escolha uma opção para consultar os detalhes.</p>}</aside></div>
     {mode === 'spells' && limits.grimoireSize !== null ? <div className="creation-spell-prepared"><h4>Preparadas {preparedCount}/{limits.preparedCount ?? 0}</h4>{chosen.map(key => <label className="check-row" key={key}><input type="checkbox" checked={selection.get(key) ?? false} disabled={busy || disabled || (!selection.get(key) && preparedCount >= (limits.preparedCount ?? 0))} onChange={() => setSelection(new Map(selection).set(key, !selection.get(key)))}/>{byId.get(key)?.name}</label>)}</div> : null}
     {error ? <p className="form-error" role="alert">{error}</p> : null}
     <button type="button" className="btn btn-small" disabled={busy || disabled} onClick={() => void save()}>{busy ? 'Guardando…' : 'Guardar escolhas'}</button>
