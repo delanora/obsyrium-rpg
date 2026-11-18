@@ -74,7 +74,7 @@ const adapters = {
   'custom-races/custom-races.service.js':
     'export const listCustomRaceOptions=async()=>[];export const findCustomRace=async()=>null;export const toCustomRaceDto=x=>x;',
   'characters/characters.service.js':
-    'export const toSheetDto=async x=>x;export const createCharacter=()=>{throw Error("Proibido criar conta")};export const levelUpDraft=()=>{};export const setCreationFinalized=()=>{};export const updateDraftSheet=()=>{};export const publishChange=async()=>{};',
+    'export const toSheetDto=async x=>x;export const createCharacter=()=>{throw Error("Proibido criar conta")};export const levelUpDraft=()=>{};export const setCreationFinalized=()=>{};export const updateDraftSheet=(...args)=>globalThis.equipmentUpdateDraft(...args);export const publishChange=async()=>{};',
 };
 const actor = { userId: 'fixture', username: 'fixture', displayName: 'Fixture', role: 'PLAYER' };
 function fixture(method = 'purchase') {
@@ -127,7 +127,7 @@ try {
   await build({
     stdin: {
       contents:
-        "export {rollCreationWealth,finalizeCreation} from './src/modules/characters/creation.service.ts';export {equipmentConfiguration} from './src/modules/shared/creation-equipment.ts';",
+        "export {rollCreationWealth,finalizeCreation,saveCreationStep} from './src/modules/characters/creation.service.ts';export {equipmentConfiguration} from './src/modules/shared/creation-equipment.ts';",
       resolveDir: process.cwd(),
       loader: 'ts',
     },
@@ -153,9 +153,27 @@ try {
       },
     ],
   });
-  const { rollCreationWealth, finalizeCreation, equipmentConfiguration } = await import(
+  const { rollCreationWealth, finalizeCreation, saveCreationStep, equipmentConfiguration } = await import(
     pathToFileURL(join(dir, 'service.mjs'))
   );
+  globalThis.equipmentUpdateDraft = async (_actor, patch, draft, options) => {
+    character = { ...character, ...structuredClone(patch), creationDraft: structuredClone(draft), version: character.version + 1 };
+    if (patch.classes) character.classes = patch.classes.map(entry => ({ ...entry, level: entry.level ?? 1 }));
+    globalThis.equipmentDraftOptions = options;
+  };
+  fixture('master');
+  character.creationDraft.mode = 'new';
+  const preserved = structuredClone(character.creationDraft.baseAbilities);
+  await saveCreationStep(actor, { step: 3, resetAbilities: true });
+  assert.deepEqual(character.creationDraft.baseAbilities, preserved, 'Voltar preserva atributos');
+  character.creationDraft.mode = 'existing';
+  character.charisma = 8; character.creationDraft.baseAbilities.charisma = 8;
+  await saveCreationStep(actor, { step: 5, classKey: 'sorcerer', subclass: 'Magia Selvagem' });
+  assert.equal(globalThis.equipmentDraftOptions.skipClassPrerequisite, true, 'Troca da classe não bloqueia antes dos atributos');
+  assert.equal(character.creationDraft.baseAbilities.charisma, 8);
+  await assert.rejects(() => saveCreationStep(actor, { step: 7, skills: [] }), /Revise os atributos na etapa 6/);
+  await assert.rejects(() => saveCreationStep(actor, { step: 6, baseAbilities: character.creationDraft.baseAbilities }), /Carisma: faltam 4/);
+  await assert.rejects(() => finalizeCreation(actor, { expectedVersion: character.version, operationId: 'invalid-class-abilities' }), /Carisma 13/);
   fixture();
   await assert.rejects(
     () => rollCreationWealth(actor, { expectedVersion: 0, operationId: 'stale' }),
@@ -270,7 +288,7 @@ try {
   ]);
   assert.equal(diceCalls, 1);
   console.log(
-    'Serviço: riqueza por classe, replay, concorrência, versão, saldo, imagens, finalização atômica, reabertura e ausência de efeitos no modo Mestre aprovados.',
+    'Serviço: atributos preservados, requisito adiado à etapa 6, bloqueio posterior/final e riqueza por classe, replay, concorrência, versão, saldo, imagens, finalização atômica, reabertura e ausência de efeitos no modo Mestre aprovados.',
   );
 } finally {
   rmSync(dir, { recursive: true, force: true });

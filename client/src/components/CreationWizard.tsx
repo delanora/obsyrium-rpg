@@ -1,3 +1,7 @@
+import { CreationSpellSelection, type CreationSpellSelectionHandle } from './creation/CreationSpellSelection';
+import { multiclassMissingAbilities, MULTICLASS_MINIMUM } from '../../../src/modules/shared/classes';
+import { classSpellcastingLimits } from '../../../src/modules/shared/spells/class-tables';
+import type { SpellClassKey } from '../../../src/modules/shared/spells/types';
 import { SkillSelectionStep } from './creation/SkillSelectionStep';
 import { normalizeEquipmentDraft, resolveEquipmentPlan, type EquipmentDraft } from '../../../src/modules/shared/creation-equipment';
 import { EquipmentReview } from './creation/equipmentUi';
@@ -178,15 +182,16 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const [classKey, setClassKey] = useState('');
   const [subclass, setSubclass] = useState('');
   const [abilitySubStep, setAbilitySubStep] = useState<'roll' | 'assign'>('roll');
-  const [classSubStep, setClassSubStep] = useState<'class' | 'subclass'>('class');
+  const [classSubStep, setClassSubStep] = useState<'class' | 'subclass' | 'cantrips' | 'spells'>('class');
   /** Escolhas de característica do passo 5 (Estilo de Luta, Inimigo Favorito). */
   const [choicePicks, setChoicePicks] = useState<Record<string, string[]>>({});
   const [assigned, setAssigned] = useState<Partial<Record<AbilityKey, number>>>({});
   const [picks, setPicks] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
-  /** Catálogo de magias para a escolha do passo 9 (buscado uma vez). */
+  /** Catálogo de magias das subetapas de classe (buscado uma vez). */
   const [catalogSpells, setCatalogSpells] = useState<CompendiumSpell[]>([]);
+  const spellSelection = useRef<CreationSpellSelectionHandle>(null);
   const avatarEditor = useRef<AvatarEditorHandle>(null);
 
   const character = state?.character ?? null;
@@ -226,7 +231,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   useEffect(() => {
     let active = true;
 
-    // O catálogo (magias do PHB) alimenta o seletor do passo 9; se falhar, o
+    // O catálogo (magias do PHB) alimenta as subetapas da classe; se falhar, o
     // passo apenas não mostra o seletor — o resto da criação segue normal.
     fetchCompendium()
       .then((data) => {
@@ -612,9 +617,13 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   );
 
   const assignedCount = ABILITY_KEYS.filter((ability) => assigned[ability] !== undefined).length;
-  const abilitiesReady = assignedCount === ABILITY_KEYS.length;
   const level = character?.level ?? 0;
   const startingLevel = creation?.startingLevel ?? 1;
+
+  const attributeTotals = Object.fromEntries(ABILITY_KEYS.map(key => [key, (assigned[key] ?? 0) + (raceBonusesWithChoices(selectedRace, abilityChoices)[key] ?? 0)])) as Record<AbilityKey, number>;
+  const attributeMissing = assignedCount === 6 ? multiclassMissingAbilities(classKey, attributeTotals) : [];
+  const attributeRequirement = attributeMissing.length ? `Para seguir como ${selectedClass?.name ?? classKey}, ajuste ${attributeMissing.map(key => `${ABILITY_LABELS[key]}: faltam ${MULTICLASS_MINIMUM - attributeTotals[key]} ponto(s) para ${MULTICLASS_MINIMUM}`).join(classKey === 'fighter' ? ' ou ' : '; ')}.` : '';
+  const initialSpellLimits = ['bard', 'cleric', 'druid', 'sorcerer', 'warlock', 'wizard', 'paladin', 'ranger'].includes(classKey) ? classSpellcastingLimits(classKey as SpellClassKey, 1) : null;
 
   const canAdvance = (() => {
     switch (step) {
@@ -639,7 +648,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
       case 5:
         return classKey !== '' && (!classNeedsSubclass || subclass !== '') && choicesReady;
       case 6:
-        return assignedCount === ABILITY_KEYS.length;
+        return assignedCount === ABILITY_KEYS.length && attributeMissing.length === 0;
       case 7: {
         const expertiseReady =
           expertiseChoice === null ||
@@ -705,30 +714,35 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     ((!raceNeedsSubrace || selectedRace !== null) && raceChoicesReady));
   async function navigateTo(destination: number): Promise<boolean> {
     if (busy || uploading) return false;
+    if (spellSelection.current && !(await spellSelection.current.save())) return false;
+    if (destination > 6 && (attributeRequirement || assignedCount < 6)) {
+      if (step < 6 && navigationReady && !(await saveStep(stepBody()))) return false;
+      setError(attributeRequirement || 'Distribua os seis atributos antes de continuar.'); setStep(6); if (mode === 'new') setAbilitySubStep('assign'); return false;
+    }
     if (destination === step) return true;
     if (destination > step) {
-      if (!navigationReady || destination > Math.max(furthestStep, step + 1)) return false;
-      if (!(await saveStep(stepBody()))) return false;
-    }
-    if (destination < step && destination < 6 && mode === 'new' &&
-      (assignedCount > 0 || Object.keys(creation?.baseAbilities ?? {}).length > 0)) {
-      setBusy(true);
-      try {
-        const response = await saveCreationStep({ step: destination, resetAbilities: true });
-        setState(response);
-        if (response.character) onCharacter(response.character);
-        setAssigned({});
-        setFurthestStep(destination);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Falha ao liberar a redistribuição dos atributos.');
+      if (!navigationReady || destination > Math.max(furthestStep, step + 1)) {
+        if (step === 6 && attributeRequirement) setError(attributeRequirement);
         return false;
-      } finally { setBusy(false); }
+      }
+      if (!(await saveStep(stepBody()))) return false;
     }
     setError(null);
     setStep(destination);
     if (destination === 3) setRaceSubStep('race');
     if (destination === 5) setClassSubStep('class');
     return true;
+  }
+
+  async function openClassSpells(kind: 'cantrips' | 'spells') {
+    if (busy || uploading) return;
+    if (spellSelection.current && !(await spellSelection.current.save())) return;
+    if (step !== 5 && !(await navigateTo(5))) return;
+    if (!classKey || (classNeedsSubclass && !subclass) || !choicesReady) {
+      setError('Conclua a escolha da classe e da subclasse primeiro.'); return;
+    }
+    const saved = await saveStep({ step: 5, classKey, subclass, choices: Object.fromEntries(featureChoices.map(item => [item.featureId, (choicePicks[item.featureId] ?? item.chosen).filter(Boolean)])) });
+    if (saved) { setStep(5); setClassSubStep(kind); }
   }
 
   const stepSummaries = [
@@ -811,7 +825,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                 <button type="button" className="wizard-step-link" disabled={busy || uploading || !available}
                   aria-current={number === step ? 'step' : undefined}
                   title={`${label}${stepSummaries[index] ? `: ${stepSummaries[index]}` : ''}`}
-                  onClick={() => { if (number === 8 && step === 8) setEquipmentDetails(false); else if (number === 3 && step === 3) setRaceSubStep('race'); else if (number === 6 && step === 6) setAbilitySubStep('roll'); else if (number === 5 && step === 5) setClassSubStep('class'); else void navigateTo(number); }}>
+                  onClick={() => { if (number === 8 && step === 8) setEquipmentDetails(false); else if (number === 3 && step === 3) setRaceSubStep('race'); else if (number === 6 && step === 6) setAbilitySubStep('roll'); else if (number === 5 && step === 5) void navigateTo(5).then(ok => { if (ok) setClassSubStep('class'); }); else void navigateTo(number); }}>
                   <span className="wizard-step-number" aria-hidden="true">{number < step ? '✓' : number}</span>
                   <span className="wizard-step-copy"><span className="wizard-step-label">{label}</span>
                     {stepSummaries[index] ? <span className="wizard-step-summary">{stepSummaries[index]}</span> : null}
@@ -845,6 +859,10 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                     <span>{selectedDragonAncestor ? 'Ancestral dracônico' : 'Subclasse'}</span><strong>{selectedDragonAncestor ? `Dragão ${selectedDragonAncestor}` : subclass || 'Selecionar'}</strong>
                   </button>
                 ) : null}
+                {number === 5 && initialSpellLimits ? <>
+                  {initialSpellLimits.cantripsKnown > 0 ? <button type="button" className={`wizard-substep-link${step === 5 && classSubStep === 'cantrips' ? ' current' : ''}`} disabled={busy || uploading || step < 5} aria-current={step === 5 && classSubStep === 'cantrips' ? 'step' : undefined} onClick={() => void openClassSpells('cantrips')}><span>Truques</span><strong>Escolher truques</strong></button> : null}
+                  {initialSpellLimits.maxSpellLevel > 0 ? <button type="button" className={`wizard-substep-link${step === 5 && classSubStep === 'spells' ? ' current' : ''}`} disabled={busy || uploading || step < 5} aria-current={step === 5 && classSubStep === 'spells' ? 'step' : undefined} onClick={() => void openClassSpells('spells')}><span>Magias</span><strong>Repertório inicial</strong></button> : null}
+                </> : null}
               </li>
             );
           })}
@@ -1302,7 +1320,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                   ))}
                 </ChoiceGallery>
                 {previewClass ? <>
-                  {abilitiesReady && selectedClass && !selectedClass.eligible && selectedClass.missing ? <p className="levelup-blocked">{selectedClass.missing}</p> : null}
+
                   <ClassInformation option={previewClass} fightingStyle={previewClass.key === classKey ? {
                     value: choicePicks[`${classKey}-fighting-style`]?.[0] ?? featureChoices.find(item => item.featureId === `${classKey}-fighting-style`)?.chosen[0] ?? '',
                     disabled: busy, onChange: value => setChoicePicks(current => ({ ...current, [`${classKey}-fighting-style`]: [value] })),
@@ -1331,7 +1349,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
               {/* Escolhas de característica do nível 1 (Estilo de Luta, Inimigo
                   Favorito, Explorador Nato). */}
-              {featureChoices.filter(item => item.featureId !== 'dragon-ancestor' && !item.featureId.endsWith('fighting-style')).map((item) => (
+              {(classSubStep === 'class' || classSubStep === 'subclass') && featureChoices.filter(item => item.featureId !== 'dragon-ancestor' && !item.featureId.endsWith('fighting-style')).map((item) => (
                 <div className="wizard-subclass" key={item.featureId}>
                   <h3 className="subsection-title">
                     {item.prompt} de {selectedClass?.name}
@@ -1346,10 +1364,15 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                   />
                 </div>
               ))}
+              {(classSubStep === 'cantrips' || classSubStep === 'spells') && character ? (() => {
+                const entry = character.classes.find(item => item.classKey === classKey);
+                return entry?.spellcasting && entry.spellcasting.type !== 'none' ? <CreationSpellSelection key={`${classKey}-${classSubStep}`} ref={spellSelection} entry={entry} mode={classSubStep} allSpells={catalogSpells} current={character.spells.list.filter(spell => spell.classKey === classKey)} disabled={busy} onSaved={saved => { setState(current => current ? { ...current, character: saved } : current); onCharacter(saved); }} /> : null;
+              })() : null}
             </div>
           ) : null}
 
           {/* --- 6. Atributos ----------------------------------------------- */}
+          {step === 6 && attributeRequirement ? <p className="levelup-blocked" role="status">{attributeRequirement}</p> : null}
           {step === 6 && mode ? (
             <AbilityStep
               mode={mode}
@@ -1441,7 +1464,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
 
               {/* Livro de magias das classes conjuradoras do nível atual — o
                   servidor revalida lista, nível máximo e limites. */}
-              {character && catalogSpells.length > 0
+              {character && level > 1 && catalogSpells.length > 0
                 ? character.classes.map((entry) =>
                     entry.spellcasting && entry.spellcasting.type !== 'none' ? (
                       <SpellPicker

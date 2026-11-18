@@ -54,6 +54,8 @@ import {
   featuresWithSubclass,
   getClassDefinition,
   multiclassPrerequisiteLabel,
+  multiclassMissingAbilities,
+  MULTICLASS_MINIMUM,
   normalizeClassEntries,
   normalizeClassState,
   normalizeProficiencies,
@@ -550,6 +552,10 @@ function missingForFinalize(character: Character, draft: CreationDraft): string[
   }
 
   if (entries.length === 0) missing.push('a classe (passo 5)');
+  if (entries[0] && ABILITY_KEYS.every(key => draft.baseAbilities[key] !== undefined)) {
+    const requirement = multiclassPrerequisiteLabel(entries[0].classKey, abilitiesOf(character), entries);
+    if (requirement) missing.push(`${requirement} (ajuste os atributos no passo 6)`);
+  }
   if (!draft.equipmentMethod) missing.push('a opção de equipamentos iniciais (passo 8)');
 
   // Clérigo/Feiticeiro/Bruxo precisam da subclasse desde o nível 1.
@@ -690,12 +696,18 @@ export async function saveCreationStep(
     if (draft.mode !== 'new' || input.step >= 6) {
       throw new HttpError('A redistribuição só pode ser reiniciada antes da etapa de atributos de um personagem novo.', 400);
     }
-    nextDraft.baseAbilities = {};
+    // Clientes antigos podem enviar o pedido; voltar agora preserva a distribuição.
     nextDraft.step = input.step;
     await updateDraftSheet(actor, {}, nextDraft as unknown as Prisma.InputJsonValue, { skipClassPrerequisite: true });
     const saved = await prisma.character.findUniqueOrThrow({ where: { userId: actor.userId } });
     const config = await getGameConfig();
     return buildState(actor, saved, config.startingLevel);
+  }
+
+  if (input.step > 6 && ABILITY_KEYS.every(key => draft.baseAbilities[key] !== undefined)) {
+    const entries = normalizeClassEntries(character.classes);
+    const requirement = entries[0] ? multiclassPrerequisiteLabel(entries[0].classKey, abilitiesOf(character), entries) : '';
+    if (requirement) throw new HttpError(`${requirement}. Revise os atributos na etapa 6.`, 400);
   }
 
   switch (input.step) {
@@ -956,8 +968,7 @@ export async function saveCreationStep(
       // junto das classes (ver resolveClassPatch, em characters.service.ts).
       const subclass = (input.subclass ?? '').trim();
 
-      // O pré-requisito de atributo é conferido aqui (com os valores já
-      // gravados) e de novo no passo 6, quando os atributos existem.
+      // A escolha da classe é livre; o requisito é validado na etapa de atributos.
       const current = normalizeClassEntries(character.classes);
       if (current.length === 0 || (current.length === 1 && current[0].level === 1)) {
         // Primeira classe (ou troca da classe inicial, ainda no nível 1).
@@ -1043,7 +1054,8 @@ export async function saveCreationStep(
         const abilities = { ...abilitiesOf(character), ...patch } as Record<AbilityKey, number>;
         const missing = multiclassPrerequisiteLabel(definition.key, abilities, entries);
         if (missing) {
-          throw new HttpError(`${missing}.`, 400);
+          const requirements = multiclassMissingAbilities(definition.key, abilities).map(key => `${ABILITY_LABELS[key]}: faltam ${MULTICLASS_MINIMUM - abilities[key]} ponto(s) para ${MULTICLASS_MINIMUM}`);
+          throw new HttpError(requirements.length ? `Para seguir como ${definition.name}, ajuste ${requirements.join(definition.key === 'fighter' ? ' ou ' : '; ')}.` : `${missing}.`, 400);
         }
       }
       break;
@@ -1138,7 +1150,7 @@ export async function saveCreationStep(
     { userId: actor.userId, username: actor.username },
     patch,
     nextDraft as unknown as Prisma.InputJsonValue,
-    { skipClassPrerequisite: !abilitiesReady },
+    { skipClassPrerequisite: !abilitiesReady || input.step < 6 },
   );
 
   const saved = await prisma.character.findUniqueOrThrow({ where: { userId: actor.userId } });

@@ -1,0 +1,19 @@
+.creation-spell-stats { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem 2rem; text-align: center; margin-bottom: 1.5rem; color: #bba781; }
+.creation-spell-stats strong { display: block; color: #f1d8a5; font: 1.15rem var(--font-display); margin-top: .25rem; }
+.creation-spell-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #e5c282; }
+.creation-spell-heading h3 { margin: .5rem 0; font: 1.2rem var(--font-display); }
+.creation-spell-workspace { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1rem; margin: 1rem 0; align-items: start; }
+.creation-spell-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; max-height: 32rem; overflow: auto; padding: .2rem; }
+.creation-spell-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: .8rem .45rem; min-height: 8rem; border: 1px solid #836b44; border-radius: 8px 2px; color: #cfbd9e; background: linear-gradient(140deg,#242933,#12151b); cursor: pointer; font: inherit; }
+.creation-spell-card small { font-size: .78rem; }
+.creation-spell-card.is-selected { border-color: #e6be6d; color: #f6deb1; box-shadow: inset 0 0 18px #c39b4324; }
+.creation-spell-card:is(:hover,:focus-visible) { outline: 1px solid #cba35b; outline-offset: 1px; }
+.creation-spell-chosen { position: absolute; top: .3rem; right: .3rem; color: #e4c26c; }
+.creation-spell-detail { padding: 1rem; border-left: 1px solid #9a7b494d; background: #11151a80; }
+.creation-spell-detail h4 { margin: 0; color: #e6c58a; font: 1.15rem var(--font-display); }
+.creation-spell-detail dl { display: grid; gap: .4rem; font-size: .85rem; }
+.creation-spell-detail dt { color: #b7a17d; }
+.creation-spell-detail dd { margin: .1rem 0 .4rem; color: #e0d0b4; }
+.creation-spell-description { white-space: pre-line; line-height: 1.6; max-height: 20rem; overflow-y: auto; padding-right: .3rem; }
+.creation-spell-prepared { margin: 1rem 0; }
+@media(max-width:600px) { .creation-spell-workspace { grid-template-columns: 1fr; } .creation-spell-cards { max-height: 21rem; } .creation-spell-detail { border-left: 0; border-top: 1px solid #9a7b494d; } }
