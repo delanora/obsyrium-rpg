@@ -1,3 +1,4 @@
+import { SkillSelectionStep } from './creation/SkillSelectionStep';
 import { normalizeEquipmentDraft, resolveEquipmentPlan, type EquipmentDraft } from '../../../src/modules/shared/creation-equipment';
 import { EquipmentReview } from './creation/equipmentUi';
 import { StartingEquipmentStep } from './creation/StartingEquipmentStep';
@@ -417,10 +418,6 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   }, [creation?.backgroundCatalog, background]);
 
   /** Perícias que o antecedente concede (mostradas nos passos 4 e 7). */
-  const backgroundSkillLabels = selectedBackground
-    ? backgroundSkillNames(selectedBackground)
-    : [];
-
   /** Chaves (cruas) das perícias do antecedente — travadas no passo 7. */
   const backgroundSkillKeys = useMemo(
     () => new Set(selectedBackground?.skills ?? []),
@@ -431,15 +428,6 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const raceSkillKeys = useMemo(
     () => new Set(creation?.raceSkillKeys ?? []),
     [creation?.raceSkillKeys],
-  );
-
-  /** Nomes das perícias raciais, para a nota do passo 7. */
-  const raceSkillLabels = useMemo(
-    () =>
-      [...raceSkillKeys].map(
-        (key) => SKILLS.find((skill) => skill.key === key)?.label ?? key,
-      ),
-    [raceSkillKeys],
   );
 
   /**
@@ -457,19 +445,6 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
       ),
     [picks, skillPoolKeys, backgroundSkillKeys, raceSkillKeys],
   );
-
-  /**
-   * A lista mostrada no passo 7: o pool da classe MAIS as perícias já concedidas
-   * (antecedente/raça) que ficam fora dele — assim elas sempre aparecem marcadas
-   * e travadas, mesmo quando a classe não as oferece.
-   */
-  const displaySkills = useMemo(() => {
-    const extras = [...new Set([...backgroundSkillKeys, ...raceSkillKeys])]
-      .filter((key) => !skillPoolKeys.has(key))
-      .map((key) => SKILLS.find((skill) => skill.key === key))
-      .filter((skill): skill is (typeof SKILLS)[number] => Boolean(skill));
-    return [...skillPool, ...extras];
-  }, [skillPool, skillPoolKeys, backgroundSkillKeys, raceSkillKeys]);
 
   /** Escolhas de ferramenta por categoria que o antecedente pede. */
   const backgroundToolChoiceDefs = selectedBackground?.toolChoices ?? [];
@@ -1397,98 +1372,13 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
           ) : null}
 
           {/* --- 7. Perícias ------------------------------------------------ */}
-          {step === 7 ? (
-            <div className="wizard-step-body">
-              <p className="section-note">
-                A classe concede {skillCount} perícia(s)
-                {skillPool.length < SKILLS.length ? ' da lista abaixo' : ' à sua escolha'}.
-              </p>
-
-              <div className="grid grid-2 wizard-skills">
-                {displaySkills.map((skill) => {
-                  // Já concedida pelo antecedente ou pela raça: marcada e travada.
-                  const fromBackground = backgroundSkillKeys.has(skill.key);
-                  const fromRace = raceSkillKeys.has(skill.key);
-                  const fromGranted = fromBackground || fromRace;
-                  const grantedBy = fromBackground
-                    ? `Concedida pelo antecedente ${selectedBackground?.name}`
-                    : `Concedida pela raça ${selectedRace?.name}`;
-                  const checked = fromGranted || effectivePicks.includes(skill.key);
-                  return (
-                    <label
-                      className={`check-row${fromGranted ? ' is-locked' : ''}`}
-                      key={skill.key}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        disabled={fromGranted || (!checked && effectivePicks.length >= skillCount)}
-                        onChange={() =>
-                          setPicks((current) =>
-                            current.includes(skill.key)
-                              ? current.filter((key) => key !== skill.key)
-                              : [...current, skill.key],
-                          )
-                        }
-                      />
-                      <span className="check-name">
-                        {skill.label}
-                        <span className="muted"> · {ABILITY_LABELS[skill.ability]}</span>
-                      </span>
-                      {fromGranted ? (
-                        <span className="info-tip skill-tip">
-                          <Icon name="info" size={14} />
-                          <span className="info-tip-text" role="tooltip">
-                            <strong>{skill.label}</strong>
-                            {grantedBy} — entra na ficha sem gastar as escolhas da classe.
-                          </span>
-                        </span>
-                      ) : null}
-                    </label>
-                  );
-                })}
-              </div>
-
-              {backgroundSkillLabels.length > 0 ? (
-                <p className="section-note">
-                  O antecedente {selectedBackground?.name} já concede{' '}
-                  {backgroundSkillLabels.join(' e ')} — entram na ficha sem gastar as escolhas da
-                  classe e aparecem marcadas e travadas na lista.
-                </p>
-              ) : null}
-
-              {raceSkillLabels.length > 0 ? (
-                <p className="section-note">
-                  A raça {selectedRace?.name} já concede {raceSkillLabels.join(' e ')} — entram na
-                  ficha sem gastar as escolhas da classe e aparecem marcadas e travadas na lista.
-                </p>
-              ) : null}
-
-              <p className="section-note">
-                {effectivePicks.length}/{skillCount} escolhida(s)
-              </p>
-
-              {expertiseChoice ? (
-                <div className="wizard-subclass">
-                  <h3 className="subsection-title">{expertiseChoice.prompt}</h3>
-                  <FeatureChoiceField
-                    info={expertiseChoice}
-                    values={choicePicks[expertiseChoice.featureId] ?? expertiseChoice.chosen}
-                    disabled={busy}
-                    onChange={(keys) =>
-                      setChoicePicks((current) => ({
-                        ...current,
-                        [expertiseChoice.featureId]: keys,
-                      }))
-                    }
-                  />
-                  <p className="section-note">
-                    A Expertise dobra o bônus de proficiência; só entra o que você já domina.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          {step === 7 ? <SkillSelectionStep character={character} classKey={classKey} className={selectedClass?.name ?? ''}
+            count={skillCount} pool={skillPoolKeys} picked={effectivePicks} background={backgroundSkillKeys} race={raceSkillKeys}
+            backgroundName={selectedBackground?.name ?? ''} raceName={selectedRace?.name ?? ''}
+            expertise={expertiseChoice} expertisePicked={expertiseChoice ? choicePicks[expertiseChoice.featureId] ?? expertiseChoice.chosen : []}
+            disabled={busy} onPicks={setPicks} onExpertise={values => {
+              if (expertiseChoice) setChoicePicks(current => ({ ...current, [expertiseChoice.featureId]: values }));
+            }} /> : null}
 
           {step === 8 ? <StartingEquipmentStep method={equipmentMethod} details={equipmentDetails} disabled={busy}
             classKey={classKey} className={selectedClass?.name ?? ''} background={selectedBackground?.name ?? background}

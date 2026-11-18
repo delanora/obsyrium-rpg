@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { register } from 'node:module';
+register('data:text/javascript,' + encodeURIComponent("export async function load(url,context,next){return url.endsWith('.css')?{format:'module',source:'export default {}',shortCircuit:true}:next(url,context)}"), import.meta.url);
+const { toggleRecentChoice } = await import('../src/components/creation/SkillSelectionStep');
+assert.deepEqual(toggleRecentChoice(['a', 'b'], 'c', 2), ['b', 'c']);
+assert.deepEqual(toggleRecentChoice(['a', 'b'], 'a', 2), ['b']);
+assert.deepEqual(toggleRecentChoice(['b'], 'a', 2), ['b', 'a']);
+assert.deepEqual(toggleRecentChoice(['b', 'a'], 'c', 2), ['a', 'c']);
+assert.deepEqual(toggleRecentChoice([], 'a', 0), []);
+assert.deepEqual(toggleRecentChoice(['a'], 'b', 1), ['b']);
+console.log('Perícias e Expertise: inclusão, desmarcação, ordem cronológica, limite zero e substituição da mais antiga aprovados.');
