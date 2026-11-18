@@ -64,7 +64,7 @@
   background: linear-gradient(#2b2b2b, #191b20); border-color: #9577498c;
   box-shadow: inset 0 1px #d6b87715; color: #e2d4b9;
 }
-:root[data-theme='dark'] .btn:not(.btn-danger):hover { border-color: #c6a36b; box-shadow: inset 0 1px #d5b77720, 0 0 10px #ae874b22; }
+:root[data-theme='dark'] .btn:not(.btn-danger):hover { border-color: #c6a36b; box-shadow: inset 0 1px #d5b77720; }
 :root[data-theme='dark'] .btn-primary:not(.btn-danger) {
   color: #f0dfbd; background: linear-gradient(#3c352a, #211f1c); border-color: #bf995e;
   box-shadow: inset 0 1px #e0c48a30, inset 0 0 0 2px #080b0e50;
@@ -121,3 +121,11 @@
 :root[data-theme='dark'] .dice-stage { border-color: #a78a55; }
 :root[data-theme='dark'] .dice-stage :is(.dice-mode, .dice-pick, .dice-head-close) { border-color: #a18452; }
 :root[data-theme='dark'] .wizard-overlay .dice-stage { --ink: #f1e5cf; }
+
+/* Botões do atlas: o realce acompanha a arte, sem pintar um retângulo por trás. */
+:root[data-theme='dark'] :is(.auth-page .auth-form > .btn-primary, .wizard-overlay .wizard .btn-primary, .modal-actions > .btn-primary, .detail-modal-actions > .btn-primary):not(.btn-danger) {
+  background: none; border-color: transparent; border-radius: 0; box-shadow: none;
+}
+:root[data-theme='dark'] :is(.auth-page .auth-form > .btn-primary, .wizard-overlay .wizard .btn-primary, .modal-actions > .btn-primary, .detail-modal-actions > .btn-primary):not(.btn-danger):hover:not(:disabled) {
+  background: none; border-color: transparent; box-shadow: none; filter: brightness(1.15);
+}
