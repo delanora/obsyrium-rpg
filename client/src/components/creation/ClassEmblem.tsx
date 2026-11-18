@@ -27,6 +27,7 @@ const SUBCLASS: Record<string, string> = {
 };
 const FALLBACK: Record<string, IconName> = { barbarian: 'flame', bard: 'music', cleric: 'sun', druid: 'earth', fighter: 'sword', monk: 'wind', paladin: 'shield', ranger: 'ammo', rogue: 'eye', sorcerer: 'bolt', warlock: 'moon', wizard: 'book' };
 export function classEmblemAsset(classKey: string, subclass?: string): string | undefined {
+  if (classKey === 'bard' && !subclass) return '/class-icons/bardo-refinado.png';
   const id = subclass ? CLASS_PRESENTATIONS.find(entry => entry.key === classKey)?.subclasses.find(entry => entry.name === subclass)?.id : undefined;
   const asset = subclass ? SUBCLASS[`${classKey}:${id}`] : BASE[classKey];
   return asset ? `/class-icons/${asset}.webp` : undefined;
@@ -34,5 +35,5 @@ export function classEmblemAsset(classKey: string, subclass?: string): string | 
 /** As artes ocupam a mesma área; nomes e regras continuam vindo do catálogo. */
 export function ClassEmblem({ classKey, subclass }: { classKey: string; subclass?: string }) {
   const asset = classEmblemAsset(classKey, subclass);
-  return asset ? <img className="class-emblem-art" data-emblem={asset.split('/').pop()?.replace('.webp', '')} src={asset} alt="" aria-hidden="true" draggable={false} decoding="async" /> : <Icon name={FALLBACK[classKey] ?? 'star'} size={64} />;
+  return asset ? <img className="class-emblem-art" data-emblem={asset.split('/').pop()?.replace(/\.(webp|png)$/, '')} src={asset} alt="" aria-hidden="true" draggable={false} decoding="async" /> : <Icon name={FALLBACK[classKey] ?? 'star'} size={64} />;
 }
