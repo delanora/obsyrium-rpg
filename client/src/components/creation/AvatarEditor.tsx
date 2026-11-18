@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CSSProperties } from 'react';
 import { fileToImagePayload, uploadAvatar } from '../../api';
 import { Icon } from '../Icon';
 import './avatar-editor.css';
@@ -77,7 +77,7 @@ export const AvatarEditor = forwardRef<AvatarEditorHandle, { value: string; user
     </div>
     <button type="button" className="btn" onClick={() => fileInput.current?.click()}>{draft.source ? 'Trocar imagem' : 'Adicionar imagem'}</button>
     <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={event => void upload(event.target.files?.[0])} />
-    {draft.source && !baked ? <><p className="section-note">Arraste a imagem para posicionar o rosto dentro da moldura.</p><label className="avatar-editor-zoom">Zoom <input type="range" min="1" max="3" step=".01" value={draft.zoom} onChange={event => update({ zoom: Number(event.target.value), x: 0, y: 0 })} /></label></> : null}
+    {draft.source && !baked ? <><p className="section-note">Arraste a imagem para posicionar o rosto dentro da moldura.</p><label className="avatar-editor-zoom">Zoom <input type="range" min="1" max="3" step=".01" value={draft.zoom} style={{ '--avatar-zoom-progress': `${((draft.zoom - 1) / 2) * 100}%` } as CSSProperties} aria-valuetext={`${Math.round(draft.zoom * 100)}%`} onChange={event => update({ zoom: Number(event.target.value), x: 0, y: 0 })} /></label></> : null}
     <h3 className="wizard-selection-title">Escolher moldura</h3>
     <div className="avatar-editor-frames" role="group" aria-label="Moldura do avatar">{FRAMES.map(frame => <button type="button" key={frame.id} aria-pressed={draft.frame === frame.id} disabled={baked} onClick={() => update({ frame: frame.id })}><img data-frame={frame.id} src={frameUrl(frame.id)} alt="" /><span>{frame.name}</span></button>)}</div>
   </div>;
