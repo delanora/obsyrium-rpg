@@ -1,4 +1,7 @@
-.creation-spell-stats { display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem 2rem; text-align: center; margin-bottom: 1.5rem; color: #bba781; }
+.creation-spell-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; width: min(100%, 38rem); text-align: center; margin: 0 auto 1.5rem; color: #c9b38b; }
+.creation-spell-stats > span { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: space-between; gap: .45rem; padding: 1rem .7rem; min-height: 6rem; border: 1px solid transparent; border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 12px / 0 stretch; }
+.creation-spell-stats > span::before { content: ''; position: absolute; inset: 5px; z-index: -1; background: linear-gradient(145deg, #252a32d9, #101318e6); clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px), 0 7px); }
+@media(max-width:600px) { .creation-spell-stats { gap: .35rem; font-size: .78rem; } .creation-spell-stats > span { padding: .85rem .4rem; } .creation-spell-stats > span > strong { font-size: 1rem; } }
 .creation-spell-stats strong { display: block; color: #f1d8a5; font: 1.15rem var(--font-display); margin-top: .25rem; }
 .creation-spell-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: #e5c282; }
 .creation-spell-heading h3 { margin: .5rem 0; font: 1.2rem var(--font-display); }

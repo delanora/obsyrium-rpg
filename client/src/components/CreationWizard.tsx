@@ -1298,11 +1298,6 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
           {/* --- 5. Classe -------------------------------------------------- */}
           {step === 5 ? (
             <div className="wizard-step-body">
-              <p className="section-note">
-                A classe inicial. O pré-requisito de atributo do livro é conferido no passo dos
-                atributos — é lá que o assistente avisa se algum atributo ainda está abaixo do
-                mínimo (13) da classe escolhida.
-              </p>
               {classSubStep === 'class' ? <>
                 <h3 className="wizard-selection-title">Selecionar classe</h3>
                 <ChoiceGallery className="wizard-class-grid" role="group" aria-label="Classe inicial" onPreviewIndex={index => previewGallery('class', index)}>
