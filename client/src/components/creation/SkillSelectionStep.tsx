@@ -1,3 +1,4 @@
+import { BackgroundEmblem } from './BackgroundEmblem';
 import type { Character, FeatureChoiceInfo } from '../../types';
 import { ABILITY_KEYS, ABILITY_LABELS, SKILLS } from '../../dnd';
 import { ClassEmblem } from './ClassEmblem';
@@ -11,10 +12,10 @@ export function toggleRecentChoice(values: string[], key: string, limit: number)
   return [...values.slice(Math.max(0, values.length - limit + 1)), key];
 }
 
-export function SkillSelectionStep({ character, classKey, className, count, pool, picked, background, race, backgroundName, raceName, expertise, expertisePicked, disabled, onPicks, onExpertise }: {
+export function SkillSelectionStep({ character, classKey, className, count, pool, picked, background, race, backgroundName, backgroundKey, raceName, expertise, expertisePicked, disabled, onPicks, onExpertise }: {
   character: Character | null; classKey: string; className: string; count: number;
   pool: ReadonlySet<string>; picked: string[]; background: ReadonlySet<string>; race: ReadonlySet<string>;
-  backgroundName: string; raceName: string; expertise: FeatureChoiceInfo | null; expertisePicked: string[];
+  backgroundName: string; backgroundKey: string; raceName: string; expertise: FeatureChoiceInfo | null; expertisePicked: string[];
   disabled: boolean; onPicks: (values: string[]) => void; onExpertise: (values: string[]) => void;
 }) {
   const signed = (value: number) => `${value >= 0 ? '+' : ''}${value}`;
@@ -51,7 +52,7 @@ export function SkillSelectionStep({ character, classKey, className, count, pool
         const calculation = `${ABILITY_LABELS[skill.ability]} ${signed(modifier)}${base !== modifier ? ` · outros bônus ${signed(base - modifier)}` : ''}${proficient ? ` · ${expert ? 'Expertise' : 'proficiência'} ${signed(pb * (expert ? 2 : 1))}` : ''} = ${signed(total)}`;
         return <div className={`skill-selection-row${proficient ? ' is-proficient' : ''}`} key={skill.key}>
           <div className="skill-selection-name" title={`${skill.description}${origin ? ` — ${origin}` : ''}`}>
-            <span className="skill-selection-origin" title={origin || undefined}>{chosen && !granted ? <ClassEmblem classKey={classKey}/> : granted ? <Icon name={background.has(skill.key) ? 'scroll' : 'star'} size={16}/> : null}</span>
+            <span className="skill-selection-origin" title={origin || undefined}>{chosen && !granted ? <ClassEmblem classKey={classKey}/> : background.has(skill.key) ? <BackgroundEmblem backgroundKey={backgroundKey}/> : race.has(skill.key) ? <Icon name="star" size={16}/> : null}</span>
             <span>{skill.label}<small>{ABILITY_LABELS[skill.ability]}{origin ? ` · ${origin}` : ''}</small></span>
           </div>
           <output className="skill-selection-bonus" aria-label={`Bônus de ${skill.label}`} title={calculation}>{signed(total)}<small>{proficient ? `${signed(base)} + ${pb * (expert ? 2 : 1)}` : signed(base)}</small></output>

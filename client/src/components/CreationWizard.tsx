@@ -1374,7 +1374,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
           {/* --- 7. Perícias ------------------------------------------------ */}
           {step === 7 ? <SkillSelectionStep character={character} classKey={classKey} className={selectedClass?.name ?? ''}
             count={skillCount} pool={skillPoolKeys} picked={effectivePicks} background={backgroundSkillKeys} race={raceSkillKeys}
-            backgroundName={selectedBackground?.name ?? ''} raceName={selectedRace?.name ?? ''}
+            backgroundName={selectedBackground?.name ?? ''} backgroundKey={selectedBackground?.key ?? ''} raceName={selectedRace?.name ?? ''}
             expertise={expertiseChoice} expertisePicked={expertiseChoice ? choicePicks[expertiseChoice.featureId] ?? expertiseChoice.chosen : []}
             disabled={busy} onPicks={setPicks} onExpertise={values => {
               if (expertiseChoice) setChoicePicks(current => ({ ...current, [expertiseChoice.featureId]: values }));
