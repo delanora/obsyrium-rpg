@@ -16,10 +16,29 @@ async function render(src: string): Promise<string> {
   const scale = size / Math.max(image.width, image.height);
   ctx.drawImage(image, (side - image.width * scale) / 2, (side - image.height * scale) / 2, image.width * scale, image.height * scale);
   const pixels = ctx.getImageData(0, 0, side, side);
+  // Pequenas fendas entre as peças da moldura não devem ligar o vazado ao exterior.
+  // Fechamento morfológico atua só na máscara; a arte original permanece intacta.
+  const radius = 3;
+  const solid = new Uint8Array(side * side), expanded = new Uint8Array(side * side);
+  for (let i = 0; i < solid.length; i++) solid[i] = pixels.data[i * 4 + 3] >= 32 ? 1 : 0;
+  for (let y = radius; y < side - radius; y++) for (let x = radius; x < side - radius; x++) {
+    if (!solid[y * side + x]) continue;
+    for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++) {
+      expanded[(y + dy) * side + x + dx] = 1;
+    }
+  }
+  const closed = new Uint8Array(side * side);
+  for (let y = radius; y < side - radius; y++) for (let x = radius; x < side - radius; x++) {
+    let filled = true;
+    for (let dy = -radius; dy <= radius && filled; dy++) for (let dx = -radius; dx <= radius; dx++) {
+      if (!expanded[(y + dy) * side + x + dx]) { filled = false; break; }
+    }
+    closed[y * side + x] = filled || solid[y * side + x] ? 1 : 0;
+  }
   const exterior = new Uint8Array(side * side), queue = new Int32Array(side * side);
   let head = 0, tail = 1; queue[0] = 0; exterior[0] = 1;
   const visit = (index: number) => {
-    if (!exterior[index] && pixels.data[index * 4 + 3] < 32) { exterior[index] = 1; queue[tail++] = index; }
+    if (!exterior[index] && !closed[index]) { exterior[index] = 1; queue[tail++] = index; }
   };
   while (head < tail) {
     const index = queue[head++], x = index % side;
