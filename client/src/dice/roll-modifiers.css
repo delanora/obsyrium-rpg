@@ -1,6 +1,6 @@
 .dice-tray-column { display: flex; flex-direction: column; min-width: 0; gap: .55rem; max-height: 92dvh; }
 .dice-overlay .dice-tray-column > .dice-stage { width: 100%; min-width: 0; box-sizing: border-box; min-height: 0; flex-shrink: 1; }
-.dice-modifiers { display: flex; gap: .45rem; padding: .2rem .15rem .35rem; overflow-x: auto; flex-shrink: 0; overscroll-behavior: contain; }
+.dice-modifiers { display: flex; justify-content: safe center; gap: .45rem; padding: .2rem .15rem .35rem; overflow-x: auto; flex-shrink: 0; overscroll-behavior: contain; }
 .dice-modifier {
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   flex: 0 0 6.5rem; min-height: 5.6rem; box-sizing: border-box; padding: .55rem .4rem;
