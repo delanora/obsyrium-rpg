@@ -31,11 +31,19 @@
 :root[data-theme='dark'] :is(.detail-modal, .modal, .short-rest-modal, .long-rest-modal, .levelup-modal) {
   border: 1px solid transparent;
   border-image: url('/creation/atlas-obsidiana/moldura-painel.webp') 42 48 / 12px / 0 stretch;
-  border-radius: 0; background-color: #12151a;
-  background-image: radial-gradient(ellipse at 50% 0, #9d7b3b12, transparent 48%), linear-gradient(135deg, #191c21, #101217);
+  --atlas-panel-fill: #15181d;
+  border-radius: 0; background-color: transparent;
+  /* Recorta apenas a pintura do fundo; conteúdo, rolagem e popups ficam livres. */
+  background-image: linear-gradient(135deg, transparent 7px, var(--atlas-panel-fill) 0),
+    linear-gradient(225deg, transparent 7px, var(--atlas-panel-fill) 0),
+    linear-gradient(45deg, transparent 7px, var(--atlas-panel-fill) 0),
+    linear-gradient(315deg, transparent 7px, var(--atlas-panel-fill) 0);
+  background-size: 51% 51%;
+  background-position: top left, top right, bottom left, bottom right;
+  background-repeat: no-repeat;
   box-shadow: 0 22px 70px #0009;
 }
-:root[data-theme='dark'] :is(.delete-dialog, .combat-risk-dialog) { border-color: var(--danger); }
+:root[data-theme='dark'] :is(.delete-dialog, .combat-risk-dialog) { border-color: transparent; }
 :root[data-theme='dark'] :is(.detail-modal-head, .item-modal-head, .inv-panel-head, .music-panel-head) {
   background: linear-gradient(100deg, #ac86400d, #11151a); border-bottom-color: #a080443d;
 }
