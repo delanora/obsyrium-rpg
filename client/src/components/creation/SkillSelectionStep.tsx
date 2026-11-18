@@ -44,9 +44,10 @@ export function SkillSelectionStep({ character, classKey, className, count, pool
   useEffect(() => {
     const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') dismissTip(); };
     window.addEventListener('blur', dismissTip);
-    window.addEventListener('scroll', dismissTip, true);
+    const hideOnScroll = () => setHover(null);
+    window.addEventListener('scroll', hideOnScroll, true);
     window.addEventListener('keydown', escape);
-    return () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); window.removeEventListener('blur', dismissTip); window.removeEventListener('scroll', dismissTip, true); window.removeEventListener('keydown', escape); };
+    return () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); window.removeEventListener('blur', dismissTip); window.removeEventListener('scroll', hideOnScroll, true); window.removeEventListener('keydown', escape); };
   }, []);
   const signed = (value: number) => `${value >= 0 ? '+' : ''}${value}`;
   const pb = character?.derived.proficiencyBonus ?? 2;
@@ -90,6 +91,7 @@ export function SkillSelectionStep({ character, classKey, className, count, pool
             if (pointer.current?.key !== skill.key) return;
             pointer.current = { key: skill.key, x: event.clientX, y: event.clientY };
             if (hover?.key === skill.key) setHover({ ...pointer.current });
+            else if (!hoverTimer.current) hoverTimer.current = setTimeout(() => { hoverTimer.current = null; if (pointer.current?.key === skill.key) setHover({ ...pointer.current }); }, 2000);
           }} onPointerLeave={dismissTip}>
           <div className="skill-selection-name">
             <span className="skill-selection-origin">{chosen && !granted ? <ClassEmblem classKey={classKey}/> : background.has(skill.key) ? <BackgroundEmblem backgroundKey={backgroundKey}/> : race.has(skill.key) ? <Icon name="star" size={16}/> : null}</span>
