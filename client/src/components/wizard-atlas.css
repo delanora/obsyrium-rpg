@@ -201,3 +201,12 @@
   content: ''; position: absolute; inset: -15.625%; z-index: -1; pointer-events: none;
   background: var(--outer-icon-aura, none) center / contain no-repeat;
 }
+
+/* Navegação flutuante: acompanha os cantos do painel e não desenha outro fundo. */
+.wizard-overlay .wizard .wizard-actions.wizard-navigation { display: flex; justify-content: space-between; align-items: center; gap: .75rem; }
+.wizard-overlay .wizard .wizard-navigation .btn.is-incomplete { opacity: .55; filter: brightness(.75); }
+.wizard-overlay .wizard .wizard-navigation .btn.is-incomplete:hover:not(:disabled) { opacity: .7; filter: brightness(.85); }
+@media(max-width:520px) {
+  .wizard-overlay .wizard .wizard-navigation { flex-wrap: nowrap; }
+  .wizard-overlay .wizard .wizard-navigation .btn { font-size: .68rem; letter-spacing: .015em; padding-inline: .35rem; }
+}

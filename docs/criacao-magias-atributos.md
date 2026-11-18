@@ -15,3 +15,9 @@ Verificações: builds de frontend/backend; serviço real com adaptadores em mem
 A distribuição sincroniza automaticamente após uma pausa curta na edição (400 ms) e é confirmada antes de sair da etapa, inclusive ao voltar. Os pedidos são serializados para que uma resposta antiga não sobrescreva uma edição mais recente. O modo `syncAbilities` usa a mesma escrita de ficha e o mesmo DTO do servidor, sem concluir a etapa nem liberar o avanço. Isso renova conjuração (ataque, CD e limite de preparo), PV, CA, iniciativa, perícias e demais projeções do motor existente. Salvamentos do livro de magias na etapa de progressão também renovam o estado interno do wizard.
 
 Uma distribuição parcial pode ser sincronizada: cada valor informado ainda precisa pertencer às rolagens disponíveis, sem reutilizar mais ocorrências do que foram roladas. Concluir a etapa continua exigindo os seis valores e os requisitos da classe; as guardas posteriores/finais permanecem. O limite de magias preparadas é recebido do servidor, não recalculado no seletor com uma segunda regra.
+
+## Navegação inferior
+
+As etapas possuem ações flutuantes nos cantos inferiores: Etapa anterior e Próxima etapa; na revisão (10), a ação direita é Finalizar criação. Na primeira tela, retornar fica desabilitado. A navegação percorre também sub-raça, subclasse, truques, magias, distribuição dos atributos e detalhes de equipamentos. Voltar não exige concluir as escolhas, preservando o rascunho e aguardando apenas salvamentos em andamento quando necessários.
+
+Próxima etapa fica visualmente escurecido enquanto a tela tem escolhas pendentes, mas permanece clicável para mostrar o aviso no rodapé. Truques/magias informam a conclusão pelo mesmo seletor, incluindo preparo do grimório. O avanço continua usando a validação/salvamento existente; requisitos de atributo e demais guardas do servidor permanecem.

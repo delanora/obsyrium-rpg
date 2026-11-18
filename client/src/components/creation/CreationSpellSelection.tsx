@@ -1,18 +1,18 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { ABILITY_LABELS, formatModifier } from '../../dnd';
 import { setSpellbook } from '../../spellbookApi';
 import type { Character, ClassEntry, CompendiumSpell, Spell } from '../../types';
 import { Icon, type IconName } from '../Icon';
 import './creation-spells.css';
 
-export interface CreationSpellSelectionHandle { save: () => Promise<boolean> }
+export interface CreationSpellSelectionHandle { save: () => Promise<boolean>; isComplete: () => boolean }
 const SCHOOL_ICONS: Record<string, IconName> = { Abjuração: 'shield', Adivinhação: 'eye', Conjuração: 'sparkle', Encantamento: 'heart', Evocação: 'flame', Ilusão: 'moon', Necromancia: 'skull', Transmutação: 'flask' };
 
 /** Edita uma parte do repertório, preservando a outra; o servidor revalida todos os limites. */
 export const CreationSpellSelection = forwardRef<CreationSpellSelectionHandle, {
   entry: ClassEntry; mode: 'cantrips' | 'spells'; allSpells: CompendiumSpell[]; current: Spell[];
-  disabled: boolean; onSaved: (character: Character) => void;
-}>(function CreationSpellSelection({ entry, mode, allSpells, current, disabled, onSaved }, ref) {
+  disabled: boolean; onSaved: (character: Character) => void; onReadyChange?: (ready: boolean) => void;
+}>(function CreationSpellSelection({ entry, mode, allSpells, current, disabled, onSaved, onReadyChange }, ref) {
   const initial = () => new Map(current.filter(spell => !spell.oath && !spell.race).map(spell => [spell.id, spell.prepared]));
   const [selection, setSelection] = useState(initial);
   const selectionRef = useRef(selection); selectionRef.current = selection;
@@ -31,6 +31,8 @@ export const CreationSpellSelection = forwardRef<CreationSpellSelectionHandle, {
   const visible = pool.filter(spell => `${spell.name} ${spell.school}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))).sort((a,b) => a.name.localeCompare(b.name,'pt-BR'));
   const detail = pool.find(spell => spell.key === preview) ?? pool.find(spell => chosen.includes(spell.key)) ?? visible[0];
   const preparedCount = [...selection].filter(([key, prepared]) => prepared && (byId.get(key)?.level ?? 0) > 0).length;
+  const complete = chosen.length === limit && (mode !== 'spells' || limits.grimoireSize === null || preparedCount === (limits.preparedCount ?? 0));
+  useEffect(() => { onReadyChange?.(complete); }, [complete, onReadyChange]);
   function toggle(spell: CompendiumSpell) {
     if (busy || disabled) return;
     const next = new Map(selection);
@@ -56,7 +58,7 @@ export const CreationSpellSelection = forwardRef<CreationSpellSelectionHandle, {
     })();
     return saving.current;
   }
-  useImperativeHandle(ref, () => ({ save }));
+  useImperativeHandle(ref, () => ({ save, isComplete: () => complete }));
   return <section className="creation-spells" aria-label={mode === 'cantrips' ? 'Escolher truques' : 'Escolher magias'}>
     <div className="creation-spell-stats">
       <span>Atributo de conjuração<strong>{limits.ability ? ABILITY_LABELS[limits.ability] : '—'}</strong></span>

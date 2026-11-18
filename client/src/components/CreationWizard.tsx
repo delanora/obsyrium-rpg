@@ -194,6 +194,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   /** Catálogo de magias das subetapas de classe (buscado uma vez). */
   const [catalogSpells, setCatalogSpells] = useState<CompendiumSpell[]>([]);
+  const [spellStepReady, setSpellStepReady] = useState(false);
   const spellSelection = useRef<CreationSpellSelectionHandle>(null);
   const avatarEditor = useRef<AvatarEditorHandle>(null);
 
@@ -748,7 +749,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     if (busy || uploading) return false;
     if (step === 6 && !(await syncAbilityDraft())) return false;
     if (spellSelection.current && !(await spellSelection.current.save())) return false;
-    if (destination > 6 && (attributeRequirement || assignedCount < 6)) {
+    if (destination > step && destination > 6 && (attributeRequirement || assignedCount < 6)) {
       if (step < 6 && navigationReady && !(await saveStep(stepBody()))) return false;
       setError(attributeRequirement || 'Distribua os seis atributos antes de continuar.'); setStep(6); if (mode === 'new') setAbilitySubStep('assign'); return false;
     }
@@ -776,6 +777,48 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     }
     const saved = await saveStep({ step: 5, classKey, subclass, choices: Object.fromEntries(featureChoices.map(item => [item.featureId, (choicePicks[item.featureId] ?? item.chosen).filter(Boolean)])) });
     if (saved) { setStep(5); setClassSubStep(kind); }
+  }
+
+  const rollReady = (creation?.rolls.length ?? 0) === 6 && (creation?.rolls ?? []).every(roll => roll.dice.reduce((sum, value, index) => index === roll.dropped ? sum : sum + value, 0) >= 8);
+  const nextReady = step === 3 && raceNeedsSubrace && raceSubStep === 'race' ? raceBaseOption !== null
+    : step === 5 && classSubStep === 'class' ? Boolean(classKey) && (classNeedsSubclass || choicesReady)
+    : step === 5 && (classSubStep === 'cantrips' || classSubStep === 'spells') ? spellStepReady
+    : step === 6 && mode === 'new' && abilitySubStep === 'roll' ? rollReady
+    : step === 8 && !equipmentDetails ? equipmentMethod !== null : canAdvance;
+  const firstScreen = step === 1;
+  async function previousStep() {
+    if (busy || uploading || firstScreen) return;
+    setError(null);
+    if (spellSelection.current && !(await spellSelection.current.save())) return;
+    if (step === 3 && raceSubStep === 'subrace') { setRaceSubStep('race'); return; }
+    if (step === 5 && classSubStep !== 'class') {
+      setClassSubStep(classSubStep === 'spells' && (initialSpellLimits?.cantripsKnown ?? 0) > 0 ? 'cantrips'
+        : (classSubStep === 'spells' || classSubStep === 'cantrips') && classNeedsSubclass ? 'subclass' : 'class'); return;
+    }
+    if (step === 6 && mode === 'new' && abilitySubStep === 'assign') { setAbilitySubStep('roll'); return; }
+    if (step === 8 && equipmentDetails) { setEquipmentDetails(false); return; }
+    const destination = step - 1;
+    if (!(await navigateTo(destination))) return;
+    if (destination === 3 && raceNeedsSubrace) setRaceSubStep('subrace');
+    if (destination === 5) setClassSubStep((initialSpellLimits?.maxSpellLevel ?? 0) > 0 ? 'spells' : (initialSpellLimits?.cantripsKnown ?? 0) > 0 ? 'cantrips' : classNeedsSubclass ? 'subclass' : 'class');
+    if (destination === 6 && mode === 'new' && rollReady) setAbilitySubStep('assign');
+    if (destination === 8 && equipmentMethod) setEquipmentDetails(true);
+  }
+  async function nextStep() {
+    if (busy || uploading) return;
+    setError(null);
+    if (!nextReady || (spellSelection.current && !spellSelection.current.isComplete())) {
+      setError(step === 6 && attributeRequirement ? attributeRequirement : 'Você ainda não escolheu todas as opções desta etapa. Complete as escolhas para continuar.'); return;
+    }
+    if (step === 3 && raceNeedsSubrace && raceSubStep === 'race') { setRaceSubStep('subrace'); return; }
+    if (step === 5) {
+      if (classSubStep === 'class' && classNeedsSubclass) { setClassSubStep('subclass'); return; }
+      if ((classSubStep === 'class' || classSubStep === 'subclass') && (initialSpellLimits?.cantripsKnown ?? 0) > 0) { await openClassSpells('cantrips'); return; }
+      if (classSubStep !== 'spells' && (initialSpellLimits?.maxSpellLevel ?? 0) > 0) { await openClassSpells('spells'); return; }
+    }
+    if (step === 6 && mode === 'new' && abilitySubStep === 'roll') { setAbilitySubStep('assign'); return; }
+    if (step === 8 && !equipmentDetails) { setEquipmentDetails(true); return; }
+    await navigateTo(step + 1);
   }
 
   const stepSummaries = [
@@ -1394,7 +1437,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
               ))}
               {(classSubStep === 'cantrips' || classSubStep === 'spells') && character ? (() => {
                 const entry = character.classes.find(item => item.classKey === classKey);
-                return entry?.spellcasting && entry.spellcasting.type !== 'none' ? <CreationSpellSelection key={`${classKey}-${classSubStep}`} ref={spellSelection} entry={entry} mode={classSubStep} allSpells={catalogSpells} current={character.spells.list.filter(spell => spell.classKey === classKey)} disabled={busy} onSaved={saved => { setState(current => current ? { ...current, character: saved } : current); onCharacter(saved); }} /> : null;
+                return entry?.spellcasting && entry.spellcasting.type !== 'none' ? <CreationSpellSelection key={`${classKey}-${classSubStep}`} ref={spellSelection} onReadyChange={setSpellStepReady} entry={entry} mode={classSubStep} allSpells={catalogSpells} current={character.spells.list.filter(spell => spell.classKey === classKey)} disabled={busy} onSaved={saved => { setState(current => current ? { ...current, character: saved } : current); onCharacter(saved); }} /> : null;
               })() : null}
             </div>
           ) : null}
@@ -1573,12 +1616,13 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
             </div>
           ) : null}
 
-          {error ? <p className="form-error">{error}</p> : null}
-          {step === LAST_STEP ? <footer className="wizard-actions">
-            <button type="button" className="btn btn-primary" disabled={busy || (!creation?.equipmentDelivered && !equipmentReview)} onClick={() => void finish()}>
+          {error ? <p className="form-error" id="wizard-step-error" role="alert">{error}</p> : null}
+          <footer className="wizard-actions wizard-navigation" aria-label="Navegação da criação">
+            <button type="button" className="btn btn-primary" disabled={busy || uploading || firstScreen} onClick={() => void previousStep()}>Etapa anterior</button>
+            {step === LAST_STEP ? <button type="button" className="btn btn-primary" disabled={busy || (!creation?.equipmentDelivered && !equipmentReview)} onClick={() => void finish()}>
               <Icon name="scroll" size={15} /> {busy ? 'finalizando...' : 'Finalizar criação'}
-            </button>
-          </footer> : null}
+            </button> : <button type="button" className={`btn btn-primary${nextReady ? '' : ' is-incomplete'}`} aria-describedby={!nextReady && error ? 'wizard-step-error' : undefined} disabled={busy || uploading} onClick={() => void nextStep()}>Próxima etapa</button>}
+          </footer>
         </div>
       </div>
     </div>
