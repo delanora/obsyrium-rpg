@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import { BackgroundEmblem } from './BackgroundEmblem';
 import type { Character, FeatureChoiceInfo } from '../../types';
 import { ABILITY_KEYS, ABILITY_LABELS, SKILLS } from '../../dnd';
@@ -18,6 +19,8 @@ export function SkillSelectionStep({ character, classKey, className, count, pool
   backgroundName: string; backgroundKey: string; raceName: string; expertise: FeatureChoiceInfo | null; expertisePicked: string[];
   disabled: boolean; onPicks: (values: string[]) => void; onExpertise: (values: string[]) => void;
 }) {
+  const tooltipPrefix = useId();
+  const [dismissedTip, setDismissedTip] = useState<string | null>(null);
   const signed = (value: number) => `${value >= 0 ? '+' : ''}${value}`;
   const pb = character?.derived.proficiencyBonus ?? 2;
   const expertiseKeys = new Set(expertise?.options.map(option => option.key) ?? []);
@@ -32,8 +35,8 @@ export function SkillSelectionStep({ character, classKey, className, count, pool
     <p className="skill-selection-intro">A proficiência soma seu bônus às rolagens da perícia. Escolha as que combinam com seu personagem.</p>
     <div className="skill-selection-head">
       <span>Perícia</span><span>Bônus</span>
-      <span title="Escolhas de proficiência da classe"><Icon name="check" size={17}/><strong aria-label="Proficiências escolhidas">{picked.length}/{count}</strong><small>Proficiência</small></span>
-      {expertise ? <span title="A Expertise dobra o bônus de proficiência"><Icon name="book" size={17}/><strong aria-label="Expertises escolhidas">{expertisePicked.filter(Boolean).length}/{expertise.count}</strong><small>Expertise</small></span> : null}
+      <span aria-label="Escolhas de proficiência da classe"><Icon name="check" size={17}/><strong aria-label="Proficiências escolhidas">{picked.length}/{count}</strong><small>Proficiência</small></span>
+      {expertise ? <span aria-label="A Expertise dobra o bônus de proficiência"><Icon name="book" size={17}/><strong aria-label="Expertises escolhidas">{expertisePicked.filter(Boolean).length}/{expertise.count}</strong><small>Expertise</small></span> : null}
     </div>
     <div className="skill-selection-rows">
       {skills.map(skill => {
@@ -50,14 +53,21 @@ export function SkillSelectionStep({ character, classKey, className, count, pool
         const total = base + (proficient ? pb * (expert ? 2 : 1) : 0);
         const origin = background.has(skill.key) ? `Antecedente: ${backgroundName}` : race.has(skill.key) ? `Raça: ${raceName}` : chosen ? `Classe: ${className}` : '';
         const calculation = `${ABILITY_LABELS[skill.ability]} ${signed(modifier)}${base !== modifier ? ` · outros bônus ${signed(base - modifier)}` : ''}${proficient ? ` · ${expert ? 'Expertise' : 'proficiência'} ${signed(pb * (expert ? 2 : 1))}` : ''} = ${signed(total)}`;
-        return <div className={`skill-selection-row${proficient ? ' is-proficient' : ''}`} key={skill.key}>
-          <div className="skill-selection-name" title={`${skill.description}${origin ? ` — ${origin}` : ''}`}>
-            <span className="skill-selection-origin" title={origin || undefined}>{chosen && !granted ? <ClassEmblem classKey={classKey}/> : background.has(skill.key) ? <BackgroundEmblem backgroundKey={backgroundKey}/> : race.has(skill.key) ? <Icon name="star" size={16}/> : null}</span>
+        return <div className={`skill-selection-row${proficient ? ' is-proficient' : ''}`} key={skill.key} tabIndex={0} aria-describedby={`${tooltipPrefix}-${skill.key}`}
+          data-tip-dismissed={dismissedTip === skill.key || undefined}
+          onMouseEnter={() => setDismissedTip(null)} onFocusCapture={() => setDismissedTip(null)}
+          onKeyDown={event => { if (event.key === 'Escape') setDismissedTip(skill.key); }}>
+          <div className="skill-selection-name">
+            <span className="skill-selection-origin">{chosen && !granted ? <ClassEmblem classKey={classKey}/> : background.has(skill.key) ? <BackgroundEmblem backgroundKey={backgroundKey}/> : race.has(skill.key) ? <Icon name="star" size={16}/> : null}</span>
             <span>{skill.label}<small>{ABILITY_LABELS[skill.ability]}{origin ? ` · ${origin}` : ''}</small></span>
           </div>
-          <output className="skill-selection-bonus" aria-label={`Bônus de ${skill.label}`} title={calculation}>{signed(total)}<small>{proficient ? `${signed(base)} + ${pb * (expert ? 2 : 1)}` : signed(base)}</small></output>
-          <span className="skill-selection-check">{granted || eligible ? <input type="checkbox" aria-label={`Proficiência em ${skill.label}`} checked={proficient} disabled={disabled || granted} title={granted ? origin : 'Ao atingir o limite, substitui a escolha mais antiga.'} onChange={() => chooseSkill(skill.key)}/> : <span aria-label="Não disponível para esta classe">—</span>}</span>
+          <output className="skill-selection-bonus" aria-label={`Bônus de ${skill.label}`}>{signed(total)}<small>{proficient ? `${signed(base)} + ${pb * (expert ? 2 : 1)}` : signed(base)}</small></output>
+          <span className="skill-selection-check">{granted || eligible ? <input type="checkbox" aria-label={`Proficiência em ${skill.label}`} checked={proficient} disabled={disabled || granted} onChange={() => chooseSkill(skill.key)}/> : <span aria-label="Não disponível para esta classe">—</span>}</span>
           {expertise ? <span className="skill-selection-check">{proficient && expertiseKeys.has(skill.key) ? <input type="checkbox" aria-label={`Expertise em ${skill.label}`} checked={expert} disabled={disabled} onChange={() => onExpertise(toggleRecentChoice(expertisePicked.filter(Boolean), skill.key, expertise.count))}/> : <span aria-label="Expertise indisponível">—</span>}</span> : null}
+          <span className="skill-selection-tooltip" id={`${tooltipPrefix}-${skill.key}`} role="tooltip">
+            <strong>{skill.label}</strong><span>{skill.description}</span>
+            {origin ? <span>{origin}</span> : null}<span className="skill-selection-tooltip-total">{calculation}</span>
+          </span>
         </div>;
       })}
       {tools.map(tool => <div className="skill-selection-row" key={tool.key}>
