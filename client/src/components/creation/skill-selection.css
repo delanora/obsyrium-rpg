@@ -36,13 +36,11 @@
 .skill-selection-row { position: relative; }
 .skill-selection-row:focus-visible { outline: 1px solid #bda16b; outline-offset: 2px; }
 .skill-selection-tooltip {
-  display: none; position: absolute; z-index: 40; bottom: calc(100% + .25rem); left: 0;
-  width: min(27rem, 100%); box-sizing: border-box; padding: .75rem .9rem;
+  display: grid; gap: .2rem; position: fixed; z-index: 10000;
+  width: min(27rem, calc(100vw - 1rem)); max-height: calc(100dvh - 1rem); box-sizing: border-box; padding: .75rem .9rem;
   border: 1px solid #ad8c51; border-radius: 5px; background: linear-gradient(145deg, #20242b, #11141a);
   box-shadow: 0 8px 24px #000a, inset 0 0 0 1px #d6b76d15;
   color: #e1d5be; font: .88rem/1.5 var(--font-body); pointer-events: none;
 }
 .skill-selection-tooltip strong { color: #e7c584; font-family: var(--font-display); }
 .skill-selection-tooltip-total { padding-top: .35rem; margin-top: .25rem; border-top: 1px solid #ad8c5140; color: #d9bb80; }
-.skill-selection-row:is(:hover, :focus-within):not([data-tip-dismissed]) { z-index: 4; }
-.skill-selection-row:is(:hover, :focus-within):not([data-tip-dismissed]) > .skill-selection-tooltip { display: grid; gap: .2rem; }
