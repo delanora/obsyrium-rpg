@@ -112,6 +112,5 @@ export function SkillSelectionStep({ character, classKey, className, count, pool
         <span className="skill-selection-check"><input type="checkbox" aria-label={`Expertise em ${tool.name}`} checked={expertisePicked.includes(tool.key)} disabled={disabled} onChange={() => onExpertise(toggleRecentChoice(expertisePicked.filter(Boolean), tool.key, expertise!.count))}/></span>
       </div>)}
     </div>
-    <p className="skill-selection-note">Ao ultrapassar o limite, a nova escolha substitui a mais antiga. As proficiências concedidas por raça ou antecedente permanecem marcadas.</p>
   </section>;
 }
