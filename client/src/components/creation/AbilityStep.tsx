@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type CSSProperties } from 'react';
 import { ABILITY_KEYS, ABILITY_LABELS, formatModifier } from '../../dnd';
 import { CommonDicePool } from '../../dice/CommonDicePool';
 import { CommonTrayFrame } from '../../dice/CommonTrayFrame';
@@ -27,8 +28,8 @@ export function AbilityStep({ mode, rolls, assigned, racialBonus, onRoll, onAssi
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiceRollDto | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
-  const [dragging, setDragging] = useState<{ index: number; x: number; y: number } | null>(null);
-  const gesture = useRef<{ index: number; x: number; y: number; moved: boolean } | null>(null);
+  const [dragging, setDragging] = useState<{ index: number; x: number; y: number; width: number; height: number; appearance: CSSProperties } | null>(null);
+  const gesture = useRef<{ index: number; x: number; y: number; offsetX: number; offsetY: number; width: number; height: number; appearance: CSSProperties; moved: boolean } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(false);
   const mounted = useRef(true);
@@ -96,16 +97,24 @@ export function AbilityStep({ mode, rolls, assigned, racialBonus, onRoll, onAssi
   }
   function token(index: number, interactive = true) {
     const source = placements.get(index);
-    return <button type="button" key={index} className={`ability-value-card${selected === index ? ' is-selected' : ''}`}
+    return <button type="button" key={index} className={`ability-value-card${selected === index ? ' is-selected' : ''}${dragging?.index === index ? ' is-drag-source' : ''}`}
       disabled={disabled || rolling || !interactive} aria-pressed={selected === index}
       aria-label={`Rolagem ${index + 1}: ${values[index]}${source ? `, ${ABILITY_LABELS[source]}` : ''}`}
-      onPointerDown={event => { if (event.button === 0) gesture.current = { index, x: event.clientX, y: event.clientY, moved: false }; }}
+      onPointerDown={event => {
+        if (event.button !== 0) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        const style = getComputedStyle(event.currentTarget);
+        gesture.current = { index, x: event.clientX, y: event.clientY, offsetX: event.clientX - rect.left,
+          offsetY: event.clientY - rect.top, width: rect.width, height: rect.height,
+          appearance: { font: style.font, background: style.background, color: style.color, boxShadow: style.boxShadow }, moved: false };
+      }}
+      onDragStart={event => event.preventDefault()}
       onPointerMove={event => {
         const current = gesture.current;
         if (!current || current.index !== index || event.buttons === 0) return;
         if (!current.moved && Math.hypot(event.clientX - current.x, event.clientY - current.y) < 6) return;
         current.moved = true; event.currentTarget.setPointerCapture(event.pointerId);
-        setDragging({ index, x: event.clientX, y: event.clientY });
+        setDragging({ index, x: event.clientX - current.offsetX, y: event.clientY - current.offsetY, width: current.width, height: current.height, appearance: current.appearance });
       }} onPointerUp={release} onPointerCancel={() => { gesture.current = null; setDragging(null); }}
       onClick={() => { if (!gesture.current?.moved) setSelected(index); gesture.current = null; }}>
       <strong>{values[index]}</strong><small>{rolls[index].dice.map((die, i) => <span key={i} className={i === rolls[index].dropped ? 'is-dropped' : ''}>{die} </span>)}</small>
@@ -179,7 +188,10 @@ export function AbilityStep({ mode, rolls, assigned, racialBonus, onRoll, onAssi
         </section>;
       })}</div>
     </>}
-    {dragging ? <span className="ability-drag-ghost" style={{ left: dragging.x, top: dragging.y }}>{values[dragging.index]}</span> : null}
+    {dragging ? createPortal(<div className="ability-value-card ability-drag-ghost" aria-hidden="true"
+      style={{ ...dragging.appearance, left: dragging.x, top: dragging.y, width: dragging.width, height: dragging.height }}>
+      <strong>{values[dragging.index]}</strong><small>{rolls[dragging.index].dice.map((die, i) => <span key={i} className={i === rolls[dragging.index].dropped ? 'is-dropped' : ''}>{die} </span>)}</small>
+    </div>, document.body) : null}
     {error ? <p className="form-error" role="alert">{error}</p> : null}
   </div>;
 }

@@ -3,7 +3,7 @@
 .ability-tray .dice-ring { width: min(100%, 25rem, 45dvh) !important; }
 .ability-roll-bank { display: flex; flex-wrap: wrap; gap: .65rem; justify-content: center; margin: 1rem 0; }
 .ability-roll-entry { width: 6.5rem; display: flex; flex-direction: column; gap: .35rem; align-items: center; }
-.ability-value-card { width: 6.5rem; min-height: 5rem; padding: .6rem; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #987442; background: linear-gradient(145deg, rgb(70 48 26 / 90%), rgb(16 12 9 / 92%)); color: #f3d393; box-shadow: inset 0 0 0 3px rgb(179 126 57 / 12%); border-radius: 5px; touch-action: none; }
+.ability-value-card { width: 6.5rem; aspect-ratio: 1; min-height: 0; box-sizing: border-box; padding: .6rem; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #987442; background: linear-gradient(145deg, rgb(70 48 26 / 90%), rgb(16 12 9 / 92%)); color: #f3d393; box-shadow: inset 0 0 0 3px rgb(179 126 57 / 12%); border-radius: 5px; touch-action: none; }
 .ability-value-card strong { font-size: 2rem; line-height: 1.2; }
 .ability-value-card small { color: var(--ink-soft); }
 .ability-value-card:disabled { opacity: 1; cursor: default; }
@@ -14,6 +14,8 @@
 .ability-targets { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1rem; }
 .ability-target { border: 1px solid #866136; padding: .85rem; background: rgb(20 14 9 / 75%); display: flex; flex-direction: column; align-items: center; gap: .6rem; min-width: 0; }
 .ability-target h4 { margin: 0; }
-.ability-empty-target { width: 6.5rem; height: 5rem; border: 1px dashed #a67d43; background: rgb(0 0 0 / 25%); color: #c3a878; font-size: 1.6rem; }
-.ability-drag-ghost { position: fixed; z-index: 100; pointer-events: none; transform: translate(-50%,-50%); padding: 1rem; background: #2c2012; color: #f7d691; border: 1px solid #d4ab60; font-size: 2rem; }
-@media(max-width:600px) { .ability-targets { grid-template-columns: repeat(2,minmax(0,1fr)); } .ability-roll-entry,.ability-value-card { width: 5.5rem; } }
+.ability-empty-target { width: 6.5rem; aspect-ratio: 1; height: auto; border: 1px dashed #a67d43; background: rgb(0 0 0 / 25%); color: #c3a878; font-size: 1.6rem; }
+/* No body: coordenadas do ponteiro não são deslocadas por transformações do wizard. */
+.ability-value-card.ability-drag-ghost { position: fixed; z-index: 10000; pointer-events: none; margin: 0; transform: none; border-color: #d4ab60; outline: none; cursor: grabbing; }
+.ability-value-card.is-drag-source { opacity: .3; }
+@media(max-width:600px) { .ability-targets { grid-template-columns: repeat(2,minmax(0,1fr)); } .ability-roll-entry,.ability-value-card { width: 5.5rem; } .ability-empty-target { width: 5.5rem; } }
