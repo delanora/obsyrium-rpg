@@ -15,6 +15,10 @@ const SYMBOLS: Record<string, IconName> = {
   'great-weapon-fighting': 'sword', protection: 'shield', 'two-weapon-fighting': 'sword',
 };
 
+export const FIGHTING_STYLE_ART: Record<string, string> = Object.fromEntries(
+  Object.keys(SYMBOLS).map(key => [key, `/fighting-style-icons/${key}.png`]),
+);
+
 /** A agulha consulta o estilo; somente o clique confirma a escolha. */
 export function FightingStyleChoice({ options, control }: {
   options: FeatureChoiceInfo['options'];
@@ -28,7 +32,9 @@ export function FightingStyleChoice({ options, control }: {
         className={`wizard-class-card${control?.value === option.key ? ' is-selected' : ''}`}
         aria-pressed={control?.value === option.key} disabled={!control || control.disabled}
         onClick={() => control?.onChange(option.key)}>
-        <span className="wizard-class-emblem"><Icon name={SYMBOLS[option.key] ?? 'sword'} size={64} /></span>
+        <span className="wizard-class-emblem">{FIGHTING_STYLE_ART[option.key]
+          ? <img className="class-emblem-art" src={FIGHTING_STYLE_ART[option.key]} width={1254} height={1254} alt="" aria-hidden="true" draggable={false} />
+          : <Icon name={SYMBOLS[option.key] ?? 'sword'} size={64} />}</span>
         <span>{option.name}</span>
       </button>)}
     </ChoiceGallery>
