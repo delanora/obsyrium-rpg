@@ -186,6 +186,9 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
   /** Escolhas de característica do passo 5 (Estilo de Luta, Inimigo Favorito). */
   const [choicePicks, setChoicePicks] = useState<Record<string, string[]>>({});
   const [assigned, setAssigned] = useState<Partial<Record<AbilityKey, number>>>({});
+  const assignedRef = useRef(assigned); assignedRef.current = assigned;
+  const syncedAbilities = useRef('');
+  const abilitySync = useRef<Promise<boolean> | null>(null);
   const [picks, setPicks] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [levelUpOpen, setLevelUpOpen] = useState(false);
@@ -223,6 +226,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     setClassKey(sheet?.classes[0]?.classKey ?? '');
     setSubclass(sheet?.classes[0]?.subclass ?? '');
     setAssigned(saved.baseAbilities);
+    syncedAbilities.current = JSON.stringify(ABILITY_KEYS.map(key => saved.baseAbilities[key]));
     setPicks(saved.skillPicks);
     setStep(saved.step);
     setFurthestStep(saved.step);
@@ -264,20 +268,21 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
       setError(null);
 
       try {
-        if (step === 2 && avatarEditor.current) {
+        const savingStep = typeof body.step === 'number' ? body.step : step;
+        if (savingStep === 2 && avatarEditor.current) {
           const composed = await avatarEditor.current.save();
           body = { ...body, avatarUrl: composed };
           setAvatarUrl(composed);
         }
-        const response = await saveCreationStep({ step, ...body } as CreationStepRequest);
+        const response = await saveCreationStep({ step: savingStep, ...body } as CreationStepRequest);
         setState(response);
         if (response.character) onCharacter(response.character);
         // Trocar a raça poda as escolhas que a nova raça já concede (o servidor
         // faz a poda); sincroniza o estado local para o passo 7 não guardar uma
         // escolha que agora vem marcada e travada.
-        if (step === 3) setPicks(response.creation.skillPicks);
-        setStep((current) => Math.min(LAST_STEP, current + 1));
-        setFurthestStep((current) => Math.max(current, Math.min(LAST_STEP, step + 1)));
+        if (savingStep === 3) setPicks(response.creation.skillPicks);
+        setStep(Math.min(LAST_STEP, savingStep + 1));
+        setFurthestStep((current) => Math.max(current, Math.min(LAST_STEP, savingStep + 1)));
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Falha ao salvar este passo.');
@@ -288,6 +293,33 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     },
     [step, onCharacter],
   );
+
+  /** Todas as projeções vêm do mesmo DTO do servidor; não duplicar cálculos no wizard. */
+  async function syncAbilityDraft(): Promise<boolean> {
+    if (abilitySync.current) {
+      if (!(await abilitySync.current)) return false;
+      return syncAbilityDraft();
+    }
+    const base = { ...assignedRef.current };
+    if (mode === 'new' && (creation?.rolls.length ?? 0) !== 6) return true;
+    const fingerprint = JSON.stringify(ABILITY_KEYS.map(key => base[key]));
+    if (fingerprint === syncedAbilities.current) return true;
+    abilitySync.current = (async () => {
+      try {
+        const response = await saveCreationStep({ step: 6, baseAbilities: base, syncAbilities: true });
+        syncedAbilities.current = fingerprint; setError(null);
+        setState(response); if (response.character) onCharacter(response.character);
+        return true;
+      } catch (err) { setError(err instanceof Error ? err.message : 'Falha ao atualizar os valores derivados dos atributos.'); return false; }
+      finally { abilitySync.current = null; }
+    })();
+    return abilitySync.current;
+  }
+  useEffect(() => {
+    if (step !== 6 || busy) return;
+    const timer = setTimeout(() => { void syncAbilityDraft(); }, 400);
+    return () => clearTimeout(timer);
+  }, [assigned, step, busy]);
 
   /** Rolagem de atributo do passo 6 (o dado é sorteado no servidor). */
   const rollAttribute = useCallback(
@@ -714,6 +746,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
     ((!raceNeedsSubrace || selectedRace !== null) && raceChoicesReady));
   async function navigateTo(destination: number): Promise<boolean> {
     if (busy || uploading) return false;
+    if (step === 6 && !(await syncAbilityDraft())) return false;
     if (spellSelection.current && !(await spellSelection.current.save())) return false;
     if (destination > 6 && (attributeRequirement || assignedCount < 6)) {
       if (step < 6 && navigationReady && !(await saveStep(stepBody()))) return false;
@@ -1469,7 +1502,7 @@ export function CreationWizard({ user, onCharacter, onFinished }: CreationWizard
                         current={character.spells.list.filter(
                           (spell) => spell.classKey === entry.classKey,
                         )}
-                        onSaved={(saved) => onCharacter(saved)}
+                        onSaved={saved => { setState(current => current ? { ...current, character: saved } : current); onCharacter(saved); }}
                       />
                     ) : null,
                   )

@@ -171,9 +171,26 @@ try {
   await saveCreationStep(actor, { step: 5, classKey: 'sorcerer', subclass: 'Magia Selvagem' });
   assert.equal(globalThis.equipmentDraftOptions.skipClassPrerequisite, true, 'Troca da classe não bloqueia antes dos atributos');
   assert.equal(character.creationDraft.baseAbilities.charisma, 8);
+  const oldStep = character.creationDraft.step;
+  await saveCreationStep(actor, { step: 6, syncAbilities: true, baseAbilities: { ...character.creationDraft.baseAbilities, charisma: 9 } });
+  assert.equal(character.creationDraft.step, oldStep, 'Sincronizar não conclui a etapa');
+  assert.equal(character.charisma, 10, 'Aplica o bônus racial no mesmo pipeline');
+  assert.equal(globalThis.equipmentDraftOptions.skipClassPrerequisite, true);
+  await assert.rejects(() => saveCreationStep(actor, { step: 2, syncAbilities: true, name: 'Fixture' }), /etapa 6/);
+
   await assert.rejects(() => saveCreationStep(actor, { step: 7, skills: [] }), /Revise os atributos na etapa 6/);
-  await assert.rejects(() => saveCreationStep(actor, { step: 6, baseAbilities: character.creationDraft.baseAbilities }), /Carisma: faltam 4/);
+  await assert.rejects(() => saveCreationStep(actor, { step: 6, baseAbilities: character.creationDraft.baseAbilities }), /Carisma: faltam 3/);
   await assert.rejects(() => finalizeCreation(actor, { expectedVersion: character.version, operationId: 'invalid-class-abilities' }), /Carisma 13/);
+  fixture('master');
+  character.creationDraft.mode = 'new'; character.creationDraft.step = 6;
+  character.creationDraft.baseAbilities = {};
+  character.creationDraft.rolls = Array.from({ length: 6 }, () => ({ dice: [5, 5, 4, 1], dropped: 3 }));
+  await saveCreationStep(actor, { step: 6, syncAbilities: true, baseAbilities: { charisma: 14 } });
+  assert.equal(character.charisma, 15);
+  assert.deepEqual(character.creationDraft.baseAbilities, { charisma: 14 });
+  assert.equal(character.creationDraft.step, 6);
+  await assert.rejects(() => saveCreationStep(actor, { step: 6, syncAbilities: true, baseAbilities: { charisma: 15 } }), /exatamente os seis valores/);
+  await assert.rejects(() => saveCreationStep(actor, { step: 6, baseAbilities: { charisma: 14 } }), /Faltam valores/);
   fixture();
   await assert.rejects(
     () => rollCreationWealth(actor, { expectedVersion: 0, operationId: 'stale' }),

@@ -483,6 +483,7 @@ function validateAbilities(
   draft: CreationDraft,
   base: Partial<Record<AbilityKey, number>>,
   current: Partial<Record<AbilityKey, number>>,
+  allowPartial = false,
 ): void {
   if (draft.mode === 'new') {
     if (draft.rolls.length < CREATION_ABILITY_COUNT) {
@@ -495,8 +496,10 @@ function validateAbilities(
     // Os seis valores distribuídos têm de ser EXATAMENTE os seis rolados.
     const rolled = [...rollValues(draft.rolls)].sort((a, b) => a - b);
     if (rolled.some(value => value < 8)) throw new HttpError('Você tirou menos que 8. Repita essa rolagem antes de distribuir.', 400);
-    const chosen = ABILITY_KEYS.map((ability) => base[ability] ?? 0).sort((a, b) => a - b);
-    if (rolled.some((value, index) => value !== chosen[index])) {
+    const chosen = ABILITY_KEYS.filter(key => !allowPartial || base[key] !== undefined).map(key => base[key] ?? 0).sort((a, b) => a - b);
+    const remaining = [...rolled];
+    const valid = chosen.every(value => { const index = remaining.indexOf(value); if (index < 0) return false; remaining.splice(index, 1); return true; });
+    if (!valid || (!allowPartial && remaining.length > 0)) {
       throw new HttpError('Distribua exatamente os seis valores rolados, um por atributo.', 400);
     }
     return;
@@ -691,6 +694,8 @@ export async function saveCreationStep(
     abilityChoices: [...draft.abilityChoices],
   };
   const patch: UpdateCharacterInput = {};
+
+  if (input.syncAbilities && input.step !== 6) throw new HttpError('A sincronização de atributos pertence à etapa 6.', 400);
 
   if (input.resetAbilities) {
     if (draft.mode !== 'new' || input.step >= 6) {
@@ -1023,7 +1028,7 @@ export async function saveCreationStep(
       if (!base) throw new HttpError('Distribua os seis valores entre os atributos.', 400);
 
       const pending = ABILITY_KEYS.filter((ability) => base[ability] === undefined);
-      if (pending.length > 0) {
+      if (pending.length > 0 && !input.syncAbilities) {
         throw new HttpError(
           `Faltam valores para: ${pending.map((ability) => ABILITY_LABELS[ability]).join(', ')}.`,
           400,
@@ -1034,7 +1039,7 @@ export async function saveCreationStep(
         character,
         await bonusesForCharacter(character, draft.abilityChoices),
       );
-      validateAbilities(draft, base, currentBase);
+      validateAbilities(draft, base, currentBase, Boolean(input.syncAbilities));
       nextDraft.baseAbilities = { ...base };
 
       Object.assign(
@@ -1053,7 +1058,7 @@ export async function saveCreationStep(
       if (definition) {
         const abilities = { ...abilitiesOf(character), ...patch } as Record<AbilityKey, number>;
         const missing = multiclassPrerequisiteLabel(definition.key, abilities, entries);
-        if (missing) {
+        if (missing && !input.syncAbilities) {
           const requirements = multiclassMissingAbilities(definition.key, abilities).map(key => `${ABILITY_LABELS[key]}: faltam ${MULTICLASS_MINIMUM - abilities[key]} ponto(s) para ${MULTICLASS_MINIMUM}`);
           throw new HttpError(requirements.length ? `Para seguir como ${definition.name}, ajuste ${requirements.join(definition.key === 'fighter' ? ' ou ' : '; ')}.` : `${missing}.`, 400);
         }
@@ -1138,7 +1143,7 @@ export async function saveCreationStep(
       break;
   }
 
-  nextDraft.step = Math.max(draft.step, Math.min(CREATION_LAST_STEP, input.step + 1));
+  nextDraft.step = input.syncAbilities ? draft.step : Math.max(draft.step, Math.min(CREATION_LAST_STEP, input.step + 1));
 
   // Enquanto os atributos não existem, o pré-requisito da classe ainda não
   // pode ser conferido — o passo 6 é quem faz isso, com os valores finais.
@@ -1150,7 +1155,7 @@ export async function saveCreationStep(
     { userId: actor.userId, username: actor.username },
     patch,
     nextDraft as unknown as Prisma.InputJsonValue,
-    { skipClassPrerequisite: !abilitiesReady || input.step < 6 },
+    { skipClassPrerequisite: !abilitiesReady || input.step < 6 || Boolean(input.syncAbilities) },
   );
 
   const saved = await prisma.character.findUniqueOrThrow({ where: { userId: actor.userId } });

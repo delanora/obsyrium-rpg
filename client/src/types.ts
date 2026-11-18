@@ -1467,6 +1467,7 @@ export interface CreationStepRequest {
   equipment?: Pick<EquipmentDraft, 'selections' | 'cart'>;
   equipmentMethod?: 'class-background' | 'purchase' | 'master';
   resetAbilities?: boolean;
+  syncAbilities?: boolean;
   step: number;
   mode?: 'new' | 'existing';
   name?: string;
@@ -1487,7 +1488,7 @@ export interface CreationStepRequest {
   classKey?: string;
   /** Subclasse, quando a classe já a exige no nível 1 (passo 5). */
   subclass?: string;
-  baseAbilities?: Record<AbilityKey, number>;
+  baseAbilities?: Partial<Record<AbilityKey, number>>;
   skills?: string[];
 }
 

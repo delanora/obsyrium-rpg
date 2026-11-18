@@ -886,8 +886,10 @@ export const creationRollRequestSchema = z.object({
 export const creationEquipmentOperationSchema = z.object({ expectedVersion: expectedVersionSchema, operationId: operationIdSchema });
 
 export const creationStepSchema = z.object({
-  /** Limpa só a distribuição ao retornar antes dos atributos, preservando os dados rolados. */
+  /** Compatibilidade com clientes antigos; voltar não apaga mais a distribuição. */
   resetAbilities: z.boolean().optional(),
+  /** Sincroniza atributos do rascunho sem concluir a etapa 6. */
+  syncAbilities: z.boolean().optional(),
   /** Número do passo que acabou de ser concluído (1 a 10). */
   step: z.number().int().min(CREATION_FIRST_STEP).max(CREATION_LAST_STEP),
   equipmentMethod: z.enum(['class-background', 'purchase', 'master']).optional(),
