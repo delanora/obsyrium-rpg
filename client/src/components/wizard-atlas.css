@@ -166,12 +166,12 @@
 .wizard-overlay .wizard > .wizard-body:has(> .wizard-actions) { margin-bottom: 4rem; }
 .wizard-overlay .wizard .wizard-body > .wizard-actions { position: absolute; top: calc(100% + .45rem); bottom: auto; left: 0; right: 0; padding: 0; }
 
-/* Seleção no carrossel: luz no alfa da arte, sem desenhar outro círculo. */
-.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected {
+/* Seleção nas galerias: luz no exterior da arte, sem desenhar outro círculo. */
+.wizard-overlay .wizard .choice-gallery:is(.is-compact, .is-small-selection) > button.is-selected {
   border-color: transparent; background: transparent; box-shadow: none;
 }
-.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected::before,
-.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected::after { display: none; }
+.wizard-overlay .wizard .choice-gallery:is(.is-compact, .is-small-selection) > button.is-selected::before,
+.wizard-overlay .wizard .choice-gallery:is(.is-compact, .is-small-selection) > button.is-selected::after { display: none; }
 /* O bitmap de luz é uma camada independente, vazia por dentro da moldura. */
 .wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected:has(img)::after {
   display: block; content: ''; position: absolute; inset: calc(.39375rem - 15.625%); width: auto; height: auto;
@@ -179,7 +179,7 @@
   background: var(--outer-icon-aura, none) center / contain no-repeat;
   pointer-events: none; z-index: -1;
 }
-.wizard-overlay .wizard .choice-gallery.is-compact > button.is-selected :is(.race-face, .class-emblem-art, .wizard-class-emblem > .icon) { filter: none; }
+.wizard-overlay .wizard .choice-gallery:is(.is-compact, .is-small-selection) > button.is-selected :is(.race-face, .class-emblem-art, .wizard-class-emblem > .icon) { filter: none; }
 
 /* Escolha de ancestral dentro da característica: versão compacta da mesma galeria. */
 .wizard-overlay .wizard .sorcerer-ancestry .choice-gallery.is-compact { gap: .8rem; padding-inline: calc(50% - 2.75rem); }
@@ -192,3 +192,12 @@
 
 .wizard-overlay .wizard-equipment-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 760px) { .wizard-overlay .wizard-equipment-cards { grid-template-columns: 1fr; } }
+
+/* Até três opções, a aura acompanha a arte dentro do botão maior, sem aro extra. */
+.wizard-overlay .wizard .choice-gallery.is-small-selection > button.is-selected :is(.wizard-class-emblem, .race-portrait):has(img) {
+  position: relative; isolation: isolate;
+}
+.wizard-overlay .wizard .choice-gallery.is-small-selection > button.is-selected :is(.wizard-class-emblem, .race-portrait):has(img)::after {
+  content: ''; position: absolute; inset: -15.625%; z-index: -1; pointer-events: none;
+  background: var(--outer-icon-aura, none) center / contain no-repeat;
+}

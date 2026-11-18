@@ -24,7 +24,6 @@ export function ChoiceGallery({ children, className = '', onPreviewIndex, ...pro
     if (compact && !selectedKey) root.current?.querySelector<HTMLButtonElement>(':scope > button:not([disabled])')?.click();
   }, [compact, selectedKey, firstEnabledKey]);
   useEffect(() => {
-    if (!compact) return;
     let cancelled = false;
     const buttons = root.current?.querySelectorAll<HTMLElement>(':scope > button.is-selected');
     for (const button of buttons ?? []) {
