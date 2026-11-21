@@ -93,6 +93,27 @@ export function ChoiceGallery({ children, className = '', onPreviewIndex, ...pro
       previewCallback.current?.(nearestIndex);
     }
   }
+  useEffect(() => {
+    const element = root.current;
+    if (!compact || !element) return;
+    // Listener não passivo permite consumir a roda somente sobre o carrossel.
+    // Ctrl + roda continua disponível para o zoom do navegador.
+    const navigateWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || dragging.current) return;
+      const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? -event.deltaY : event.deltaX;
+      if (!delta) return;
+      event.preventDefault();
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+      const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? element.clientWidth : 1;
+      element.scrollTo({ left: element.scrollLeft + delta * unit, behavior: 'instant' });
+      normalizeLoop();
+      highlightCenter();
+      settleTimer.current = setTimeout(settle, 180);
+    };
+    element.addEventListener('wheel', navigateWheel, { passive: false });
+    return () => element.removeEventListener('wheel', navigateWheel);
+  }, [compact, cards.length]);
   useLayoutEffect(() => {
     if (!compact) return;
     const element = root.current;
