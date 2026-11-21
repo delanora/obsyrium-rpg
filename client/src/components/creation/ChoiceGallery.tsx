@@ -98,6 +98,33 @@ export function ChoiceGallery({ children, className = '', onPreviewIndex, ...pro
     if (!compact || !element) return;
     // Listener não passivo permite consumir a roda somente sobre o carrossel.
     // Ctrl + roda continua disponível para o zoom do navegador.
+    let wheelTarget = element.scrollLeft;
+    let frame = 0;
+    let lastFrameAt = 0;
+    const resetWheel = () => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    };
+    const animateWheel = (now: number) => {
+      const elapsed = Math.min(40, now - lastFrameAt);
+      lastFrameAt = now;
+      const distance = wheelTarget - element.scrollLeft;
+      const next = Math.abs(distance) < 2 ? wheelTarget
+        : element.scrollLeft + distance * (1 - Math.exp(-elapsed / 85));
+      element.scrollTo({ left: next, behavior: 'instant' });
+      const beforeLoop = element.scrollLeft;
+      normalizeLoop();
+      wheelTarget += element.scrollLeft - beforeLoop;
+      highlightCenter();
+      if (Math.abs(wheelTarget - element.scrollLeft) > 2) {
+        frame = requestAnimationFrame(animateWheel);
+      } else {
+        frame = 0;
+        if (settleTimer.current) clearTimeout(settleTimer.current);
+        settleTimer.current = setTimeout(settle, 180);
+      }
+    };
+    // Listener não passivo: a página não rola junto com o carrossel.
     const navigateWheel = (event: WheelEvent) => {
       if (event.ctrlKey || dragging.current) return;
       const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? -event.deltaY : event.deltaX;
@@ -106,13 +133,28 @@ export function ChoiceGallery({ children, className = '', onPreviewIndex, ...pro
       if (settleTimer.current) clearTimeout(settleTimer.current);
       const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16
         : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? element.clientWidth : 1;
-      element.scrollTo({ left: element.scrollLeft + delta * unit, behavior: 'instant' });
-      normalizeLoop();
-      highlightCenter();
-      settleTimer.current = setTimeout(settle, 180);
+      if (!frame) wheelTarget = element.scrollLeft;
+      wheelTarget = Math.max(0, Math.min(element.scrollWidth - element.clientWidth, wheelTarget + delta * unit));
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        element.scrollTo({ left: wheelTarget, behavior: 'instant' });
+        normalizeLoop();
+        highlightCenter();
+        settleTimer.current = setTimeout(settle, 180);
+      } else if (!frame) {
+        // Amortece os impulsos da roda sem reiniciar a velocidade a cada evento.
+        lastFrameAt = performance.now();
+        frame = requestAnimationFrame(animateWheel);
+      }
     };
     element.addEventListener('wheel', navigateWheel, { passive: false });
-    return () => element.removeEventListener('wheel', navigateWheel);
+    element.addEventListener('pointerdown', resetWheel);
+    element.addEventListener('click', resetWheel);
+    return () => {
+      resetWheel();
+      element.removeEventListener('wheel', navigateWheel);
+      element.removeEventListener('pointerdown', resetWheel);
+      element.removeEventListener('click', resetWheel);
+    };
   }, [compact, cards.length]);
   useLayoutEffect(() => {
     if (!compact) return;
