@@ -53,6 +53,8 @@ import type {
 export type ConnectionState = 'connecting' | 'online' | 'offline';
 
 export interface RealtimeHandlers {
+  /** Presença autenticada, também usada na identidade visual das rolagens. */
+  onPresence?: (payload: { online: OnlineUser[] }) => void;
   onSheetUpdated?: (payload: SheetUpdatedPayload) => void;
   /** O mestre excluiu um personagem junto com a conta do dono. */
   onCharacterDeleted?: (payload: CharacterDeletedPayload) => void;
@@ -136,7 +138,10 @@ export function useRealtime(handlers: RealtimeHandlers) {
     socket.on('connect', () => setConnection('online'));
     socket.on('disconnect', () => setConnection('offline'));
     socket.on('connect_error', () => setConnection('offline'));
-    socket.on('presence:update', (payload) => setOnline(payload.online));
+    socket.on('presence:update', (payload) => {
+      setOnline(payload.online);
+      handlersRef.current.onPresence?.(payload);
+    });
 
     socket.on('sheet:updated', (payload) => {
       setLastEventAt(payload.at);

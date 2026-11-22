@@ -131,7 +131,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
   const [toasts, setToasts] = useState<DiceToast[]>([]);
   const [history, setHistory] = useState<DiceRollDto[]>([]);
   // Tabuleiro de outra pessoa da mesa, espelhado aqui (só para assistir).
-  const { boards: remoteBoards, onActive: applyRemote, onRoll: applyRemoteRoll } = useRemoteRolls(user.id);
+  const { boards: remoteBoards, onActive: applyRemote, onRoll: applyRemoteRoll, onPresence: applyRemotePresence } = useRemoteRolls(user.id);
   const remote = remoteBoards[0] ?? null;
 
   // Reconhece a própria rolagem no tempo real (para não repetir o aviso).
@@ -524,6 +524,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
     () => ({
       // O tabuleiro de outra pessoa da mesa (para assistir a rolagem).
       onDiceActive: applyRemote,
+      onPresence: applyRemotePresence,
 
       onDiceRoll: (payload) => {
         const { roll } = payload;
@@ -563,7 +564,7 @@ export function useDiceRoller(user: SessionUser, options: DiceRollerOptions = {}
         );
       },
     }),
-    [isMaster, applyRemote, applyRemoteRoll],
+    [isMaster, applyRemote, applyRemoteRoll, applyRemotePresence],
   );
 
   return {

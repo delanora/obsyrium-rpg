@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { DiceRollDto, TableRollActivePayload } from '../types';
+import type { DiceRollDto, TableRollActivePayload, PresencePayload } from '../types';
 import type { RemoteBoard } from './useDiceRoller';
 import { rollAnimationMs } from './rollAnimation';
 
@@ -8,6 +8,19 @@ export const SPECTATOR_RESULT_MS = 5000;
 /** Uma projeção por participante; timers de um jogador nunca afetam outro. */
 export function useRemoteRolls(ownUserId: string) {
   const [boards, setBoards] = useState<RemoteBoard[]>([]);
+  const [masterIds, setMasterIds] = useState<Set<string>>(() => new Set());
+  const onPresence = useCallback((payload: PresencePayload) => {
+    // Conserva a identidade durante os segundos finais do resultado, mesmo
+    // quando o autor desconecta; o papel vem da presença enviada pelo servidor.
+    setMasterIds(previous => {
+      const next = new Set(previous);
+      for (const user of payload.online) {
+        if (user.role === 'MASTER') next.add(user.userId);
+        else next.delete(user.userId);
+      }
+      return next;
+    });
+  }, []);
   const current = useRef(new Map<string, RemoteBoard>());
   const sequence = useRef(0);
   const metadata = useRef(new Map<string, RemoteBoard>());
@@ -75,5 +88,9 @@ export function useRemoteRolls(ownUserId: string) {
       advantage:roll.advantage,disadvantage:roll.disadvantage,deathSave:roll.deathSaveState?.before??cached?.deathSave,
       phase:roll.autoFail?'settled':'tumbling',result:roll,startedAt,updatedAt:sequence.current},roll.autoFail?0:rollAnimationMs(roll.kind));
   },[ownUserId,present]);
-  return { boards, onActive, onRoll };
+  return {
+    boards: boards.map(board => masterIds.has(board.userId)
+      ? { ...board, avatarUrl: '/brand/emblema-mestre.png' } : board),
+    onActive, onRoll, onPresence,
+  };
 }
