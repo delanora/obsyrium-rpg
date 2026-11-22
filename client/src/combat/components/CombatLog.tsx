@@ -46,7 +46,7 @@ function actionHead(action?: string): { icon: IconName; title: string } | null {
     return { icon: 'heart', title: 'Teste contra a Morte' };
   if (action === 'stabilize') return { icon: 'flask', title: 'Estabilização' };
   if (action === 'death-override')
-    return { icon: 'crown', title: 'Decisão do Mestre' };
+    return { icon: 'master', title: 'Decisão do Mestre' };
   // 6.6I: o resultado da salvaguarda resolvida continua no MESMO registro, no
   // lugar do card que estava pendente (com o breakdown do servidor).
   if (action === 'spell-save')

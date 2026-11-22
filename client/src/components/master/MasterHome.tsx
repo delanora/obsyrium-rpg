@@ -138,7 +138,7 @@ export function MasterHome({
 
       <section className="home-hero">
         <span className="home-hero-mark">
-          <Icon name="dragon" size={26} />
+          <Icon name="master" size={72} />
         </span>
         <h2 className="home-title">Salão do Mestre</h2>
         <p className="home-lede">

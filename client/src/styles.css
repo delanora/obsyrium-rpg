@@ -18072,3 +18072,10 @@ body:has(.app-shell.has-ongoing-combat) .roll-log-fab:is(:hover, :focus-visible)
   select:not([multiple]):not([size]) option:disabled { color: #8f8d88; cursor: default; }
   select:not([multiple]):not([size]) option::checkmark { color: #dfb86e; }
 }
+
+/* Emblema oficial do Mestre: a própria arte já contém sua moldura. */
+.master-emblem { object-fit: contain; flex-shrink: 0; vertical-align: middle; }
+.home-hero-mark:has(.master-emblem) {
+  width: 4.5rem; height: 4.5rem;
+  border: 0; border-radius: 0; background: none; box-shadow: none;
+}

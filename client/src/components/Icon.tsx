@@ -6,6 +6,7 @@ import type { CSSProperties, ReactNode } from 'react';
  * contexto — dourado, vinho, couro etc. — e escalam sem perder nitidez.
  */
 export type IconName =
+  | 'master'
   | 'flag'
   | 'cursor'
   | 'wall'
@@ -64,7 +65,7 @@ export type IconName =
   | 'repeat'
   | 'ruler';
 
-const ICONS: Record<IconName, ReactNode> = {
+const ICONS: Record<Exclude<IconName, 'master'>, ReactNode> = {
   cursor: <path d="m5 3 14 10-6.5 1.4L9 21Z" />,
   wall: <><rect x="3" y="5" width="18" height="15" rx="1" /><path d="M3 10h18M3 15h18M9 5v5m6 0v5m-6 0v5" /></>,
   brush: <><path d="m13 5 3-2a2 2 0 0 1 3 3l-7 9-4-4Z" /><path d="M8 12c-4-1-3 5-5 7 4 1 9-1 8-5" /></>,
@@ -414,6 +415,12 @@ interface IconProps {
 
 /** Ícone temático. Sem `title`, é decorativo e fica oculto para leitores de tela. */
 export function Icon({ name, size = 20, className, title, style }: IconProps) {
+  if (name === 'master') return <img
+    className={`icon master-emblem${className ? ` ${className}` : ''}`}
+    src="/brand/emblema-mestre.png" width={size} height={size}
+    alt={title ?? ''} aria-hidden={title ? undefined : true} title={title}
+    draggable={false} style={style}
+  />;
   return (
     <svg
       className={className ? `icon ${className}` : 'icon'}

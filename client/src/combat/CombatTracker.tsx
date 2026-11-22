@@ -1581,7 +1581,7 @@ export function CombatTracker({
                   onClick={() => {
                     setMasterAssumed(assumedCharacter ? null : currentControlKey);
                     setMasterPick({turnId: currentId, combatantId: currentId});
-                  }}><Icon name="crown" size={13} /> {assumedCharacter ? `Encerrar controle de ${current.name}` : `Assumir o turno de ${current.name}`}</button> : null}
+                  }}><Icon name="master" size={13} /> {assumedCharacter ? `Encerrar controle de ${current.name}` : `Assumir o turno de ${current.name}`}</button> : null}
                 <button
                   type="button"
                   className="btn btn-primary btn-small combat-next-turn"

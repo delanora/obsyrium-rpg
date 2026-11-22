@@ -49,7 +49,7 @@ export function CombatMasterDock({ gridToolbarRef, action, masterTools, tools, r
   return <div className="combat-master-dock" ref={root}>
     {resourceBar ? <div className="combat-master-resources">{resourceBar}</div> : null}
     <div className="combat-master-toolbar" aria-label="Controles do Mestre">
-      <span className="combat-master-label"><Icon name="crown" size={14} /> Mestre</span>
+      <span className="combat-master-label"><Icon name="master" size={14} /> Mestre</span>
       <button ref={actionsButton} type="button" className="btn btn-small"
         aria-expanded={panel === 'actions'} aria-controls={`${id}-actions`}
         onClick={() => setPanel(current => current === 'actions' ? null : 'actions')}>

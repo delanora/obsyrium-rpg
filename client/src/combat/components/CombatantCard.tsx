@@ -37,7 +37,7 @@ function DeathRow({ death }: { death: DeathState }) {
   if (death.pending) {
     return (
       <span className="death-status pending">
-        <Icon name="crown" size={12} /> AGUARDANDO O MESTRE
+        <Icon name="master" size={12} /> AGUARDANDO O MESTRE
       </span>
     );
   }

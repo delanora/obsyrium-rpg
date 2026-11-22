@@ -184,7 +184,7 @@ export function StartingEquipmentStep({
               },
               {
                 key: 'master',
-                icon: 'crown',
+                icon: 'master',
                 hint: 'Combine os equipamentos com o Mestre. Esta opção não entrega itens nem dinheiro.',
               },
             ] as const
