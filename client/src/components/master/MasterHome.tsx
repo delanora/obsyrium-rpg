@@ -138,7 +138,7 @@ export function MasterHome({
 
       <section className="home-hero">
         <span className="home-hero-mark">
-          <Icon name="master" size={72} />
+          <img className="master-emblem" src="/brand/salao-mestre.png" width={72} height={72} alt="" aria-hidden="true" draggable={false} />
         </span>
         <h2 className="home-title">Salão do Mestre</h2>
         <p className="home-lede">
