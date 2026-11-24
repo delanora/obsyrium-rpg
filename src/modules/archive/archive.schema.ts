@@ -31,6 +31,18 @@ const link = {
   directed: z.boolean(),
   description,
 };
+const branchRelation = z
+  .object({
+    relation: z.enum(NARRATIVE_RELATIONS),
+    label: z.string().trim().max(160),
+    directed: z.boolean(),
+    description,
+  })
+  .strict();
+const branch = {
+  parentPlacementId: id.optional(),
+  branchRelation: branchRelation.optional(),
+};
 export const archiveOperationSchema = z.discriminatedUnion("action", [
   z
     .object({
@@ -63,6 +75,7 @@ export const archiveOperationSchema = z.discriminatedUnion("action", [
       ...receipt,
       ...version,
       action: z.literal("card.create"),
+      ...branch,
       boardId: id,
       ...card,
       geometry: narrativeGeometrySchema,
@@ -90,9 +103,21 @@ export const archiveOperationSchema = z.discriminatedUnion("action", [
       ...receipt,
       ...version,
       action: z.literal("placement.add"),
+      ...branch,
       boardId: id,
       cardId: id,
       geometry: narrativeGeometrySchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...receipt,
+      ...version,
+      action: z.literal("placement.parent"),
+      boardId: id,
+      placementId: id,
+      parentPlacementId: id.nullable(),
+      branchRelation: branchRelation.optional(),
     })
     .strict(),
   z

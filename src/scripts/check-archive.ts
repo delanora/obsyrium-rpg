@@ -52,6 +52,34 @@ try {
     await tx.$executeRawUnsafe(`SET LOCAL search_path TO "${schema}", public`);
     for (const statement of sql.split(";").filter((s) => s.trim()))
       await tx.$executeRawUnsafe(statement);
+    // Compatibilidade: representação antiga, criada antes da migration aditiva.
+    const legacyBoard = randomUUID(),
+      legacyCard = randomUUID(),
+      legacyPlacement = randomUUID();
+    await tx.$executeRaw`INSERT INTO narrative_boards (id, name, "createdById", "updatedAt") VALUES (${legacyBoard}, 'Legado isolado', 'fixture', CURRENT_TIMESTAMP)`;
+    await tx.$executeRaw`INSERT INTO narrative_cards (id, title, category, "createdById", "updatedAt") VALUES (${legacyCard}, 'Card legado', 'note', 'fixture', CURRENT_TIMESTAMP)`;
+    await tx.$executeRaw`INSERT INTO narrative_placements (id, "boardId", "cardId", x, y) VALUES (${legacyPlacement}, ${legacyBoard}, ${legacyCard}, -123, 456)`;
+    const [legacyBefore] = await tx.$queryRaw<
+      Record<string, unknown>[]
+    >`SELECT * FROM narrative_placements WHERE id=${legacyPlacement}`;
+    const branches = await readFile(
+      new URL(
+        "../../prisma/migrations/20261124150000_narrative_branches/migration.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    for (const statement of branches.split(";").filter((s) => s.trim()))
+      await tx.$executeRawUnsafe(statement);
+    const [legacyAfter] = await tx.$queryRaw<
+      Record<string, unknown>[]
+    >`SELECT id, "boardId", "cardId", x, y, width, height, "zIndex", "parentPlacementId" FROM narrative_placements WHERE id=${legacyPlacement}`;
+    const { parentPlacementId, ...unchanged } = legacyAfter;
+    assert.equal(parentPlacementId, null);
+    assert.deepEqual(unchanged, legacyBefore);
+    checks += 2;
+    await tx.$executeRaw`DELETE FROM narrative_boards WHERE id=${legacyBoard}`;
+    await tx.$executeRaw`DELETE FROM narrative_cards WHERE id=${legacyCard}`;
     await tx.$executeRawUnsafe(
       `CREATE TYPE "${schema}"."Role" AS ENUM ('PLAYER','MASTER')`,
     );
@@ -377,6 +405,258 @@ try {
   );
   checks += 3;
   assert.ok(notifications > 10);
+  checks++;
+  // Estrutura explícita: todas as entidades abaixo pertencem a este schema descartável.
+  const structureBoard = await op({
+    action: "board.create",
+    name: "Estrutura",
+    description: "",
+  });
+  const readStructure = () => req(`/boards/${structureBoard.id}`);
+  const makeBranch = async (title: string, parentPlacementId?: string) =>
+    op({
+      action: "card.create",
+      boardId: structureBoard.id,
+      expectedVersion: (await readStructure()).board.version,
+      title,
+      category: "room",
+      summary: "",
+      content: "",
+      geometry: geo,
+      ...(parentPlacementId ? { parentPlacementId } : {}),
+    });
+  const root = await makeBranch("Masmorra");
+  const branchA = await makeBranch("Sala A", root.id);
+  const branchB = await makeBranch("Sala B");
+  const grandchild = await makeBranch("Passagem", branchA.id);
+  let structure = await readStructure();
+  assert.equal(
+    structure.placements.find((p: any) => p.id === branchA.id)
+      .parentPlacementId,
+    root.id,
+  );
+  checks++;
+  const rootCard = structure.placements.find(
+    (p: any) => p.id === root.id,
+  ).cardId;
+  const childCard = structure.placements.find(
+    (p: any) => p.id === branchB.id,
+  ).cardId;
+  const canonical = await op({
+    action: "link.create",
+    boardId: structureBoard.id,
+    sourceId: rootCard,
+    targetId: childCard,
+    relation: "contains",
+    label: "",
+    directed: true,
+    description: "Original",
+  });
+  const attach = {
+    action: "placement.parent",
+    boardId: structureBoard.id,
+    placementId: branchB.id,
+    parentPlacementId: root.id,
+    expectedVersion: structure.board.version,
+    branchRelation: {
+      relation: "contains",
+      label: "",
+      directed: true,
+      description: "Não substituir",
+    },
+    operationId: randomUUID(),
+  };
+  await req("/operations", attach);
+  assert.equal((await req("/operations", attach)).replayed, true);
+  checks++;
+  await req(
+    "/operations",
+    { ...attach, parentPlacementId: branchA.id },
+    mt,
+    409,
+  );
+  structure = await readStructure();
+  assert.equal(
+    structure.links.filter((l: any) => l.id === canonical.id).length,
+    1,
+  );
+  assert.equal(
+    (
+      await prisma.narrativeLink.findUniqueOrThrow({
+        where: { id: canonical.id },
+      })
+    ).description,
+    "Original",
+  );
+  checks += 2;
+  const parentOp = async (
+    child: string,
+    parent: string | null,
+    status = 200,
+    extra = {},
+  ) =>
+    op(
+      {
+        action: "placement.parent",
+        boardId: structureBoard.id,
+        expectedVersion: (await readStructure()).board.version,
+        placementId: child,
+        parentPlacementId: parent,
+        ...extra,
+      },
+      status,
+    );
+  await parentOp(root.id, root.id, 400);
+  await parentOp(root.id, grandchild.id, 400);
+  await parentOp(branchB.id, root.id, 409);
+  await parentOp(branchB.id, branchA.id, 409);
+  await parentOp(root.id, randomUUID(), 404);
+  await parentOp(root.id, branchA.id, 409, { expectedVersion: 0 });
+  await req("/operations", { ...attach, operationId: randomUUID() }, pt, 403);
+  await req(`/boards/${structureBoard.id}`, undefined, pt, 403);
+  const beforeDetach = JSON.stringify((await readStructure()).links);
+  await parentOp(branchB.id, null);
+  assert.equal(JSON.stringify((await readStructure()).links), beforeDetach);
+  checks++;
+  await parentOp(branchB.id, root.id);
+  const snapshot = await readStructure();
+  const countCards = await prisma.narrativeCard.count();
+  await op(
+    {
+      action: "card.create",
+      boardId: structureBoard.id,
+      expectedVersion: snapshot.board.version,
+      title: "Rollback",
+      category: "room",
+      summary: "",
+      content: "",
+      geometry: geo,
+      parentPlacementId: root.id,
+      branchRelation: {
+        relation: "custom",
+        label: "",
+        directed: true,
+        description: "",
+      },
+    },
+    400,
+  );
+  assert.equal(await prisma.narrativeCard.count(), countCards);
+  assert.equal((await readStructure()).board.version, snapshot.board.version);
+  checks += 2;
+  const foreignBoard = await op({
+    action: "board.create",
+    name: "Outro contexto",
+    description: "",
+  });
+  const foreignRoot = await op({
+    action: "placement.add",
+    boardId: foreignBoard.id,
+    cardId: rootCard,
+    expectedVersion: 0,
+    geometry: geo,
+  });
+  const foreignChild = await op({
+    action: "placement.add",
+    boardId: foreignBoard.id,
+    cardId: childCard,
+    expectedVersion: 1,
+    geometry: geo,
+    parentPlacementId: foreignRoot.id,
+  });
+  await parentOp(root.id, foreignRoot.id, 404);
+  await assert.rejects(
+    prisma.narrativePlacement.update({
+      where: { id: root.id },
+      data: { parentPlacementId: foreignRoot.id },
+    }),
+  );
+  await assert.rejects(
+    prisma.narrativePlacement.update({
+      where: { id: root.id },
+      data: { parentPlacementId: root.id },
+    }),
+  );
+  checks += 2;
+  await op({
+    action: "placement.remove",
+    boardId: structureBoard.id,
+    placementId: root.id,
+    expectedVersion: (await readStructure()).board.version,
+  });
+  structure = await readStructure();
+  assert.equal(
+    structure.placements.find((p: any) => p.id === branchA.id)
+      .parentPlacementId,
+    null,
+  );
+  assert.equal(
+    structure.placements.find((p: any) => p.id === branchB.id)
+      .parentPlacementId,
+    null,
+  );
+  assert.equal(
+    structure.placements.find((p: any) => p.id === grandchild.id)
+      .parentPlacementId,
+    branchA.id,
+  );
+  assert.equal(
+    (
+      await prisma.narrativePlacement.findUniqueOrThrow({
+        where: { id: foreignChild.id },
+      })
+    ).parentPlacementId,
+    foreignRoot.id,
+  );
+  checks += 4;
+  // Duas janelas, mesma versão: uma associação vence, a outra não sobrescreve.
+  const v = structure.board.version;
+  const race = await Promise.all(
+    [root.id, branchA.id].map((parentPlacementId) =>
+      fetch(`http://127.0.0.1:${port}/api/archive/operations`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${mt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          operationId: randomUUID(),
+          action: "placement.parent",
+          boardId: structureBoard.id,
+          placementId: branchB.id,
+          parentPlacementId:
+            parentPlacementId === root.id ? grandchild.id : parentPlacementId,
+          expectedVersion: v,
+        }),
+      }),
+    ),
+  );
+  assert.deepEqual(race.map((r) => r.status).sort(), [200, 409]);
+  checks++;
+  await op({ action: "card.delete", cardId: rootCard, expectedVersion: 0 });
+  assert.equal(
+    (
+      await prisma.narrativePlacement.findUniqueOrThrow({
+        where: { id: foreignChild.id },
+      })
+    ).parentPlacementId,
+    null,
+  );
+  assert.ok(
+    await prisma.narrativeCard.findUnique({ where: { id: childCard } }),
+  );
+  checks += 2;
+  await op({
+    action: "board.delete",
+    boardId: structureBoard.id,
+    expectedVersion: (await readStructure()).board.version,
+  });
+  assert.equal(
+    await prisma.narrativePlacement.count({
+      where: { boardId: structureBoard.id },
+    }),
+    0,
+  );
   checks++;
   await prisma.$disconnect();
   console.log(

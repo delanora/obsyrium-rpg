@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -46,7 +47,9 @@ import {
   zoomArchive,
   type ArchiveCamera,
 } from "./archiveCamera";
+import { projectArchive } from "./archiveProjection";
 import "./archive.css";
+const EMPTY_EXPANSION = new Set<string>();
 type Command = ArchiveOperation extends infer T
   ? T extends { operationId: string }
     ? Omit<T, "operationId">
@@ -54,9 +57,10 @@ type Command = ArchiveOperation extends infer T
   : never;
 type Radial = {
   point: { x: number; y: number };
-  kind: "create" | "category" | "card" | "link";
+  kind: "create" | "category" | "card" | "link" | "branches";
   group?: string;
   targetId?: string;
+  parentPlacementId?: string;
 };
 const CARD_GROUPS = [
   {
@@ -95,10 +99,11 @@ type Editor =
       kind: "board" | "card" | "link";
       id?: string;
       version?: number;
+      parentPlacementId?: string;
       sourceId?: string;
       targetId?: string;
     }
-  | { kind: "library" }
+  | { kind: "library"; parentPlacementId?: string }
   | { kind: "confirm"; command: Command; message: string };
 function ArchiveDialog({
   title,
@@ -148,6 +153,18 @@ export function ArchivePage() {
   const [boards, setBoards] = useState<NarrativeBoardDto[]>([]),
     [boardId, setBoardId] = useState(""),
     [graph, setGraph] = useState<NarrativeGraphDto | null>(null);
+  // Memória desta janela, por quadro; não persiste nem publica expansão.
+  const [expansion, setExpansion] = useState<Record<string, Set<string>>>({});
+  const expanded = expansion[boardId] ?? EMPTY_EXPANSION;
+  const projection = useMemo(
+    () => (graph ? projectArchive(graph, expanded) : null),
+    [graph, expanded],
+  );
+  const [branchRelationEnabled, setBranchRelationEnabled] = useState(false);
+  const [branchRelation, setBranchRelation] =
+    useState<NarrativeRelation>("contains");
+  const [branchLabel, setBranchLabel] = useState("");
+  const [branchDirected, setBranchDirected] = useState(true);
   const [radial, setRadial] = useState<Radial | null>(null);
   const radialRef = useRef<Radial | null>(null);
   radialRef.current = radial;
@@ -156,6 +173,19 @@ export function ArchivePage() {
     [camera, setCamera] = useState<ArchiveCamera>({ x: 60, y: 60, zoom: 1 });
   const [visual, setVisual] = useState<Record<string, Geometry>>({}),
     [editor, setEditor] = useState<Editor | null>(null);
+  const branchAncestors = useMemo(() => {
+    const ancestors = new Set<string>();
+    let id =
+      editor && "parentPlacementId" in editor
+        ? editor.parentPlacementId
+        : undefined;
+    const byId = new Map(graph?.placements.map((p) => [p.id, p]) ?? []);
+    while (id && !ancestors.has(id)) {
+      ancestors.add(id);
+      id = byId.get(id)?.parentPlacementId ?? undefined;
+    }
+    return ancestors;
+  }, [graph, editor]);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [pending, setPending] = useState<ArchiveOperation | null>(null),
@@ -207,6 +237,14 @@ export function ArchivePage() {
       const next = await loadGraph(chosen);
       if (request !== generation.current) return;
       setGraph(next);
+      setExpansion((previous) => {
+        if (!previous[chosen]) return previous;
+        const ids = new Set(next.placements.map((p) => p.id));
+        return {
+          ...previous,
+          [chosen]: new Set([...previous[chosen]].filter((id) => ids.has(id))),
+        };
+      });
       setBoardId(chosen);
     } else {
       setGraph(null);
@@ -233,10 +271,47 @@ export function ArchivePage() {
     if (!viewport) return;
     const next =
       cameras.current.get(graph.board.id) ??
-      fitArchive(graph.placements, viewport);
+      fitArchive(projection?.graph.placements ?? [], viewport);
     cameras.current.set(graph.board.id, next);
     setCamera(next);
   }, [graph?.board.id]);
+  // A seleção nunca mantém controles em representações temporariamente ocultas.
+  useLayoutEffect(() => {
+    if (!projection) return;
+    if (radial?.kind === "link") {
+      if (!projection.graph.links.some((l) => l.id === radial.targetId))
+        setRadial(null);
+    } else if (radial?.targetId && !projection.visibleIds.has(radial.targetId))
+      setRadial(null);
+    if (
+      radial?.parentPlacementId &&
+      !projection.visibleIds.has(radial.parentPlacementId)
+    )
+      setRadial(null);
+    if (!selected) return;
+    if (selected.kind === "card" && !projection.visibleIds.has(selected.id)) {
+      const owner = projection.owner.get(selected.id);
+      setSelected(owner ? { kind: "card", id: owner } : null);
+    } else if (
+      selected.kind === "link" &&
+      !projection.graph.links.some((l) => l.id === selected.id)
+    ) {
+      const link = graph?.links.find((l) => l.id === selected.id);
+      const place = graph?.placements.find((p) => p.cardId === link?.sourceId);
+      const owner = place && projection.owner.get(place.id);
+      setSelected(owner ? { kind: "card", id: owner } : null);
+    }
+  }, [projection, selected, graph, radial]);
+  const toggleBranches = useCallback((id: string) => {
+    if (current.current.busy || current.current.pending) return;
+    setExpansion((previous) => {
+      const key = current.current.boardId,
+        next = new Set(previous[key] ?? []);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return { ...previous, [key]: next };
+    });
+  }, []);
   const onCamera = useCallback((value: ArchiveCamera) => {
     setCamera(value);
     if (current.current.boardId)
@@ -281,6 +356,17 @@ export function ArchivePage() {
           setVisual({});
           setEditor(null);
           if (input.action !== "placement.update") setSelected(null);
+          if ("parentPlacementId" in input && input.parentPlacementId) {
+            const parentId = input.parentPlacementId;
+            setExpansion((previous) => ({
+              ...previous,
+              [current.current.boardId]: new Set([
+                ...(previous[current.current.boardId] ?? []),
+                parentId,
+              ]),
+            }));
+            setSelected({ kind: "card", id: receipt.id });
+          }
           draftPosition.current = null;
         },
       );
@@ -298,9 +384,22 @@ export function ArchivePage() {
     const r = root.current
       ?.querySelector(".archive-viewport")
       ?.getBoundingClientRect();
-    if (r && graph) onCamera(fitArchive(graph.placements, r));
+    if (r && projection) onCamera(fitArchive(projection.graph.placements, r));
   };
-  const geometry = (): Geometry => {
+  const geometry = (parentId?: string): Geometry => {
+    const parent = graph?.placements.find((p) => p.id === parentId);
+    if (parent)
+      return {
+        x: Math.min(1000000, parent.x + parent.width + 64),
+        y: Math.min(
+          1000000,
+          parent.y +
+            (projection?.nodes.get(parent.id)?.children.length ?? 0) * 220,
+        ),
+        width: 280,
+        height: 200,
+        zIndex: parent.zIndex,
+      };
     const r = root.current
       ?.querySelector(".archive-viewport")
       ?.getBoundingClientRect();
@@ -346,7 +445,13 @@ export function ArchivePage() {
     }));
     setEditor({ kind: "card", id: card.id, version: card.version });
   }, []);
-  const newCard = (category: NarrativeCategory = "note") => {
+  const newCard = (
+    category: NarrativeCategory = "note",
+    parentPlacementId?: string,
+  ) => {
+    setBranchRelationEnabled(false);
+    setBranchDirected(true);
+    setBranchLabel("");
     setDraft((d) => ({
       ...d,
       title: "",
@@ -354,7 +459,7 @@ export function ArchivePage() {
       summary: "",
       content: "",
     }));
-    setEditor({ kind: "card" });
+    setEditor({ kind: "card", parentPlacementId });
   };
   const openLink = (sourceId?: string, targetId?: string, linkId?: string) => {
     const link = graph?.links.find((l) => l.id === (linkId ?? selected?.id));
@@ -423,7 +528,7 @@ export function ArchivePage() {
       caption: NARRATIVE_CATEGORY_LABELS[category],
       icon: CATEGORY_ICONS[category],
       disabled: guarded,
-      action: radialAction(() => newCard(category)),
+      action: radialAction(() => newCard(category, radial.parentPlacementId)),
     }));
   } else if (radial?.kind === "create") {
     radialOptions = graph
@@ -443,7 +548,9 @@ export function ArchivePage() {
             caption: "Anotação",
             icon: "quill",
             disabled: guarded,
-            action: radialAction(() => newCard("note")),
+            action: radialAction(() =>
+              newCard("note", radial.parentPlacementId),
+            ),
           },
         ]
       : [
@@ -488,7 +595,7 @@ export function ArchivePage() {
           setEditor({
             kind: "confirm",
             message:
-              "Remover somente deste quadro? O conteúdo e suas relações continuam no Arquivo.",
+              "Remover somente deste quadro? Suas ramificações diretas ficarão independentes. O conteúdo e suas relações continuam no Arquivo.",
             command: {
               action: "placement.remove",
               boardId,
@@ -508,7 +615,7 @@ export function ArchivePage() {
           setEditor({
             kind: "confirm",
             message:
-              "Excluir definitivamente este card de todos os quadros e apagar suas relações? Esta ação não pode ser revertida.",
+              "Excluir definitivamente este card de todos os quadros e apagar suas relações? Suas ramificações diretas ficarão independentes. Esta ação não pode ser revertida.",
             command: {
               action: "card.delete",
               cardId: targetPlace.cardId,
@@ -517,6 +624,80 @@ export function ArchivePage() {
           }),
         ),
       },
+    ];
+    radialOptions.push({
+      id: "branches",
+      label: "Ramificações",
+      caption: "Ramificações",
+      icon: "flag",
+      disabled: guarded,
+      action: () => setRadial({ ...radial, kind: "branches" }),
+    });
+  } else if (radial?.kind === "branches" && targetPlace && graph) {
+    radialTitle = "Ramificações";
+    const info = projection?.nodes.get(targetPlace.id);
+    radialOptions = [
+      ...(info?.children.length
+        ? [
+            {
+              id: "toggle",
+              label: `${info.expanded ? "Recolher" : "Expandir"} ramificações`,
+              caption: info.expanded ? "Recolher" : "Expandir",
+              icon: "eye" as const,
+              disabled: guarded,
+              action: radialAction(() => toggleBranches(targetPlace.id)),
+            },
+          ]
+        : []),
+      {
+        id: "new-branch",
+        label: "Criar ramificação",
+        caption: "Criar",
+        icon: "plus",
+        disabled: guarded,
+        action: () =>
+          setRadial({
+            ...radial,
+            kind: "create",
+            parentPlacementId: targetPlace.id,
+          }),
+      },
+      {
+        id: "associate",
+        label: "Associar card como ramificação",
+        caption: "Associar",
+        icon: "book",
+        disabled: guarded,
+        action: radialAction(() => {
+          setBranchRelationEnabled(false);
+          setBranchLabel("");
+          setLibraryQuery("");
+          setEditor({ kind: "library", parentPlacementId: targetPlace.id });
+          void listCards()
+            .then((r) => setLibrary(r.cards))
+            .catch((e) => setError(e.message));
+        }),
+      },
+      ...(targetPlace.parentPlacementId
+        ? [
+            {
+              id: "detach",
+              label: "Remover pertencimento",
+              caption: "Desvincular",
+              icon: "minus" as const,
+              disabled: guarded,
+              action: radialAction(() =>
+                run({
+                  action: "placement.parent",
+                  boardId,
+                  placementId: targetPlace.id,
+                  parentPlacementId: null,
+                  expectedVersion: graph.board.version,
+                }),
+              ),
+            },
+          ]
+        : []),
     ];
   } else if (radial?.kind === "link" && targetLink) {
     radialTitle = "Relação";
@@ -597,7 +778,9 @@ export function ArchivePage() {
         <>
           <ArchiveCanvas
             key={graph.board.id}
-            graph={graph}
+            graph={projection!.graph}
+            nodes={projection!.nodes}
+            onToggle={toggleBranches}
             camera={camera}
             onCamera={onCamera}
             selected={selected}
@@ -808,10 +991,21 @@ export function ArchivePage() {
           onBack={
             radial.kind === "category"
               ? () => setRadial({ ...radial, kind: "create", group: undefined })
-              : undefined
+              : radial.kind === "branches"
+                ? () => setRadial({ ...radial, kind: "card" })
+                : radial.kind === "create" && radial.parentPlacementId
+                  ? () =>
+                      setRadial({
+                        ...radial,
+                        kind: "branches",
+                        targetId: radial.parentPlacementId,
+                      })
+                  : undefined
           }
           centerLabel={
-            radial.kind === "category"
+            radial.kind === "category" ||
+            radial.kind === "branches" ||
+            radial.parentPlacementId
               ? "Voltar no menu do Fichário"
               : "Fechar menu do Fichário"
           }
@@ -839,6 +1033,64 @@ export function ArchivePage() {
           }}
           busy={busy}
         >
+          {"parentPlacementId" in editor && editor.parentPlacementId ? (
+            <fieldset className="archive-branch-relation" disabled={guarded}>
+              <legend>
+                Ramificação de{" "}
+                {
+                  graph?.placements.find(
+                    (p) => p.id === editor.parentPlacementId,
+                  )?.card.title
+                }
+              </legend>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={branchRelationEnabled}
+                  onChange={(e) => setBranchRelationEnabled(e.target.checked)}
+                />
+                Também registrar ou reutilizar relação narrativa
+              </label>
+              {branchRelationEnabled ? (
+                <>
+                  <label>
+                    Relação narrativa
+                    <select
+                      aria-label="Relação narrativa"
+                      value={branchRelation}
+                      onChange={(e) =>
+                        setBranchRelation(e.target.value as NarrativeRelation)
+                      }
+                    >
+                      {NARRATIVE_RELATIONS.map((r) => (
+                        <option key={r} value={r}>
+                          {NARRATIVE_RELATION_LABELS[r]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={branchDirected}
+                      onChange={(e) => setBranchDirected(e.target.checked)}
+                    />{" "}
+                    Relação direcional
+                  </label>
+                  {branchRelation === "custom" ? (
+                    <label>
+                      Nome da relação
+                      <input
+                        maxLength={160}
+                        value={branchLabel}
+                        onChange={(e) => setBranchLabel(e.target.value)}
+                      />
+                    </label>
+                  ) : null}
+                </>
+              ) : null}
+            </fieldset>
+          ) : null}
           {editor.kind === "confirm" ? (
             <>
               <p>{editor.message}</p>
@@ -873,18 +1125,53 @@ export function ArchivePage() {
                         className="btn"
                         disabled={
                           guarded ||
-                          graph?.placements.some((p) => p.cardId === c.id)
+                          graph?.placements.some(
+                            (p) =>
+                              p.cardId === c.id &&
+                              (!editor.parentPlacementId ||
+                                branchAncestors.has(p.id) ||
+                                !!p.parentPlacementId),
+                          )
                         }
-                        onClick={() =>
-                          graph &&
-                          run({
-                            action: "placement.add",
-                            boardId,
-                            cardId: c.id,
-                            expectedVersion: graph.board.version,
-                            geometry: geometry(),
-                          })
-                        }
+                        onClick={() => {
+                          if (!graph) return;
+                          const place = graph.placements.find(
+                            (p) => p.cardId === c.id,
+                          );
+                          const branch = editor.parentPlacementId
+                            ? {
+                                parentPlacementId: editor.parentPlacementId,
+                                ...(branchRelationEnabled
+                                  ? {
+                                      branchRelation: {
+                                        relation: branchRelation,
+                                        label: branchLabel,
+                                        directed: branchDirected,
+                                        description: "",
+                                      },
+                                    }
+                                  : {}),
+                              }
+                            : {};
+                          if (place && editor.parentPlacementId)
+                            run({
+                              action: "placement.parent",
+                              boardId,
+                              placementId: place.id,
+                              parentPlacementId: editor.parentPlacementId,
+                              expectedVersion: graph.board.version,
+                              ...branch,
+                            });
+                          else
+                            run({
+                              action: "placement.add",
+                              boardId,
+                              cardId: c.id,
+                              expectedVersion: graph.board.version,
+                              geometry: geometry(editor.parentPlacementId),
+                              ...branch,
+                            });
+                        }}
                       >
                         {c.title}{" "}
                         <small>
@@ -939,7 +1226,22 @@ export function ArchivePage() {
                           action: "card.create",
                           boardId,
                           expectedVersion: graph.board.version,
-                          geometry: geometry(),
+                          geometry: geometry(editor.parentPlacementId),
+                          ...(editor.parentPlacementId
+                            ? {
+                                parentPlacementId: editor.parentPlacementId,
+                                ...(branchRelationEnabled
+                                  ? {
+                                      branchRelation: {
+                                        relation: branchRelation,
+                                        label: branchLabel,
+                                        directed: branchDirected,
+                                        description: "",
+                                      },
+                                    }
+                                  : {}),
+                              }
+                            : {}),
                           ...content,
                         },
                   );

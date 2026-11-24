@@ -35,6 +35,7 @@ const boards = [
 const cards = [],
   placements = [],
   links = [];
+let reads = 0;
 let operations = 0,
   failNext = false,
   graphDelay = 0;
@@ -106,6 +107,7 @@ await page.route("http://arquivo.test/**", async (route) => {
   const url = new URL(route.request().url()),
     p = url.pathname;
   if (p.startsWith("/api/archive")) {
+    if (route.request().method() === "GET") reads++;
     if (p.endsWith("/operations")) {
       operations++;
       if (failNext) {
@@ -143,6 +145,7 @@ await page.route("http://arquivo.test/**", async (route) => {
           id,
           boardId: i.boardId,
           cardId: c.id,
+          parentPlacementId: i.parentPlacementId ?? null,
           ...i.geometry,
         });
         board.version++;
@@ -156,7 +159,22 @@ await page.route("http://arquivo.test/**", async (route) => {
           version: c.version + 1,
         });
         id = c.id;
+      } else if (i.action === "placement.add") {
+        placements.push({
+          id,
+          boardId: i.boardId,
+          cardId: i.cardId,
+          parentPlacementId: i.parentPlacementId ?? null,
+          ...i.geometry,
+        });
+        board.version++;
+      } else if (i.action === "placement.parent") {
+        const place = placements.find((p) => p.id === i.placementId);
+        place.parentPlacementId = i.parentPlacementId;
+        id = place.id;
+        board.version++;
       } else if (i.action === "placement.update") {
+        id = i.placementId;
         Object.assign(
           placements.find((p) => p.id === i.placementId),
           i.geometry,
@@ -164,6 +182,25 @@ await page.route("http://arquivo.test/**", async (route) => {
         board.version++;
       } else if (i.action === "link.create")
         links.push({ ...i, id, version: 0 });
+      if (i.parentPlacementId && i.branchRelation) {
+        const parent = placements.find((p) => p.id === i.parentPlacementId);
+        const child = placements.find((p) => p.id === id);
+        if (
+          !links.some(
+            (l) =>
+              l.sourceId === parent.cardId &&
+              l.targetId === child.cardId &&
+              l.relation === i.branchRelation.relation,
+          )
+        )
+          links.push({
+            id: randomUUID(),
+            sourceId: parent.cardId,
+            targetId: child.cardId,
+            ...i.branchRelation,
+            version: 0,
+          });
+      }
       return route.fulfill({ json: { id, version: board?.version ?? 0 } });
     }
     if (p === "/api/archive/boards") return route.fulfill({ json: { boards } });
@@ -529,6 +566,296 @@ try {
   );
   await page.keyboard.press("Escape");
   await page.emulateMedia({ reducedMotion: "no-preference" });
+  // 8.5.2.1: pertencimento persistido no mock, expansão apenas nesta janela.
+  const storyNames = [
+    "Cidade de Valdoria",
+    "Taverna do Corvo",
+    "Mercado",
+    "Guarda da cidade",
+    "Templo Serpentino",
+    "Entrada da Caverna",
+    "Salão das Estátuas",
+    "Armadilha de Dardos",
+    "Guardião",
+    "Dragão das Montanhas do Norte",
+  ];
+  populate(10);
+  links.length = 0;
+  const positions = [
+    [80, 120],
+    [80, 400],
+    [400, 120],
+    [400, 400],
+    [80, 680],
+    [1100, 120],
+    [1100, 400],
+    [1440, 120],
+    [1440, 400],
+    [760, 680],
+  ];
+  storyNames.forEach((name, i) => {
+    cards[i].title = name;
+    cards[i].category = [
+      "locality",
+      "locality",
+      "locality",
+      "npc",
+      "locality",
+      "dungeon",
+      "room",
+      "trap",
+      "creature",
+      "creature",
+    ][i];
+    Object.assign(placements[i], {
+      x: positions[i][0],
+      y: positions[i][1],
+      width: 300,
+      height: 230,
+      parentPlacementId:
+        i > 0 && i < 5
+          ? placements[0].id
+          : i > 5 && i < 9
+            ? placements[5].id
+            : null,
+    });
+  });
+  for (const [a, b] of [
+    [0, 1],
+    [0, 9],
+    [6, 9],
+    [6, 7],
+  ])
+    links.push({
+      id: randomUUID(),
+      sourceId: cards[a].id,
+      targetId: cards[b].id,
+      relation: "related",
+      label: "",
+      directed: true,
+      description: "",
+      version: 0,
+    });
+  const externalLink = links[2].id;
+  const savedStructure = JSON.stringify({ placements, links });
+  await page.setViewportSize({ width: 2100, height: 1320 });
+  await page.reload();
+  await page.waitForFunction(
+    () => document.querySelectorAll(".archive-card").length === 3,
+  );
+  const worldTransform = () =>
+    page.locator(".archive-world").getAttribute("style");
+  const fixedCamera = await worldTransform(),
+    beforeExpand = operations,
+    beforeRead = reads;
+  await page.screenshot({
+    path: path.join(temp, "expansao-inicial-recolhido.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", {
+      name: "Expandir ramificações de Cidade de Valdoria",
+      exact: true,
+    })
+    .click();
+  assert.equal(await page.locator(".archive-card").count(), 7);
+  await page
+    .getByRole("article", { name: storyNames[9], exact: true })
+    .waitFor();
+  await page.screenshot({
+    path: path.join(temp, "expansao-cidade.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", {
+      name: "Expandir ramificações de Entrada da Caverna",
+      exact: true,
+    })
+    .click();
+  assert.equal(await page.locator(".archive-card").count(), 10);
+  assert.equal(await page.locator(`[data-link="${externalLink}"]`).count(), 1);
+  await page.screenshot({
+    path: path.join(temp, "expansao-cidade-masmorra.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("article", { name: "Salão das Estátuas", exact: true })
+    .locator(".archive-card-copy")
+    .click();
+  await page
+    .getByRole("button", {
+      name: "Recolher ramificações de Entrada da Caverna",
+      exact: true,
+    })
+    .click();
+  assert.equal(await page.locator(`[data-link="${externalLink}"]`).count(), 0);
+  assert.ok(
+    await page
+      .getByRole("article", { name: "Entrada da Caverna", exact: true })
+      .evaluate((el) => el.classList.contains("is-selected")),
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Conectar Salão das Estátuas", exact: true })
+      .count(),
+    0,
+  );
+  await page
+    .getByRole("button", {
+      name: "Expandir ramificações de Entrada da Caverna",
+      exact: true,
+    })
+    .click();
+  assert.equal(await page.locator(`[data-link="${externalLink}"]`).count(), 1);
+  await page
+    .getByRole("button", {
+      name: "Recolher ramificações de Entrada da Caverna",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("button", {
+      name: "Recolher ramificações de Cidade de Valdoria",
+      exact: true,
+    })
+    .click();
+  assert.equal(await page.locator(".archive-card").count(), 3);
+  assert.equal(await worldTransform(), fixedCamera);
+  assert.equal(operations, beforeExpand);
+  assert.equal(reads, beforeRead);
+  assert.equal(JSON.stringify({ placements, links }), savedStructure);
+  await page.screenshot({
+    path: path.join(temp, "expansao-recolhida-vinculos-preservados.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Ações de Cidade de Valdoria", exact: true })
+    .click();
+  await chooseRadial("Ramificações");
+  await chooseRadial("Criar ramificação");
+  await chooseRadial("Criar anotação");
+  await page.getByLabel("Título", { exact: true }).fill("Posto de vigia");
+  await page
+    .getByLabel("Também registrar ou reutilizar relação narrativa")
+    .check();
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page
+    .getByRole("article", { name: "Posto de vigia", exact: true })
+    .waitFor();
+  const createdBranch = placements.find(
+    (p) => cards.find((c) => c.id === p.cardId)?.title === "Posto de vigia",
+  );
+  assert.equal(createdBranch.parentPlacementId, placements[0].id);
+  await page.reload();
+  await page.waitForFunction(
+    () => document.querySelectorAll(".archive-card").length === 3,
+  );
+  assert.equal(
+    await page
+      .getByRole("article", { name: "Posto de vigia", exact: true })
+      .count(),
+    0,
+  );
+  await page.screenshot({
+    path: path.join(temp, "expansao-estrutura-apos-reload.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Ações de Cidade de Valdoria", exact: true })
+    .click();
+  await chooseRadial("Ramificações");
+  await chooseRadial("Associar card como ramificação");
+  await page
+    .getByLabel("Também registrar ou reutilizar relação narrativa")
+    .check();
+  await page
+    .getByLabel("Relação narrativa", { exact: true })
+    .selectOption("related");
+  const oldLinks = links.length;
+  await page
+    .locator(".archive-library button")
+    .filter({ hasText: "Dragão das Montanhas do Norte" })
+    .click();
+  await page.waitForFunction(
+    () => document.querySelector(".archive-save")?.textContent === "Salvo",
+  );
+  assert.equal(placements[9].parentPlacementId, placements[0].id);
+  assert.equal(links.length, oldLinks);
+  await page
+    .getByRole("button", {
+      name: "Ações de Dragão das Montanhas do Norte",
+      exact: true,
+    })
+    .click();
+  await chooseRadial("Ramificações");
+  await chooseRadial("Remover pertencimento");
+  await page.waitForFunction(
+    () => document.querySelector(".archive-save")?.textContent === "Salvo",
+  );
+  assert.equal(placements[9].parentPlacementId, null);
+  await page
+    .getByRole("article", { name: "Taverna do Corvo", exact: true })
+    .locator(".archive-card-copy")
+    .click();
+  placements[1].parentPlacementId = placements[5].id;
+  boards[0].version++;
+  const beforeExternalCamera = await worldTransform();
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("obsyrium:archive-changed")),
+  );
+  await page
+    .getByRole("article", { name: "Taverna do Corvo", exact: true })
+    .waitFor({ state: "detached" });
+  assert.ok(
+    await page
+      .getByRole("article", { name: "Entrada da Caverna", exact: true })
+      .evaluate((el) => el.classList.contains("is-selected")),
+  );
+  assert.equal(await worldTransform(), beforeExternalCamera);
+  await page
+    .getByLabel("Quadro narrativo", { exact: true })
+    .selectOption(boards[1].id);
+  await page.waitForFunction(
+    (id) => document.querySelector(".archive-toolbar select")?.value === id,
+    boards[1].id,
+  );
+  await page
+    .getByLabel("Quadro narrativo", { exact: true })
+    .selectOption(boardId);
+  await page
+    .getByRole("button", {
+      name: "Recolher ramificações de Cidade de Valdoria",
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(placements[1].parentPlacementId, placements[5].id);
+  Object.assign(placements[0], { width: 180, height: 120 });
+  await page.reload();
+  await page.waitForFunction(
+    () => document.querySelectorAll(".archive-card").length === 3,
+  );
+  const compactCore = page.getByRole("article", {
+    name: "Cidade de Valdoria",
+    exact: true,
+  });
+  assert.ok(
+    await compactCore.evaluate((el) => {
+      const card = el.getBoundingClientRect();
+      return [...el.querySelectorAll("footer > *")].every((item) => {
+        const r = item.getBoundingClientRect();
+        return r.left >= card.left && r.right <= card.right;
+      });
+    }),
+    "Indicadores do núcleo mínimo não saem da moldura",
+  );
+  await page.screenshot({
+    path: path.join(temp, "expansao-nucleo-compacto.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  console.log(
+    "Expansão local: zero HTTP/escritas/câmera; estrutura, radial, reload e atualização externa conferidos.",
+  );
   // Quadro isolado com todas as artes, tamanhos livres e títulos extensos.
   const categories = [
     ["region", "regiao"],

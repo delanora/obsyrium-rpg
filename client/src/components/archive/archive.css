@@ -850,3 +850,19 @@ body:has(.archive-page) {
 .archive-card[data-tiny] .archive-card-copy p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .archive-card[data-tiny] footer::before { display: none; }
+
+.archive-card footer { gap: 4px; }
+.archive-card footer .archive-branch-toggle {
+  border: 1px solid #a8864d66;
+  border-radius: 9px;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.archive-card footer .archive-branch-toggle:hover { border-color: #ddba7a; background: #b1915720; }
+.archive-card footer .archive-hidden-links { font-size: 0.65rem; color: #bea77e; white-space: nowrap; }
+.archive-branch-relation { margin: 0.7rem 0; border: 1px solid #9a7a4944; padding: 0.7rem; }
+.archive-branch-relation label { display: flex; align-items: center; gap: 0.5rem; }
+.archive-branch-relation input[type="checkbox"] { width: auto; }
+.archive-card footer > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.archive-card footer > button { flex-shrink: 0; }

@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -21,6 +22,7 @@ import {
   NARRATIVE_CATEGORY_LABELS,
   NARRATIVE_RELATION_LABELS,
 } from "../../../../src/modules/shared/narrative";
+import type { ArchiveNodeProjection } from "./archiveProjection";
 import { ArchiveRelationLabel } from "./ArchiveRelationLabel";
 import {
   cameraPoint,
@@ -52,6 +54,8 @@ export type Geometry = Pick<
   "x" | "y" | "width" | "height" | "zIndex"
 >;
 interface Props {
+  nodes?: Map<string, ArchiveNodeProjection>;
+  onToggle?: (id: string) => void;
   graph: NarrativeGraphDto;
   camera: ArchiveCamera;
   onCamera: (c: ArchiveCamera) => void;
@@ -82,6 +86,8 @@ interface Gesture {
 }
 /** O memo evita recalcular relações/títulos quando apenas a câmera se move. */
 const GraphContent = memo(function GraphContent({
+  nodes,
+  onToggle,
   graph,
   visual,
   selected,
@@ -90,6 +96,8 @@ const GraphContent = memo(function GraphContent({
   onMenu,
   temporary,
 }: {
+  nodes?: Map<string, ArchiveNodeProjection>;
+  onToggle?: (id: string) => void;
   graph: NarrativeGraphDto;
   visual: Record<string, Geometry>;
   selected: ArchiveSelection;
@@ -228,6 +236,7 @@ const GraphContent = memo(function GraphContent({
       </svg>
       {places.map((p) => {
         const titles = related.get(p.cardId) ?? [];
+        const info = nodes?.get(p.id);
         const compact = p.width < 230 || p.height < 160;
         return (
           <article
@@ -286,7 +295,31 @@ const GraphContent = memo(function GraphContent({
               ) : null}
             </div>
             <footer>
-              <span>{titles.length} conexões</span>
+              <span>{info?.relationCount ?? titles.length} conexões</span>
+              {info?.children.length ? (
+                <button
+                  type="button"
+                  className="archive-branch-toggle"
+                  aria-label={`${info.expanded ? "Recolher" : "Expandir"} ramificações de ${p.card.title}`}
+                  aria-expanded={info.expanded}
+                  disabled={!onToggle}
+                  title={`${info.children.length} ramificações diretas; ${info.hiddenLinks} vínculos ocultos`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggle?.(p.id);
+                  }}
+                >
+                  {info.expanded ? "−" : "+"} {info.children.length}
+                </button>
+              ) : null}
+              {info?.hiddenLinks ? (
+                <small
+                  className="archive-hidden-links"
+                  aria-label={`${info.hiddenLinks} vínculos ocultos`}
+                >
+                  ↗ {info.hiddenLinks}
+                </small>
+              ) : null}
               <button
                 type="button"
                 aria-label={`Ações de ${p.card.title}`}
@@ -324,6 +357,8 @@ const GraphContent = memo(function GraphContent({
   );
 });
 export function ArchiveCanvas({
+  nodes,
+  onToggle,
   graph,
   camera,
   onCamera,
@@ -375,6 +410,10 @@ export function ArchiveCanvas({
     if (viewport.current?.hasPointerCapture(g.pointer))
       viewport.current.releasePointerCapture(g.pointer);
   };
+  useLayoutEffect(() => {
+    const active = gesture.current?.placement;
+    if (active && !graph.placements.some((p) => p.id === active.id)) cancel();
+  }, [graph.placements]);
   useEffect(() => {
     const stop = () => cancel();
     const esc = (e: KeyboardEvent) => {
@@ -383,6 +422,7 @@ export function ArchiveCanvas({
     window.addEventListener("blur", stop);
     window.addEventListener("keydown", esc);
     return () => {
+      stop();
       window.removeEventListener("blur", stop);
       window.removeEventListener("keydown", esc);
     };
@@ -581,6 +621,8 @@ export function ArchiveCanvas({
         }}
       >
         <GraphContent
+          nodes={nodes}
+          onToggle={busy ? undefined : onToggle}
           graph={graph}
           visual={visual}
           selected={selected}

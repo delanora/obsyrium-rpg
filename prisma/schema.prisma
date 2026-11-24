@@ -1912,6 +1912,7 @@ model NarrativePlacement {
   id      String @id @default(uuid())
   boardId String
   cardId  String
+  parentPlacementId String?
   x       Float
   y       Float
   width   Float @default(280)
@@ -1919,6 +1920,10 @@ model NarrativePlacement {
   zIndex  Int @default(0)
   board   NarrativeBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
   card    NarrativeCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  parent NarrativePlacement? @relation("NarrativeBranches", fields: [boardId, parentPlacementId], references: [boardId, id], onDelete: NoAction, onUpdate: NoAction)
+  children NarrativePlacement[] @relation("NarrativeBranches")
+  @@unique([boardId, id])
+  @@index([boardId, parentPlacementId])
   @@unique([boardId, cardId])
   @@index([cardId])
   @@map("narrative_placements")

@@ -84,6 +84,8 @@ export interface NarrativeCardDto {
   updatedAt: string;
 }
 export interface NarrativePlacementDto {
+  /** Pai estrutural no quadro; ausente em clientes anteriores à expansão. */
+  parentPlacementId?: string | null;
   id: string;
   boardId: string;
   cardId: string;

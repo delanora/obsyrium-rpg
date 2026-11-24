@@ -336,3 +336,233 @@ repetida em checkout isolado.
 
 Pendências: aceite visual/fluidez e autorização explícita para publicação.
 Não foi iniciada a próxima fase.
+
+## Fase 8.5.2.1 — fundação de expansão e recolhimento (24/11/2026)
+
+**Estado:** implementada e testada em isolamento, com aceite manual pendente.
+Não publicada. A migration desta microfase não foi aplicada em produção e não
+houve restart. A fundação 8.5.1 foi informada pelo responsável como aprovada em
+13/13 critérios; a composição visual do commit `05a5916` foi aprovada e publicada
+antes deste pedido. Essa aparência foi preservada.
+
+### Estado inicial e auditoria
+
+HEAD inicial e `origin/main`: `05a5916bab727166925bed0d8ef642c5ca85a011`;
+branch `main`; staging inicialmente vazio. Foram encontrados 41 arquivos
+rastreados modificados e seis grupos não rastreados, relativos a combate,
+inventário, geografia/cenas, música, FABs, log e migrations anteriores. Todos
+foram preservados. O schema foi incluído seletivamente como **HEAD + extensão de
+NarrativePlacement**, sem incorporar alterações alheias.
+
+O código confirmou os cinco modelos da fundação, operações HTTP privadas,
+versionamento e recibos transacionais, invalidação `archive:updated` exclusiva
+do Mestre, canvas com geometria visual separada, câmera e o radial compartilhado
+`SceneEditorRadialMenu`. Não havia pertencimento nem expansão implementados.
+Nenhum componente do radial ou seus contratos/animações foi reconstruído.
+
+### Decisão de modelo e compatibilidade
+
+`NarrativePlacement.parentPlacementId` é um campo opcional para o núcleo pai
+**da representação naquele quadro**, sem mudar o conteúdo global de
+`NarrativeCard`. Um campo escalar permite no máximo um pai direto. A migration
+aditiva `20261124150000_narrative_branches` contém:
+
+- Coluna nullable, sem atribuição retroativa de pais.
+- Chave única `(boardId, id)` e índice `(boardId, parentPlacementId)`.
+- FK composta `(boardId, parentPlacementId)` para a representação do mesmo quadro.
+- CHECK que rejeita a própria representação como pai.
+
+Ciclos entre representações são rejeitados no serviço, dentro da mesma transação
+serializada das operações existentes. Não se infere estrutura a partir de
+categoria, texto ou relação `Contém`. Raízes antigas continuam independentes.
+O teste aplica a migration a uma fixture do schema anterior e comprova que todos
+os campos antigos permanecem idênticos e o novo pertencimento é `null`.
+
+O DTO acrescenta `parentPlacementId`; a propriedade é opcional no tipo público
+para tolerar snapshots/clientes anteriores. O servidor novo a devolve como
+string ou `null`.
+
+### Contratos e operações
+
+A rota permanece `POST /api/archive/operations`; não foram criados writes por
+socket nem outro motor de persistência.
+
+| Operação | Extensão |
+|---|---|
+| `card.create` | Aceita `parentPlacementId` opcional e cria conteúdo, representação, pertencimento e relação opcional atomicamente. |
+| `placement.add` | Aceita os mesmos campos opcionais para reutilizar um card de outro contexto sem duplicar seu conteúdo. |
+| `placement.parent` | Nova operação: `boardId`, `placementId`, `parentPlacementId` string/null, `expectedVersion`, `operationId` e relação opcional. `null` devolve independência. |
+
+`branchRelation`, quando solicitado explicitamente, contém `relation`, `label`,
+`directed` e `description`. A identidade canônica das relações foi centralizada
+em `narrativeLinkData`, compartilhada com o fluxo de relações livres. Uma relação
+igual existente é reutilizada com o mesmo ID, descrição e versão. Sem esse campo,
+a associação estrutural não cria relação narrativa. Remover pertencimento não
+apaga nem modifica relações.
+
+As operações validam autorização MASTER, UUIDs, quadro, existência, pai único,
+autorreferência e ciclos; reutilizam CAS da versão do quadro, advisory lock,
+fingerprint e recibos `NarrativeOperation`. Repetir uma associação com nova chave
+é rejeitado; repetir a mesma operação retorna replay sem nova escrita/evento.
+Para trocar de pai, é preciso remover o pertencimento atual antes de associar o
+novo. O cliente omite candidatos já parentados, o próprio núcleo e seus ancestrais;
+o servidor mantém a validação autoritativa independentemente disso.
+
+### Política de remoção e exclusão
+
+- Recolher: somente preferência visual local, sem excluir nada.
+- Desvincular estruturalmente: torna a representação independente, preservando
+  geometria, conteúdo e todas as relações narrativas.
+- Remover representação do núcleo: promove os filhos **diretos** a independentes
+  na mesma transação, sem alterar filhos de outros quadros nem apagar conteúdo.
+- Excluir o card global: promove filhos diretos de suas representações em todos
+  os quadros antes da exclusão. Apenas relações/representações do registro
+  efetivamente excluído seguem os cascades já existentes.
+- Excluir quadro: remove suas representações conforme o contrato anterior,
+  preservando conteúdo global. A FK estrutural não impede esse cascade; testado.
+
+Não existe exclusão recursiva de cidades, masmorras ou descendentes narrativos.
+As confirmações destrutivas informam a promoção dos filhos.
+
+### Estado local e projeção única
+
+`archiveProjection.ts` contém `projectArchive`, função pura que deriva:
+
+- Representações visíveis, descendentes ocultos e núcleo visível responsável.
+- Filhos diretos, estado de expansão e contagem estrutural de cada núcleo.
+- Total de relações narrativas diretas e quantidade de vínculos temporariamente
+  ocultos, apresentados como indicadores diferentes.
+- Conexões desenháveis apenas quando ambas as extremidades estão visíveis.
+
+Não há cópia autoritativa do grafo. As representações e relações originais não
+são mutadas pela projeção. O percurso estrutural é iterativo e protegido contra
+referências inválidas/ciclos; snapshots inválidos não causam loop infinito. A
+mesma projeção alimenta renderização, seleção, portas/hit testing e enquadramento.
+
+O estado aberto/recolhido fica em memória **nesta instância do Fichário**, por
+quadro e ID de representação. Trocar quadros preserva as escolhas enquanto o
+componente permanece montado. Recarregar a página, fechar o Fichário ou abrir
+outra janela começa recolhido: raízes visíveis, descendentes ocultos. IDs removidos
+são descartados ao reconciliar snapshots; preferências ainda válidas são mantidas.
+Expandir um ancestral respeita o estado local de descendentes, sem controles
+avançados nem animações multinível.
+
+Expandir/recolher não faz HTTP, não escreve no banco, não emite realtime e não
+muda pan/zoom. Uma criação/associação intencional abre localmente o núcleo para
+mostrar o resultado. Demais janelas mantêm suas preferências visuais próprias.
+
+Ao ocultar uma representação selecionada, a seleção passa ao núcleo visível.
+Menus sem alvo visível são encerrados. Gestos sobre representações removidas da
+projeção são cancelados antes da pintura; controles de cards ocultos não são
+renderizados. O desmontar do canvas também encerra o gesto e a captura.
+
+A invalidação privada existente continua usada somente para alterações
+persistentes. Janelas ociosas recarregam e reconciliam a projeção. Durante edição,
+salvamento, gesto ou radial, a atualização externa é sinalizada e o fluxo
+existente de conflito/recarregamento preserva o rascunho. A versão no servidor
+impede sobrescrita de estrutura alterada em outra janela.
+
+### Geometria e fronteira para 8.5.2.2
+
+A fonte de verdade continua sendo `NarrativePlacement.x/y/width/height/zIndex`.
+A projeção entrega os registros sem reescrevê-los. `ArchiveCanvas.visual` continua
+como fronteira separada para geometria renderizada/overrides de interação; a
+câmera continua sendo outra transformação independente. A próxima microfase
+poderá introduzir offsets temporários nessa fronteira, sem gravar a distribuição
+no banco nem alterar o conteúdo narrativo.
+
+Expandir não move o núcleo, descendentes existentes ou vizinhos. Novas
+representações filhas usam posicionamento simples e determinístico à direita do
+pai, escalonado pela quantidade de filhos diretos e limitado às coordenadas
+válidas. Representações já presentes mantêm integralmente sua geometria.
+Enquadrar usa somente os cards atualmente visíveis. Conexões usam os limites
+renderizados existentes e reaparecem com os mesmos IDs, tipos e direções.
+
+**Limitação intencional:** pode haver sobreposição ou cards fora da câmera ao
+revelar posições persistidas/criar filhos. Não há distribuição radial, colisões,
+ondas, deslocamento de vizinhos, timers ou física nesta microfase.
+
+### Interface e aparência
+
+O radial de cards ganhou um submenu `Ramificações`: criar, associar, expandir ou
+recolher quando houver filhos e desvincular quando houver pai. O botão `+ N`/`− N`
+do rodapé é discreto, intencional e tem nome acessível/estado expandido; hover só
+realça. Cards sem filhos não exibem comando de expansão enganoso. `↗ N` indica
+vínculos ocultos, sem desenhar relações indiretas artificiais. Em cards mínimos,
+o texto de relações pode usar reticências para os controles caberem na moldura.
+
+Formulários de criação/associação permitem registrar/reutilizar uma relação
+narrativa opcional, inclusive personalizada e não direcional. Molduras, assets,
+texturas, suporte/ícones, rótulos, plano de fundo, tipografia e cores existentes
+permaneceram. Nenhum asset novo foi gerado. Nenhum motor mecânico foi alterado.
+
+### Validação executada
+
+Tudo foi validado em checkout isolado de **HEAD + esta tarefa**, com Prisma Client
+gerado fora da instalação ativa. Passaram:
+
+- Typecheck backend e frontend.
+- Build backend e frontend; permanece o aviso de bundle grande já existente.
+- **121 verificações HTTP/PostgreSQL** em schema `test_archive_exp_<uuid>` novo:
+  compatibilidade legada, referências, criação atômica e rollback, associação,
+  remoção de pertencimento, ciclos, FK/check, pai único, contextos, persistência,
+  autorização, CAS/concorrência, replay/fingerprint, relações canônicas e promoção
+  de filhos nas exclusões.
+- **25 invariantes puras** de visibilidade, relações circulares, hierarquia,
+  snapshots inválidos, não duplicação, isolamento entre quadros e não mutação de
+  posições/dimensões/IDs/direções após 100 ciclos visuais.
+- **16 verificações puras de câmera** já existentes.
+- Chromium real, **API simulada**, com o cenário Valdoria/Taverna/Mercado/Guarda/
+  Templo/Caverna/Salão/Armadilha/Guardião/Dragão: estado inicial, expansão separada,
+  recolhimento, dragão independente, links externos reaparecendo com seus IDs,
+  seleção transferida, controles ocultos ausentes, zero HTTP/escritas por expansão,
+  câmera e snapshot persistido invariantes, criação pelo radial, associação,
+  remoção estrutural, reload e atualização externa. Também núcleo de 180 × 120,
+  troca de quadros, 16 categorias, arraste/resize, conexão, retry e celular.
+
+Os testes de banco criam schema e atores próprios, verificam `current_schema`
+tanto no cliente de preparação quanto no Prisma usado pela aplicação HTTP,
+recusam `public` como alvo e removem somente o schema que acabaram de criar.
+Hash dos dados reais em `public`: **ANTES = DEPOIS**; cleanup confirmado. O browser
+não se conecta à aplicação da campanha. Não houve smoke legado contra produção.
+
+Falhas encontradas foram investigadas: o primeiro checkout de validação incluía
+schema de geografia WIP sem seus serviços correspondentes, corrigido isolando
+somente a mudança narrativa; a fixture de migration usava `SELECT *` preparado
+antes/depois de adicionar coluna, corrigido com seleção explícita de colunas na
+segunda consulta; nomes acessíveis de seletores foram ajustados no componente
+novo e no teste. Não foram classificadas como flakes nem ignoradas.
+
+Amostra local da projeção pura (1000 projeções alternando recolhido/expandido):
+50 cards **45,50 ms**, 100 cards **40,07 ms**, 200 cards **76,71 ms** no total.
+Diferenças de aquecimento/JIT impedem inferir uma escala linear desses números.
+Amostras headless de renderização/gestos de 50/100/200 cards estão nas evidências.
+São observações locais, sem garantia de FPS ou desempenho em produção.
+
+### Evidências e continuidade
+
+Capturas e logs:
+`/root/.codex/visualizations/2026/11/08/01a1b91f-bed8-7260-a9ac-7553fb7b7adb/fichario-expansao/`.
+
+- `expansao-inicial-recolhido.png`
+- `expansao-cidade.png`
+- `expansao-cidade-masmorra.png`
+- `expansao-recolhida-vinculos-preservados.png`
+- `expansao-estrutura-apos-reload.png`
+- `expansao-nucleo-compacto.png`
+- `navegador.txt`, `projecao.txt`, `camera.txt`
+
+Checklist manual: criar núcleo e dois filhos; associar independente já presente e
+um card de outro quadro; alternar expansão e confirmar que um card apenas
+relacionado continua visível; verificar links externos/seleção; abrir outra janela
+com estado visual diferente; remover pertencimento e núcleo; conferir a geometria
+original; avaliar badge/controles em cards pequenos.
+
+Antes da publicação será necessário autorizar a migration aditiva, gerar o Prisma
+Client compatível, publicar os builds e reiniciar o backend. Essas operações não
+foram executadas no serviço ativo. Revisar o estado das migrations anteriores e
+preservar os WIPs no procedimento de publicação.
+
+Próximas microfases, **não iniciadas**: 8.5.2.2 distribuição radial/colisões;
+8.5.2.3 ondas/animações; 8.5.2.4 experiência multinível avançada/hardening.
+A fase 8.5.2 inteira não está concluída.

@@ -77,6 +77,47 @@ function conflict() {
     "CONFLICT",
   );
 }
+/** A mesma identidade canônica é usada por relações livres e por vínculos opcionais de ramificações. */
+function narrativeLinkData(input: {
+  sourceId: string;
+  targetId: string;
+  relation: string;
+  label: string;
+  directed: boolean;
+  description: string;
+}) {
+  if (input.sourceId === input.targetId)
+    throw new HttpError(
+      "Um card não pode se conectar a si mesmo.",
+      400,
+      "SELF_RELATION",
+    );
+  const label = input.relation === "custom" ? input.label.trim() : "";
+  if (input.relation === "custom" && !label)
+    throw new HttpError("Dê um nome à relação personalizada.", 400);
+  const ends = input.directed
+    ? [input.sourceId, input.targetId]
+    : [input.sourceId, input.targetId].sort();
+  const signature = createHash("sha256")
+    .update(
+      JSON.stringify([
+        ends,
+        input.directed,
+        input.relation,
+        label.normalize("NFKC").toLocaleLowerCase("pt-BR"),
+      ]),
+    )
+    .digest("hex");
+  return {
+    sourceId: input.sourceId,
+    targetId: input.targetId,
+    relation: input.relation,
+    label,
+    directed: input.directed,
+    description: input.description,
+    signature,
+  };
+}
 /** Mesma semântica de SceneOperation: versão esperada, fingerprint e recibo atômico. */
 export async function operateArchive(
   actor: ArchiveActor,
@@ -145,6 +186,65 @@ export async function operateArchive(
           if (link.version !== version) throw conflict();
           return link;
         };
+        const placement = async (id: string, boardId: string) => {
+          const row = await db.narrativePlacement.findUnique({ where: { id } });
+          if (!row || row.boardId !== boardId)
+            throw new HttpError(
+              "Representação não encontrada neste quadro.",
+              404,
+            );
+          return row;
+        };
+        const validateParent = async (
+          boardId: string,
+          childId: string | null,
+          parentId: string,
+        ) => {
+          const parent = await placement(parentId, boardId);
+          const visited = new Set<string>();
+          let cursor: typeof parent | null = parent;
+          while (cursor) {
+            if (cursor.id === childId || visited.has(cursor.id))
+              throw new HttpError(
+                "O pertencimento não pode criar ciclos.",
+                400,
+                "STRUCTURAL_CYCLE",
+              );
+            visited.add(cursor.id);
+            cursor = cursor.parentPlacementId
+              ? await placement(cursor.parentPlacementId, boardId)
+              : null;
+          }
+          return parent;
+        };
+        const branchLink = async (
+          parentCardId: string,
+          childCardId: string,
+          relation:
+            | {
+                relation: string;
+                label: string;
+                directed: boolean;
+                description: string;
+              }
+            | undefined,
+        ) => {
+          if (!relation) return;
+          const data = narrativeLinkData({
+            sourceId: parentCardId,
+            targetId: childCardId,
+            ...relation,
+          });
+          // Reaproveita a relação existente sem alterar descrição, tipo ou versão.
+          if (
+            !(await db.narrativeLink.findUnique({
+              where: { signature: data.signature },
+            }))
+          )
+            await db.narrativeLink.create({
+              data: { ...data, createdById: actor.userId },
+            });
+        };
         let receipt: ArchiveReceipt;
         switch (input.action) {
           case "board.create": {
@@ -193,6 +293,15 @@ export async function operateArchive(
                 "Limite de 500 cards neste quadro atingido.",
                 400,
               );
+            if (input.branchRelation && !input.parentPlacementId)
+              throw new HttpError("Informe o núcleo da ramificação.", 400);
+            const parent = input.parentPlacementId
+              ? await validateParent(
+                  input.boardId,
+                  null,
+                  input.parentPlacementId,
+                )
+              : null;
             let cardId: string;
             if (input.action === "card.create") {
               if ((await db.narrativeCard.count()) >= 10000)
@@ -212,9 +321,59 @@ export async function operateArchive(
               cardId = input.cardId;
             }
             const r = await db.narrativePlacement.create({
-              data: { boardId: input.boardId, cardId, ...input.geometry },
+              data: {
+                boardId: input.boardId,
+                cardId,
+                parentPlacementId: parent?.id ?? null,
+                ...input.geometry,
+              },
             });
+            if (parent)
+              await branchLink(parent.cardId, cardId, input.branchRelation);
             receipt = { id: r.id, version };
+            break;
+          }
+          case "placement.parent": {
+            const version = await boardVersion(
+              input.boardId,
+              input.expectedVersion,
+            );
+            const child = await placement(input.placementId, input.boardId);
+            if (child.parentPlacementId === input.parentPlacementId)
+              throw new HttpError(
+                "Esta associação estrutural já está definida.",
+                409,
+                "DUPLICATE_STRUCTURE",
+              );
+            if (input.parentPlacementId && child.parentPlacementId)
+              throw new HttpError(
+                "Remova o pertencimento atual antes de associar outro núcleo.",
+                409,
+                "STRUCTURAL_PARENT_EXISTS",
+              );
+            if (!input.parentPlacementId && input.branchRelation)
+              throw new HttpError(
+                "Remover pertencimento não altera relações narrativas.",
+                400,
+              );
+            const parent = input.parentPlacementId
+              ? await validateParent(
+                  input.boardId,
+                  child.id,
+                  input.parentPlacementId,
+                )
+              : null;
+            await db.narrativePlacement.update({
+              where: { id: child.id },
+              data: { parentPlacementId: parent?.id ?? null },
+            });
+            if (parent)
+              await branchLink(
+                parent.cardId,
+                child.cardId,
+                input.branchRelation,
+              );
+            receipt = { id: child.id, version };
             break;
           }
           case "placement.update":
@@ -231,9 +390,13 @@ export async function operateArchive(
                 "Representação não encontrada neste quadro.",
                 404,
               );
-            if (input.action === "placement.remove")
+            if (input.action === "placement.remove") {
+              await db.narrativePlacement.updateMany({
+                where: { parentPlacementId: r.id },
+                data: { parentPlacementId: null },
+              });
               await db.narrativePlacement.delete({ where: { id: r.id } });
-            else
+            } else
               await db.narrativePlacement.update({
                 where: { id: r.id },
                 data: input.geometry,
@@ -256,11 +419,15 @@ export async function operateArchive(
             if (input.action === "card.delete") {
               const places = await db.narrativePlacement.findMany({
                 where: { cardId: input.cardId },
-                select: { boardId: true },
+                select: { id: true, boardId: true },
               });
               await db.narrativeBoard.updateMany({
                 where: { id: { in: places.map((p) => p.boardId) } },
                 data: { version: { increment: 1 } },
+              });
+              await db.narrativePlacement.updateMany({
+                where: { parentPlacementId: { in: places.map((p) => p.id) } },
+                data: { parentPlacementId: null },
               });
               await db.narrativeCard.delete({ where: { id: input.cardId } });
             } else
@@ -306,31 +473,8 @@ export async function operateArchive(
                   400,
                 );
             } else await ensureLink(input.linkId, input.expectedVersion);
-            const label = input.relation === "custom" ? input.label.trim() : "";
-            if (input.relation === "custom" && !label)
-              throw new HttpError("Dê um nome à relação personalizada.", 400);
-            const ends = input.directed
-              ? [input.sourceId, input.targetId]
-              : [input.sourceId, input.targetId].sort();
-            const signature = createHash("sha256")
-              .update(
-                JSON.stringify([
-                  ends,
-                  input.directed,
-                  input.relation,
-                  label.normalize("NFKC").toLocaleLowerCase("pt-BR"),
-                ]),
-              )
-              .digest("hex");
-            const data = {
-              sourceId: input.sourceId,
-              targetId: input.targetId,
-              relation: input.relation,
-              label,
-              directed: input.directed,
-              description: input.description,
-              signature,
-            };
+            const data = narrativeLinkData(input);
+            const signature = data.signature;
             const duplicate = await db.narrativeLink.findUnique({
               where: { signature },
             });
