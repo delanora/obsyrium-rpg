@@ -1,6 +1,7 @@
 # Relatório técnico — Fase 8.5.2.3
 
-Implementação exclusivamente frontend. **Não publicada. Aceite manual pendente.**
+Relatório da implementação anterior à publicação, exclusivamente frontend.
+**Atualização: publicação controlada concluída no frontend para o SHA `69276aef46301044acddeaa509988cf847e845f2`; aceite manual da experiência animada pendente.**
 Base: `5f61d60027b151f9555914d1fb9ee4ab77c4b49a`, branch `main`.
 O SHA final é o commit que adiciona este relatório; a confirmação completa é entregue na conversa.
 
@@ -67,9 +68,10 @@ não elimina o custo de montagem do grafo nem os limites do resolvedor existente
 ## Pendências para o responsável
 
 - Aceite visual/funcional de fluidez e das curvas nos browsers/hardware usados.
-- Autorizar separadamente a publicação; nenhum artefato ativo foi substituído.
+- Publicação frontend concluída; aguardar aceite manual da experiência animada.
+  Registro operacional e backup em `docs/arquivo-mestre.md`, seção de publicação.
 - Atenção a colisões residuais em densidade extrema, regressão medida nos tempos
   de interação e custo de renderização de cards/conexões em quadros extensos.
-- Fundo: aceite anterior parcial 12/13; a textura substituta não recebe aceite
-  definitivo por esta entrega. Radial 15/15, relativo 13/13 e consulta 12/12 são
+- Fundo: aceite anterior parcial 12/13 preservado como histórico; agora aceito
+  por ora pelo responsável na autorização de publicação. Radial 15/15, relativo 13/13 e consulta 12/12 são
   aceites anteriores informados pelo responsável.

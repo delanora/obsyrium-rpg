@@ -1603,3 +1603,55 @@ substituem a avaliação manual de fluidez em hardware/browser do responsável.
 alterações de backend/Prisma/migrations, geração de client, restart ou build na
 produção. Aguardar autorização própria para publicar e aceite visual/funcional.
 Não iniciar 8.5.2.4.
+
+### Publicação controlada da 8.5.2.3 — 24/11/2026
+
+Autorização específica do responsável para o commit funcional
+`69276aef46301044acddeaa509988cf847e845f2`, repositório
+`delanora/obsyrium-rpg`, branch `main`. HEAD e `origin/main` conferidos novamente,
+inclusive por `git ls-remote`, iguais ao SHA autorizado antes da operação.
+
+**O fundo espacial foi aceito por ora pelo responsável nesta autorização.**
+Permanece registrado o histórico do aceite inicialmente parcial de 12/13 e da
+substituição posterior pela textura de linho. Esse aceite do fundo não equivale
+a aceite manual da experiência animada, que continua pendente. A moldura externa
+permanece ausente.
+
+O espelho anterior em `/tmp/arquivo-publicacao` foi copiado para
+`/tmp/ondas-publicacao`; o build isolado reproduziu byte a byte todos os 340
+arquivos da versão ativa antes da sobreposição. Só os seis módulos frontend do
+commit autorizado foram então sobrepostos. Nenhuma outra frente WIP foi incluída.
+O build/typecheck resultante preservou integralmente CSS e assets, incluindo o
+PNG de linho; apenas o novo bundle JavaScript e o HTML diferem da versão ativa.
+Curvas, temporizações e limites são exatamente os do commit autorizado.
+
+Backup integral dos 354 arquivos então ativos, conferido por SHA-256, em
+`/var/backups/obsyrium/20261124-ondas-8523/client-dist/`. Manifests, logs, scripts e
+`rollback-frontend.py` ficam no mesmo diretório. O rollback repõe assets anteriores
+antes do HTML por rename atômico, mantém bundles novos para clientes com cache e
+não exige backend, banco ou restart.
+
+Publicados `assets/index-tPm1jDVE.js` e, somente depois da conferência dos assets,
+o HTML por substituição atômica. CSS `assets/index-BwtHA_mH.css` e demais assets
+mantidos; bundles antigos continuam disponíveis. Os 340 arquivos do novo build
+foram verificados em disco; os 353 artefatos anteriores além do HTML permanecem
+íntegros. HTML, JS, CSS e PNG de linho conferidos por HTTP e hash. Frontend respondeu
+200; health retornou `status: ok`, `database: up`; Arquivo privado recusou acesso
+sem autenticação (401). PID 2467899 preservado; logs do serviço sem avisos/erros
+durante a operação.
+
+Regressões repetidas no espelho isolado, com API em memória: testes puros de
+animação 723, layout 718, projeção 25 e câmera 16; Chromium de ondas com 100 ciclos,
+reversão, gestos, snapshots externos simulados, consulta, personalização, troca e
+reload, seguido das regressões radial/editor/leitor/mobile, gerais e fundo.
+Nenhuma fixture real ou escrita na campanha. O alerta de tamanho do bundle no
+build permanece. A regressão de desempenho medida em 100/200 cards continua no
+relatório `docs/fichario-ondas-validacao.md`, sem reclassificação nem mudança de
+limites para esta publicação.
+
+Backend compilado, Prisma Client, schema/migrations e os 47 arquivos WIP
+preservados por hash. Sem geração de Prisma, migration, alteração de banco ou
+restart. Espelho reutilizável atualizado para esta composição publicada.
+**Publicação concluída; aguardar aceite manual da experiência animada.** Colisões
+residuais em densidade extrema e custo de cards/conexões extensos permanecem como
+pontos de atenção. A Fase 8.5.2.4 não foi iniciada.
