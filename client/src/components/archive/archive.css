@@ -1017,21 +1017,3 @@ body:has(.archive-page) {
 .archive-card-editor input[type="checkbox"] { width: auto; }
 .archive-card-editor .archive-branch-relation label { display: flex; }
 .archive-card-editor form > button[type="submit"] { justify-self: start; }
-
-/* Contorno externo discreto, fixo à área útil e sem interceptar o quadro. */
-.archive-page::after {
-  content: "";
-  position: absolute;
-  top: var(--archive-frame-top, 4px);
-  right: 4px;
-  bottom: 4px;
-  left: 4px;
-  border: 1px solid transparent;
-  border-image: url("/creation/atlas-obsidiana/moldura-painel.webp") 42 48 / 10px / 0 stretch;
-  pointer-events: none;
-  z-index: 26;
-}
-.archive-page > .archive-reader { top: calc(var(--archive-frame-top, 4px) + 12px); }
-.archive-page > .archive-viewport {
-  clip-path: inset(var(--archive-frame-top, 4px) 4px 4px 4px);
-}

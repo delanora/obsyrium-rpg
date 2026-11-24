@@ -1495,3 +1495,14 @@ moldura conferidos por HTTP/hash. Health saudável, rota privada sem token 401,
 PID permanece 2467899, sem restart. Backend, Prisma e 47 WIPs intactos por hash;
 nenhuma escrita de dados ou migration. Logs e evidências preservados no backup,
 espelho reutilizável atualizado. Aguardar avaliação visual; 8.5.2.3 não iniciada.
+
+### Retirada da moldura externa — 24/11/2026
+
+O responsável não aprovou a moldura e solicitou sua retirada. Removidos o contorno,
+a medição da barra de abas, o recorte do viewport e o deslocamento dos painéis que
+acompanhavam esse ajuste. Editor lateral, consulta, prévia e fundo de linho mantidos.
+`ArchivePage.tsx` e `archive.css` retornam exatamente à versão anterior à moldura;
+o teste agora confere ausência do contorno. Os assets compartilhados permanecem.
+Build/typecheck somente em `/tmp/sem-moldura-publicacao/client`, reproduzindo
+`index-ZdSEGbQt.js` e `index-BwtHA_mH.css` da versão anterior. Regressão no Chromium
+com API simulada; 47 WIPs preservados. Sem backend, Prisma ou migrations.
