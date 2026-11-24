@@ -155,16 +155,22 @@ const GraphContent = memo(function GraphContent({
             [link.sourceId, link.targetId].sort().join(":"),
           )!;
           const ordinal = same.indexOf(link.id);
-          const offset = (ordinal - (same.length - 1) / 2) * 42;
+          const offset = (ordinal - (same.length - 1) / 2) * 64;
           const dx = to.x - from.x,
             dy = to.y - from.y,
             len = Math.max(1, Math.hypot(dx, dy));
+          const bend = Math.min(100, len * 0.16) + offset;
           const mid = {
-            x: (from.x + to.x) / 2 - (dy / len) * offset,
-            y: (from.y + to.y) / 2 + (dx / len) * offset,
+            x: (from.x + to.x) / 2 - (dy / len) * bend,
+            y: (from.y + to.y) / 2 + (dx / len) * bend,
           };
           const path = `M${from.x},${from.y} Q${mid.x},${mid.y} ${to.x},${to.y}`;
           const label = link.label || NARRATIVE_RELATION_LABELS[link.relation];
+          const labelWidth = Math.max(84, Array.from(label).length * 7.5 + 28);
+          const labelPoint = {
+            x: (from.x + 2 * mid.x + to.x) / 4,
+            y: (from.y + 2 * mid.y + to.y) / 4,
+          };
           return (
             <g
               key={link.id}
@@ -193,9 +199,22 @@ const GraphContent = memo(function GraphContent({
                   }
                 }}
               />
+              <rect
+                className="archive-link-label"
+                x={labelPoint.x - labelWidth / 2}
+                y={labelPoint.y - 15}
+                width={labelWidth}
+                height={30}
+                rx={15}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onSelect({ kind: "link", id: link.id });
+                }}
+              />
               <text
-                x={(from.x + 2 * mid.x + to.x) / 4}
-                y={(from.y + 2 * mid.y + to.y) / 4 - 8}
+                x={labelPoint.x}
+                y={labelPoint.y}
+                dominantBaseline="central"
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   onSelect({ kind: "link", id: link.id });
