@@ -23,6 +23,7 @@ import {
   NARRATIVE_RELATION_LABELS,
 } from "../../../../src/modules/shared/narrative";
 import type { ArchiveNodeProjection } from "./archiveProjection";
+import { ArchiveBackground } from "./ArchiveBackground";
 import { ArchiveRelationLabel } from "./ArchiveRelationLabel";
 import {
   cameraPoint,
@@ -669,6 +670,7 @@ export function ArchiveCanvas({
         }
       }}
     >
+      <ArchiveBackground camera={camera} />
       <div
         className="archive-world"
         style={{

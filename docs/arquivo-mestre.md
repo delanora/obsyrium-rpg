@@ -1160,3 +1160,147 @@ regiões densas, custo do layout misto com muitas posições reservadas e render
 DOM em quadros extensos. Os avisos de bundle grande permanecem. Monitoramento foi
 breve; continuar observação durante o uso real sem usar a campanha como fixture.
 **8.5.2.3 não iniciada. Fundo Espacial Contínuo permanece separado.**
+
+## Fase 8.5.2.2.3 — Fundo Espacial Contínuo — 24/11/2026
+
+### Auditoria e escopo
+
+HEAD inicial e remoto `origin/main`:
+`5a3144115c4d266126ce955204ca8a90f50bf78f`, branch `main`, staging inicialmente vazio.
+47 WIPs anteriores preservados e conferidos por SHA-256. O responsável informou
+que as microfases anteriores foram publicadas e validadas manualmente; este fundo
+aguarda aceite próprio. A Fase 8.5.2 inteira não foi marcada como concluída.
+
+Foram lidos AGENTS, roadmap e este relatório, e auditados `ArchivePage`,
+`ArchiveCanvas`, `archiveCamera`, `archiveLayout`, consulta e CSS. A causa perceptiva
+era o fundo em `.archive-page`, com `center / cover no-repeat`, enquanto somente
+`.archive-world` recebia a transformação de pan/zoom. Cards e SVG de conexões
+participavam da câmera; a textura ficava presa à página.
+
+Escopo estritamente frontend: não altera estado/limites da câmera, semântica de
+coordenadas, layout radial, preferências relativas, leitura, radial, auth, realtime,
+API, backend, Prisma, migrations ou dependências. Não implementa animações/ondas
+nem antecipa 8.5.2.3.
+
+### Asset e implementação
+
+O caminho `/mnt/data/a_seamless_tileable_dark_charcoal_blue_stone.png` citado na
+especificação não existe neste host. Foi usado o PNG anexado junto ao pedido,
+**Textura de mármore azul-ardósia nebuloso.png**, copiado explicitamente para
+`client/public/archive/textura-marmore-azul-ardosia.png`, 1672×941, RGB, 2.134.797 bytes.
+Arquivo original e versão do repositório têm o mesmo SHA-256:
+`a20438370c99a0c218284df141069df5741affb76074e5d836b2da3635ec5d5b`.
+Nenhuma edição, recompressão, espelhamento ou perda de qualidade foi aplicada.
+A imagem antiga foi conservada no catálogo para compatibilidade, mas não é usada
+como fundo estático do fichário.
+
+Novo `ArchiveBackground.tsx`: SVG do tamanho da viewport, com um único `pattern`
+em `userSpaceOnUse`, tile 1672×941 e uma única referência à textura. Uma superfície
+SVG equivalente ao espaço transformado da câmera, antes de `.archive-world` no
+Canvas, recebe os mesmos valores X/Y/zoom. Não é uma imagem gigante nem uma grade
+de elementos/tile gerada conforme os cards. Há um SVG e cinco elementos internos,
+independentemente da quantidade de cards ou distância navegada.
+
+O padrão usa escala `camera.zoom`; a translação é a fase equivalente
+`((camera.x % (1672 * zoom)) + (1672 * zoom)) % (1672 * zoom)`, e o mesmo para Y
+com 941. Reduzir a translação por um número inteiro de tiles não altera a posição
+da textura no mundo periódico. Mantém a matriz pequena e evita diferenças de
+arredondamento em pans extensos. A câmera dos cards permanece intacta.
+
+A textura acompanha pan e zoom, incluindo coordenadas negativas. Mover/redimensionar
+um card não muda a câmera nem a fase do fundo. Abertura de consulta, abas/rolagem e
+expansão/recolhimento também não alteram a textura. O componente é memoizado e
+recebe somente a câmera; não depende de grafo, seleção, resolvedor ou ponteiro.
+`aria-hidden`, `focusable=false` e `pointer-events:none` impedem foco/captura indevida.
+
+O fundo estático da página virou apenas uma cor de fallback. Um segundo rect SVG
+aplica escurecimento uniforme de 12% como camada separada de UI; não há vinheta
+embutida no tile, blur, filtro fullscreen, parallax, logo ou ornamento repetido.
+Cards, rótulos e linhas conservaram cores/estilos. A nitidez do PNG foi preservada;
+o zoom máximo usa a interpolação normal do navegador ao ampliar uma imagem raster.
+
+Arquivos: novo componente e PNG; duas linhas de integração em `ArchiveCanvas.tsx`;
+alteração mínima em `archive.css`; novo teste `check-archive-background-browser.mjs`;
+assertivas adicionais em `check-archive-radial-browser.mjs`; trechos pertinentes
+neste documento e no roadmap.
+
+### Testes e inspeção visual
+
+- `npm run typecheck:client` e `npm run build:client` passaram em
+  `/tmp/fundo-validacao`; nenhum build Vite foi executado em `client/dist` ativo.
+  O aviso já existente de bundle grande permanece.
+- **718 verificações puras de layout**, **25 de projeção** e **16 de câmera**
+  passaram. Nenhuma cobertura anterior foi reduzida. Backend/banco não foram
+  alterados, portanto não se repetiu integração PostgreSQL nesta fase.
+- Chromium real: novo teste de fundo com fixture React local, sem APIs de campanha,
+  validou pan em várias direções, zoom, equivalência de fase com a matriz da câmera,
+  arraste independente, translação de quase um milhão de unidades e árvore constante.
+  A textura não foi requisitada novamente durante pan/zoom.
+- Deslocar 400 tiles em X e −300 em Y, em zoom 0,5, retorna screenshot **idêntica
+  byte a byte** à fase inicial. Esse resultado veio após a normalização da fase.
+- Repetição horizontal, vertical e combinada foi capturada em zooms **0,15; 0,5;
+  1; 1,25; 2,5**, incluindo limites de tiles dentro da viewport. O salto RGB médio
+  nas junções ficou entre **1,29 e 2,03** em escala 0–255. A medida é auxiliar,
+  não substitui inspeção visual ou uma métrica perceptual formal.
+- Capturas de repetição em 0,15/0,5/2,5 e composição com cards/conexões foram
+  inspecionadas: não foram observadas linhas de emenda, bordas escuras de tile ou
+  lacunas. Os metais, títulos e etiquetas continuam legíveis na amostra.
+- Teste integrado do fichário repetido no Chromium com **API simulada**, cobrindo
+  expansão, personalização, gestos, retry/conflito, leitura, edição, resets,
+  atualização externa, quadros e mobile. Agora também confere explicitamente que
+  drag/resize, expansão/recolhimento e consulta não mudam o transform do fundo.
+- Não houve teste mutável com dados reais, autenticação de fixture na campanha,
+  publicação ou restart. O health ativo foi consultado somente em leitura e estava
+  saudável durante a validação. Não se afirma observação visual em produção.
+
+Uma comparação inicial expandia buffers PNG inteiros no diagnóstico de falha e
+encerrou o processo de teste com código 137. A comparação foi substituída por
+`Buffer.equals`, mantendo a exigência de igualdade sem construir um diff enorme.
+A investigação mostrou diferença máxima de um nível RGB em pans grandes usando
+translação SVG sem normalização; a fase periódica corrigiu essa diferença e o teste
+passou com igualdade exata. Não foi classificado como flake e nenhum filtro foi
+adicionado para mascarar o resultado.
+
+### Desempenho
+
+Mesmo script de regressão geral, baseline isolada no HEAD inicial e versão atual,
+50/100/200/500 cards, três ciclos de pan/arraste/resize por tamanho. API simulada,
+Chromium headless local; medições incluem automação/React/DOM e não são SLA/FPS.
+
+| Cards | Render inicial antes/depois (ms) | Gestos mediana antes/depois (ms) | Maior intervalo de frame antes/depois (ms) |
+|---|---:|---:|---:|
+| 50 | 278 / 317 | 671 / 664 | 16,7 / 33,4 |
+| 100 | 375 / 358 | 906 / 878 | 16,7 / 33,4 |
+| 200 | 600 / 646 | 1610 / 1514 | 66,7 / 33,4 |
+| 500 | 920 / 935 | 3206 / 3175 | 66,7 / 83,3 |
+
+As medianas de gestos não apresentaram aumento consistente. Máximos de frame
+variaram, incluindo um frame adicional em 500 cards; uma rodada anterior com o
+fundo já integrado registrou 66,7 ms nesse tamanho. Não se afirma equivalência
+absoluta de desempenho, ganho de FPS ou ausência de custo de pintura. A superfície
+é constante em elementos, referência de imagem e operações de fase; o navegador
+ainda pinta a viewport. As limitações anteriores de DOM/layout em quadros grandes
+permanecem. Os contadores do teste mantiveram zero recálculo de layout durante
+pan/zoom/frames de gestos e durante abas/rolagem da consulta.
+
+### Evidências e pendências
+
+Evidências locais:
+`/root/.codex/visualizations/2026/11/08/01a1b91f-bed8-7260-a9ac-7553fb7b7adb/fichario-fundo-espacial/`.
+Incluem `fundo-inicial.png`, `fundo-pan-longo.png`, `fundo-zoom.png`,
+`fundo-card-arrastado.png`, cinco capturas `repeticao-zoom-*.png`, comparação periódica,
+capturas de integração, logs e `pan-zoom.webm` gravado no navegador. Os dados são
+fixtures locais/API simulada. Não representam aceite manual do responsável.
+
+Entrega em commit isolado na `main`, com push sem force e SHA remoto conferido no
+relatório final; os 47 WIPs anteriores permanecem fora do commit. Não publicado:
+publicação futura é somente frontend, com build em espelho isolado e preservação
+das demais frentes ativas. Não requer migration, Prisma ou restart.
+
+Checklist manual: navegar vazio em várias direções; fazer zoom sobre junções da
+textura; pan longo; arrastar um card sem mover o fundo; abrir consulta e expandir
+núcleos; conferir leitura em desktop/celular e fluidez no hardware do responsável.
+Repetição raster é periódica por definição; a escala visual/nitidez ampliada e a
+preferência de contraste devem receber aceite visual próprio. Testes automatizados
+não garantem o mesmo resultado perceptivo em todos os monitores/navegadores.
+**Aguardar aceite desta fase; 8.5.2.3 (ondas) continua não iniciada.**

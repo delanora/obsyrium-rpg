@@ -307,6 +307,8 @@ await page.route("http://radial.test/**", async (route) => {
   });
 });
 const world = () => page.locator(".archive-world").getAttribute("style");
+const background = () =>
+  page.locator(".archive-background pattern").getAttribute("patternTransform");
 const state = () =>
   page.locator(".archive-card").evaluateAll((els) =>
     Object.fromEntries(
@@ -404,6 +406,7 @@ const saveGesture = async (id, mode, dx, dy, expected = "ok") => {
     mode === "move"
       ? { x: box.x + Math.min(40, box.width / 2), y: box.y + box.height / 2 }
       : { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const backgroundBeforeGesture = await background();
   const count = calls(),
     prior = await state(),
     op = requests.length,
@@ -415,6 +418,11 @@ const saveGesture = async (id, mode, dx, dy, expected = "ok") => {
     await calls(),
     countBefore,
     "Gesto não executa layout por frame",
+  );
+  assert.equal(
+    await background(),
+    backgroundBeforeGesture,
+    "Arraste/resize não move o fundo espacial",
   );
   const shown = await el.boundingBox();
   if (mode === "move") {
@@ -505,12 +513,18 @@ try {
   await page.waitForTimeout(120);
   assert.equal(await calls(), beforeZoom);
   await shot("radial-recolhido");
+  const savedBackground = await background();
   const savedCamera = await world(),
     readBefore = reads;
   await toggle(0, false);
   await page.waitForTimeout(150);
   let open = await state();
   assert.equal(await world(), savedCamera);
+  assert.equal(
+    await background(),
+    savedBackground,
+    "Expansão/recolhimento não altera o fundo",
+  );
   assert.equal(reads, readBefore);
   assert.equal(requests.length, 0);
   assert.deepEqual(open[uuid(200)], { x: 0, y: 0, width: 300, height: 230 });
@@ -547,6 +561,11 @@ try {
   await toggle(0, true);
   await page.waitForTimeout(100);
   assert.equal(await world(), savedCamera);
+  assert.equal(
+    await background(),
+    savedBackground,
+    "Expansão/recolhimento não altera o fundo",
+  );
   await shot("radial-somente-faccao");
   await toggle(11, true);
   await page.waitForTimeout(100);
@@ -657,6 +676,7 @@ try {
     name: "Consulta narrativa",
   });
   await reader.waitFor();
+  const readerBackground = await background();
   const readOps = requests.length,
     readHTTP = reads,
     readerCamera = await world(),
@@ -676,6 +696,11 @@ try {
   assert.equal(await reader.locator("h2").textContent(), branchCard.title);
   assert.equal(await calls(), readerCalls);
   assert.equal(await world(), readerCamera);
+  assert.equal(
+    await background(),
+    readerBackground,
+    "Consulta não altera textura/câmera",
+  );
   assert.equal(requests.length, readOps);
   assert.equal(reads, readHTTP, "Leitura do snapshot não duplica HTTP");
   await saveGesture(branch, "move", 10, 7);
