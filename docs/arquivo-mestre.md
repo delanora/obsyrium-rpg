@@ -772,3 +772,65 @@ neste documento). WIPs anteriores devem permanecer fora do staging.
 8.5.2.3/4 não foram iniciadas. Para a 8.5.2.3, consumir os snapshots da transição,
 animando somente a projeção temporária, sem alterar autoridade/persistência e sem
 inserir o resolvedor no loop de frames.
+
+### Publicação controlada da 8.5.2.2 — 24/11/2026
+
+Autorizada pelo responsável exclusivamente para o frontend, após análise.
+Commit funcional publicado: **`2bcfcd14e960ede5ac0d164ae84b0a14258cdd1f`**, branch
+`main`, push e igualdade com `origin/main` confirmados antes da publicação.
+O commit contém somente três módulos frontend, três scripts de teste frontend e
+documentação/roadmap: **nenhum backend, schema Prisma ou migration** desta entrega.
+Os 47 arquivos/grupos WIP existentes foram registrados por SHA-256 e conferidos
+intactos após a publicação; nada foi incorporado ou descartado.
+
+Build executado somente em `/tmp/radial-publicacao/client`, um novo espelho isolado
+da fonte anteriormente publicada. Antes da atualização, o build desse espelho
+reproduziu byte a byte o HTML e todos os arquivos por ele referenciados em produção.
+Quatro bundles históricos extras, não referenciados, estavam no diretório ativo;
+não foram removidos. Depois foram sobrepostos somente `ArchivePage.tsx`,
+`ArchiveCanvas.tsx` e `archiveLayout.ts` do commit autorizado. Isso preserva as
+outras frentes frontend já publicadas, mesmo quando ainda são WIPs no checkout.
+O espelho reutilizável de publicação também foi atualizado para a próxima operação.
+
+Backup completo dos artefatos anteriores:
+`/tmp/radial-publicacao/rollback-client-dist/`. Manifests, builds e evidências:
+`/tmp/radial-publicacao/`. A publicação copiou assets antes de trocar o HTML por
+rename atômico, sem apagar bundles antigos. Para rollback, restaurar os arquivos
+desse backup e trocar o HTML por último; não alterar banco ou serviço.
+
+Artefatos principais publicados:
+
+- JavaScript: **`/assets/index-DvzluyZM.js`**.
+- CSS: **`/assets/index-CX9JPIDF.css`**, idêntico ao CSS anterior.
+- `index.html` referencia o novo JavaScript e o mesmo CSS.
+- 338 arquivos do build conferidos localmente por SHA-256; HTML e ambos os bundles
+  também baixados por HTTP e comparados byte a byte com o build isolado.
+
+Verificações pós-publicação:
+
+- Frontend disponível por HTTP; Chromium real carregou o login de produção,
+  encontrou os campos esperados e não registrou `pageerror` ou `requestfailed`.
+  Nenhuma autenticação ou escrita foi feita na campanha.
+- Health check: `status: ok`, `database: up`.
+- `/api/archive/boards` sem token permanece 401.
+- `rpg.service` ativo, PID **2341486** antes e depois; não houve restart.
+- Journal do serviço desde o início da operação sem entradas, portanto sem erros
+  relevantes observados nessa janela. Isso não substitui monitoramento prolongado.
+- 964 arquivos de backend compilado, Prisma/schema/migrations e client gerado
+  conferidos por hash, intactos. Não houve build backend, geração do Prisma,
+  aplicação de migration ou alteração de dados de teste em produção.
+- O teste dedicado do Chromium foi repetido sobre a fonte do espelho de publicação
+  com **API simulada**, passando expansão, vizinhos, restauração, dois núcleos,
+  gestos, Escape, retry/conflito, estruturas, conexões, quadros, externo e celular.
+  Evidências dessa rodada: `/tmp/arquivo-radial-browser-GA2bmD/`.
+  A preservação das demais funcionalidades é sustentada pela reprodução do build
+  anterior e pela sobreposição restrita, não por uma sessão completa da campanha.
+
+Pontos de atenção mantidos: **colisões residuais em densidade extrema; regressão
+observada nos tempos de interação; custo DOM de cards e conexões em quadros
+extensos**. As métricas e limites acima continuam válidos; a publicação não os
+resolve. O build mantém aviso de bundle grande. A observação em produção foi
+breve e somente de leitura; o aceite funcional pós-deploy depende do responsável.
+
+A publicação foi registrada em commit documental separado, sem misturar WIPs.
+**Aguardar validação manual. A 8.5.2.3 não foi iniciada.**
