@@ -1506,3 +1506,9 @@ o teste agora confere ausência do contorno. Os assets compartilhados permanecem
 Build/typecheck somente em `/tmp/sem-moldura-publicacao/client`, reproduzindo
 `index-ZdSEGbQt.js` e `index-BwtHA_mH.css` da versão anterior. Regressão no Chromium
 com API simulada; 47 WIPs preservados. Sem backend, Prisma ou migrations.
+
+Retirada publicada no frontend, com os bundles anteriores conferidos por HTTP/hash.
+Backup da versão com moldura em `/var/backups/obsyrium/20261124-sem-moldura/`.
+Health saudável, PID 2467899 mantido, backend/Prisma e 47 WIPs intactos; sem restart
+ou escrita de dados. Espelho de publicação atualizado. Commit funcional `364b42d`;
+registro de publicação enviado separadamente. O restante do Fichário foi preservado.
