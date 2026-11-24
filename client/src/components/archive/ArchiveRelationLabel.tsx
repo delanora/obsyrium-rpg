@@ -44,6 +44,8 @@ export function ArchiveRelationLabel({
   return (
     <g
       className="archive-relation-label"
+      data-origin-x={point.x}
+      data-origin-y={point.y}
       onPointerDown={(event) => {
         event.stopPropagation();
         onSelect();

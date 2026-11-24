@@ -183,6 +183,7 @@ const browser = await chromium.launch({
 });
 const context = await browser.newContext({
   viewport: { width: 2200, height: 1400 },
+  reducedMotion: "reduce",
   recordVideo: { dir: temp, size: { width: 1280, height: 814 } },
 });
 const page = await context.newPage(),
@@ -500,6 +501,14 @@ try {
   await page.goto("http://radial.test/");
   await page.getByRole("article", { name: names[0], exact: true }).waitFor();
   await settled();
+  if(process.env.ARCHIVE_MOTION_EVIDENCE){
+    const { exerciseArchiveMotion }=await import('./archive-motion-browser-scenarios.mjs');
+    await exerciseArchiveMotion({page,temp,names,uuid,toggle,calls,shot,world,requests,placements,links});
+    await page.emulateMedia({reducedMotion:'reduce'});
+    await page.reload();
+    await page.getByRole('article',{name:names[0],exact:true}).waitFor();
+    await settled();
+  }
   assert.equal(await page.locator(".archive-page").evaluate(el => getComputedStyle(el,"::after").content), "none", "Sem moldura externa no Fichário");
   await shot("radial-organizacao-original-global");
   const rootBox = await page

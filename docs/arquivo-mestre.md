@@ -1512,3 +1512,94 @@ Backup da versão com moldura em `/var/backups/obsyrium/20261124-sem-moldura/`.
 Health saudável, PID 2467899 mantido, backend/Prisma e 47 WIPs intactos; sem restart
 ou escrita de dados. Espelho de publicação atualizado. Commit funcional `364b42d`;
 registro de publicação enviado separadamente. O restante do Fichário foi preservado.
+
+## Fase 8.5.2.3 — Expansão orgânica animada (implementação, sem publicação)
+
+Base auditada: `5f61d60027b151f9555914d1fb9ee4ab77c4b49a`, `main` igual a
+`origin/main`, staging vazio e 47 arquivos WIP preservados por SHA-256. A retirada
+posterior da moldura externa prevalece sobre o pedido histórico de incluí-la.
+Linho, contraste, leitor e editor lateral permanecem como estavam. Aceites
+anteriores informados: radial 15/15, posições relativas 13/13 e consulta 12/12;
+fundo 12/13 parcial, sem presumir aceite definitivo da textura substituta.
+
+### Fronteiras e funcionamento
+
+Pipeline mantido: snapshot → `projectArchive` → `layoutArchive` → apresentação
+interpolada → override de gesto → câmera. `archiveMotion.ts` consome
+`archiveLayoutTransition`; não contém resolução de colisões. Os destinos finais
+são exatamente o mapa do layout existente. Nenhum frame altera o snapshot,
+versão, preferências relativas, recibos ou contratos HTTP/realtime.
+
+`useArchiveMotion` mantém um único RAF por canvas. React monta a união temporária
+de cards visíveis e saídas ainda válidas; frames modificam transforms, opacidade,
+curvas SVG e a transformação do rótulo completo, incluindo a área clicável.
+`archiveLinkGeometry` é a fórmula compartilhada entre render estático e animado.
+Referências DOM são coletadas no commit, sem medir o DOM ou executar projeção,
+resolvedor ou render React a cada frame. Escritas repetidas são evitadas por cache.
+
+Entradas partem do centro do ancestral efetivamente apresentado, com escala 0,3
+e opacidade zero. Saídas retornam ao ancestral sobrevivente e permanecem inertes,
+fora da navegação por teclado, até serem removidas. Entradas ficam inertes durante
+a apresentação inicial. Vizinhos usam profundidade/distância e causa do layout;
+na restauração, a causa anterior continua disponível. A câmera e a textura não
+participam dessa transição.
+
+Constantes centralizadas: entrada 420 ms, saída 320 ms, vizinhos 400 ms, ondas de
+35 ms por profundidade, defasagem máxima 180 ms; os planos atuais terminam em até
+600 ms, abaixo do teto de referência de 650 ms. Não há efeito elástico. Uma nova
+intenção substitui o plano a partir do último frame pintado, inclusive escala e
+opacidade, sem filas obrigatórias. Pan/zoom seguem independentes. Arraste/resize
+pausam a apresentação no frame atual; o gesto tem prioridade, e a retomada parte
+dessa apresentação. Só o pointerup explícito continua usando a operação existente.
+
+Atualização de snapshot cancela a apresentação antiga e consolida o novo destino.
+Troca de quadro/desmontagem cancela o RAF; o guard de descarte impede que o cleanup
+de um gesto volte a agendá-lo. Movimento reduzido aplica o destino diretamente.
+O leitor segue usando o card canônico, não uma cópia do estado animado.
+
+### Degradação e limites
+
+Mais de 160 elementos em transição **ou** mais de 200 representações apresentadas
+em qualquer extremo aplica o destino diretamente, sem RAF de animação. Essa regra
+limita o custo medido de cards/conexões extensos, preserva todos os cards e não
+altera os limites/diagnósticos do resolvedor. Quadros de 500 continuam funcionais,
+mas não recebem interpolação nesta entrega. Persistem os riscos de colisões
+residuais em densidade extrema e custo de montar/renderizar muitos cards e links;
+fallback não transforma colisão residual em sucesso de layout.
+
+### Validação reproduzível
+
+Todos os cenários são sintéticos, sem conexão HTTP à campanha, fixtures reais ou
+escrita no banco. Builds exclusivamente em `/tmp/ondas-validacao`; o `client/dist`
+ativo não é destino de build desta fase.
+
+- `tsx client/scripts/check-archive-motion.ts`: 723 verificações, 110 ciclos
+  completos, 120 inversões rápidas, geometria final exata, coordenadas negativas,
+  preferência relativa, ausência de drift, reduced-motion e degradação.
+- Regressões puras: layout 718, projeção 25 e câmera 16 verificações.
+- `ARCHIVE_MOTION_EVIDENCE=1 node client/scripts/check-archive-radial-browser.mjs`:
+  Chromium real, relógio controlado e trecho com tempo real; 100 ciclos completos,
+  entrada/saída, reversão, curvas e rótulos, núcleos simultâneos, zoom, gesto
+  cancelado, atualização externa/remoção em memória, troca de quadro e reload.
+  Também executa as regressões de personalização, leitor, editor, resize, retry,
+  conflito e mobile. As verificações antigas de destino usam movimento reduzido;
+  isso é separado das provas da animação.
+- `node client/scripts/check-archive-browser.mjs` e
+  `node client/scripts/check-archive-background-browser.mjs`: regressões gerais,
+  navegação/categorias/gestos e textura/câmera; menus radiais mantêm sua prova de
+  animação antes de ativar reduced-motion para as asserções de destino.
+- `node client/scripts/check-archive-motion-performance.mjs`: Chromium sintético,
+  50/100/200/500 cards, distribuição espaçada/densa, três expansões e três
+  recolhimentos por configuração. `ARCHIVE_BASELINE_ROOT` aponta para uma cópia
+  limpa do SHA inicial para comparação. Mede layout, React Profiler, número de
+  renders, pintura DOM/SVG, intervalos de RAF e long tasks. Um layout por toggle;
+  nenhum render React por frame. Números e evidências no relatório da entrega.
+
+Capturas de recolhido, início, intermediário, recolhimento e final, WebM verdadeiro
+e inspeção por quadros da gravação são entregues separadamente para aceite. Não
+substituem a avaliação manual de fluidez em hardware/browser do responsável.
+
+**Status: validação técnica; publicação não autorizada nesta solicitação.** Sem
+alterações de backend/Prisma/migrations, geração de client, restart ou build na
+produção. Aguardar autorização própria para publicar e aceite visual/funcional.
+Não iniciar 8.5.2.4.

@@ -666,6 +666,8 @@ try {
     });
   const externalLink = links[2].id;
   const savedStructure = JSON.stringify({ placements, links });
+  // As regressões de destino são síncronas; animações têm harness próprio.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 2100, height: 1320 });
   await page.reload();
   await page.waitForFunction(

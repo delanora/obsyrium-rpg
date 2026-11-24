@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type PointerEvent,
+  type RefObject,
 } from "react";
 import { Icon, type IconName } from "../Icon";
 import {
@@ -25,12 +26,10 @@ import {
 import type { ArchiveNodeProjection } from "./archiveProjection";
 import { ArchiveBackground } from "./ArchiveBackground";
 import { ArchiveRelationLabel } from "./ArchiveRelationLabel";
-import {
-  cameraPoint,
-  linkEndpoints,
-  zoomArchive,
-  type ArchiveCamera,
-} from "./archiveCamera";
+import { cameraPoint, zoomArchive, type ArchiveCamera } from "./archiveCamera";
+import { useArchiveMotion, type ArchivePresentation } from "./useArchiveMotion";
+import type { ArchiveLayout } from "./archiveLayout";
+import { archiveLinkGeometry } from "./archiveLinkGeometry";
 export const CATEGORY_ICONS: Record<NarrativeCategory, IconName> = {
   region: "earth",
   locality: "home",
@@ -55,6 +54,9 @@ export type Geometry = Pick<
   "x" | "y" | "width" | "height" | "zIndex"
 >;
 interface Props {
+  layout?: ArchiveLayout;
+  snapshot?: NarrativeGraphDto;
+  presentation?: RefObject<ArchivePresentation | null>;
   nodes?: Map<string, ArchiveNodeProjection>;
   onToggle?: (id: string) => void;
   onConsult?: (id: string, pointer?: boolean) => void;
@@ -172,26 +174,16 @@ const GraphContent = memo(function GraphContent({
           const a = byCard.get(link.sourceId),
             b = byCard.get(link.targetId);
           if (!a || !b) return null;
-          const [from, to] = linkEndpoints(a, b);
           const same = pairs.get(
             [link.sourceId, link.targetId].sort().join(":"),
           )!;
-          const ordinal = same.indexOf(link.id);
-          const offset = (ordinal - (same.length - 1) / 2) * 64;
-          const dx = to.x - from.x,
-            dy = to.y - from.y,
-            len = Math.max(1, Math.hypot(dx, dy));
-          const bend = Math.min(100, len * 0.16) + offset;
-          const mid = {
-            x: (from.x + to.x) / 2 - (dy / len) * bend,
-            y: (from.y + to.y) / 2 + (dx / len) * bend,
-          };
-          const path = `M${from.x},${from.y} Q${mid.x},${mid.y} ${to.x},${to.y}`;
+          const { path, labelPoint } = archiveLinkGeometry(
+            a,
+            b,
+            same.indexOf(link.id),
+            same.length,
+          );
           const label = link.label || NARRATIVE_RELATION_LABELS[link.relation];
-          const labelPoint = {
-            x: (from.x + 2 * mid.x + to.x) / 4,
-            y: (from.y + 2 * mid.y + to.y) / 4,
-          };
           return (
             <g
               key={link.id}
@@ -370,6 +362,9 @@ const GraphContent = memo(function GraphContent({
   );
 });
 export function ArchiveCanvas({
+  layout,
+  snapshot,
+  presentation,
   nodes,
   onToggle,
   onConsult,
@@ -387,6 +382,16 @@ export function ArchiveCanvas({
   onInteraction,
 }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
+  const motion = useArchiveMotion(
+    viewport,
+    graph,
+    layout,
+    snapshot,
+    visual,
+    presentation,
+  );
+  const motionRef = useRef(motion);
+  motionRef.current = motion;
   const gesture = useRef<Gesture | null>(null);
   const suppressConsultUntil = useRef(0);
   const lastTap = useRef<{
@@ -439,6 +444,7 @@ export function ArchiveCanvas({
     state.current.onInteraction(false);
     if (g.mode !== "pan") state.current.onVisual({});
     setTemporary(null);
+    motionRef.current.resume();
     if (viewport.current?.hasPointerCapture(g.pointer))
       viewport.current.releasePointerCapture(g.pointer);
   };
@@ -490,6 +496,11 @@ export function ArchiveCanvas({
       e.preventDefault();
       if (p) onSelect({ kind: "card", id: p.id });
       else onSelect(null);
+      if (p) {
+        const shown = motionRef.current.geometry(p.id);
+        if (shown) p = { ...p, ...shown };
+        motionRef.current.pause();
+      }
       state.current.onInteraction(true);
       gesture.current = {
         pointer: e.pointerId,
@@ -668,6 +679,7 @@ export function ArchiveCanvas({
               };
           }
         }
+        if (g.mode !== "pan") motionRef.current.resume();
       }}
     >
       <ArchiveBackground camera={camera} />
@@ -681,7 +693,7 @@ export function ArchiveCanvas({
           nodes={nodes}
           onToggle={busy ? undefined : onToggle}
           onConsult={busy ? undefined : consultCard}
-          graph={graph}
+          graph={motion.graph}
           visual={visual}
           selected={selected}
           onStart={start}

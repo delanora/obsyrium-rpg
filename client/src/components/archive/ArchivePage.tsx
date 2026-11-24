@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { ArchivePresentation } from "./useArchiveMotion";
 import { createPortal } from "react-dom";
 import { newId } from "../../utils";
 import { ApiError } from "../../api";
@@ -202,6 +203,7 @@ function ArchiveDialog({
 }
 export function ArchivePage() {
   const reader = useRef<ArchiveReaderHandle>(null);
+  const presentation = useRef<ArchivePresentation | null>(null);
   const consult = useCallback((id: string) => reader.current?.consult(id), []);
   const [boards, setBoards] = useState<NarrativeBoardDto[]>([]),
     [boardId, setBoardId] = useState(""),
@@ -404,7 +406,7 @@ export function ArchivePage() {
     if (c.busy || c.pending || interacting.current) return;
     const opening = !c.expanded.has(id);
     const base = c.graph?.placements.find((p) => p.id === id),
-      shown = c.layout?.geometry.get(id);
+      shown = presentation.current?.geometry(id) ?? c.layout?.geometry.get(id);
     setLayoutAnchors((previous) => {
       const next = { ...(previous[c.boardId] ?? {}) };
       if (opening && base && shown)
@@ -512,7 +514,9 @@ export function ArchivePage() {
           if ("parentPlacementId" in input && input.parentPlacementId) {
             const id = input.parentPlacementId,
               base = c.graph?.placements.find((p) => p.id === id),
-              shown = c.layout?.geometry.get(id);
+              shown =
+                presentation.current?.geometry(id) ??
+                c.layout?.geometry.get(id);
             if (base && shown && !c.expanded.has(id))
               setLayoutAnchors((previous) => ({
                 ...previous,
@@ -548,7 +552,11 @@ export function ArchivePage() {
     if (r && layout)
       onCamera(
         fitArchive(
-          layout.graph.placements.map((p) => ({ ...p, ...visual[p.id] })),
+          layout.graph.placements.map((p) => ({
+            ...p,
+            ...presentation.current?.geometry(p.id),
+            ...visual[p.id],
+          })),
           r,
         ),
       );
@@ -1050,6 +1058,9 @@ export function ArchivePage() {
           <ArchiveCanvas
             key={graph.board.id}
             graph={previewGraph!}
+            layout={layout!}
+            snapshot={graph}
+            presentation={presentation}
             nodes={projection!.nodes}
             onToggle={toggleBranches}
             camera={camera}
@@ -1065,7 +1076,9 @@ export function ArchivePage() {
               if (!persisted) return;
               gestureCommit.current = { id, visual: g };
               const parent = persisted.parentPlacementId
-                ? layout?.geometry.get(persisted.parentPlacementId)
+                ? (presentation.current?.geometry(
+                    persisted.parentPlacementId,
+                  ) ?? layout?.geometry.get(persisted.parentPlacementId))
                 : null;
               const relative =
                 parent && (mode === "move" || isCustomBranch(persisted))
