@@ -1484,3 +1484,14 @@ Os harnesses esbuild agora reconhecem também assets públicos `/creation/*`.
 Capturas: `/tmp/arquivo-radial-browser-qLH0FH/`. Sem novos assets, dependências,
 backend, Prisma ou migrations; 47 WIPs preservados. Publicação autorizada pelo
 responsável ao finalizar, com backup dos artefatos ativos e preservação das frentes.
+
+Publicação autorizada da moldura concluída: SHA funcional
+`3f5af925d6c58a26697c33e533123d8d348895de`, `main`, push e remoto iguais.
+O espelho de publicação reproduziu a versão anterior antes de sobrepor somente
+`ArchivePage.tsx` e `archive.css`. Backup persistente e rollback frontend em
+`/var/backups/obsyrium/20261124-moldura-fichario/`.
+Publicados `index-BukAQ6YI.js` e `index-BheNwtZ7.css`; HTML, bundles e asset da
+moldura conferidos por HTTP/hash. Health saudável, rota privada sem token 401,
+PID permanece 2467899, sem restart. Backend, Prisma e 47 WIPs intactos por hash;
+nenhuma escrita de dados ou migration. Logs e evidências preservados no backup,
+espelho reutilizável atualizado. Aguardar avaliação visual; 8.5.2.3 não iniciada.
