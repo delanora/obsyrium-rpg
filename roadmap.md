@@ -49,7 +49,7 @@
 | **6 — Motor de combate e regras** | 🟡 muito avançada | Núcleo jogável integrado; ampliar regras especiais, conteúdo e geometria. |
 | **7 — Reações e combate avançado** | 🟡 fundação | Opportunity Attacks existentes; faltam reações/fluxos especiais. |
 | **8 — Compêndio e ferramentas do Mestre** | 🟡 | Gestão de criaturas, itens, localidades e conteúdo operacional; ampliar. |
-| **8.5 — Arquivo do Mestre** | 🟡 fundação 8.5.1 implementada; aceite manual pendente | Quadros, cards narrativos reutilizáveis, geometria livre e relações privadas/versionadas. Publicação com migration/reinício depende de autorização. Ver `docs/arquivo-mestre.md`; expansões e ações operacionais continuam futuras. |
+| **8.5 — Arquivo do Mestre** | 🟡 fundação 8.5.1 implementada; aceite manual pendente | Quadros, cards narrativos reutilizáveis, geometria livre e relações privadas/versionadas. Publicada com migration aditiva; aceite manual pendente. Ver `docs/arquivo-mestre.md`; expansões e ações operacionais continuam futuras. |
 | **9 — Compatibilidade / conteúdo complementar** | ⬜ | Importação, exportação, compatibilidade e ferramentas administrativas. |
 | **10 — Segurança, produção e escala** | 🟡 fundação | Backups, autorização, recuperação, observabilidade e deploy. |
 | **11 — UX, acessibilidade e acabamento** | 🟡 | Responsividade, feedback, navegação, gestos e polimento. |

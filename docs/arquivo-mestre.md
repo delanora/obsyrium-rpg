@@ -1,6 +1,6 @@
 # Arquivo do Mestre — Fase 8.5.1
 
-Fundação narrativa privada, acessível pelo card **Fichário do Mestre** no Salão e pela aba Fichário. Implementação técnica em validação; aceite manual e publicação com migration/reinício dependem de autorização. Nenhuma regra mecânica foi modificada.
+Fundação narrativa privada, acessível pelo card **Fichário do Mestre** no Salão e pela aba Fichário. Publicada em 23/11/2026 após autorização; validação técnica concluída e aceite manual pendente. Nenhuma regra mecânica foi modificada.
 
 ## Auditoria e decisões
 
@@ -85,9 +85,9 @@ Biblioteca não possui busca avançada nem paginação nesta etapa. Geometria de
 - Confirmar privacidade com sessão PLAYER e legibilidade em desktop/celular.
 - Dar aceite visual/funcional antes de registrar a fase como totalmente validada.
 
-## Publicação pendente
+## Publicação em 23/11/2026
 
-Esta etapa contém backend e migration. O site ativo não foi alterado: obter autorização para aplicar **somente** `20261124120000_narrative_archive`, gerar o Prisma, publicar os builds e reiniciar o serviço. Não executar migrations não rastreadas de terceiros por consequência desta entrega. Revisar antes as migrations aplicadas/pendentes e preservar o runtime das outras frentes locais. Não usar `db push` nem seed.
+A publicação foi autorizada e executada. Somente `20261124120000_narrative_archive` estava pendente e foi aplicada; as migrations locais de geografia/log de dados já estavam aplicadas. O Prisma foi gerado após comparar os modelos anteriores e confirmar que a estrutura existente foi preservada. O backend recebeu apenas o módulo novo, catálogo narrativo, montagem da rota e constante de evento; o restante do runtime foi preservado. O frontend foi compilado em diretório separado, mantendo as frentes visuais já ativas, e o serviço `rpg.service` foi reiniciado. Não houve `db push`, seed nem criação de fixtures na campanha. Consultas de produção confirmaram as cinco tabelas, registro da migration concluído, rotas sem autenticação respondendo 401, bundle servido idêntico ao publicado e health check saudável. Aceite manual continua pendente.
 
 ## Resultados técnicos desta entrega
 
