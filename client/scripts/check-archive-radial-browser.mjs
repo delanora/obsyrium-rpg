@@ -18,7 +18,7 @@ await build({
   bundle: true,
   jsx: "automatic",
   outfile: path.join(temp, "app.js"),
-  external: ["/archive/*"],
+  external: ["/archive/*", "/creation/*"],
   plugins: [
     {
       name: "medicao-isolada",
@@ -500,6 +500,13 @@ try {
   await page.goto("http://radial.test/");
   await page.getByRole("article", { name: names[0], exact: true }).waitFor();
   await settled();
+  const frame = await page.locator(".archive-page").evaluate(el => {
+    const s=getComputedStyle(el,"::after"), nav=document.querySelector(".master-navigation");
+    return { top:el.getBoundingClientRect().top+parseFloat(s.top), navBottom:nav.getBoundingClientRect().bottom,
+      pointerEvents:s.pointerEvents, source:s.borderImageSource };
+  });
+  assert.ok(Math.abs(frame.top-frame.navBottom-4)<1,"Moldura começa abaixo das abas");
+  assert.equal(frame.pointerEvents,"none");assert.ok(frame.source.includes("moldura-painel.webp"));
   await shot("radial-organizacao-original-global");
   const rootBox = await page
     .getByRole("article", { name: names[0], exact: true })

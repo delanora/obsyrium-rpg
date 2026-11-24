@@ -1466,3 +1466,21 @@ Prisma e os 47 WIPs intactos por hash. Rotas privadas continuam exigindo autenti
 Logs e manifests preservados no backup; espelho reutilizável atualizado. Publicação
 registrada em commit documental separado e enviada ao remoto. Aguardar aceite
 visual/funcional; 8.5.2.3 não iniciada.
+
+### Moldura externa fina do Fichário — 24/11/2026
+
+HEAD inicial `b992ba352932ddb06b163bd8b815bbf158d0c821`, `main`, igual ao remoto.
+A pedido do responsável, uma moldura fina de latão reutiliza
+`/creation/atlas-obsidiana/moldura-painel.webp` no contorno do Fichário, abaixo das
+abas. ResizeObserver acompanha a altura real da navegação e o tamanho da área,
+sem estado React/cálculo espacial por frame. A borda não captura ponteiro; um recorte
+visual mantém o quadro dentro do contorno sem alterar coordenadas ou câmera.
+Consulta e editor permanecem sobrepostos e passam a começar dentro da moldura.
+
+Typecheck/build frontend em `/tmp/moldura-validacao` e build de publicação no
+espelho isolado passaram. Chromium real com API simulada passou a regressão integrada,
+verificou início abaixo das abas e borda sem captura, incluindo editor e mobile.
+Os harnesses esbuild agora reconhecem também assets públicos `/creation/*`.
+Capturas: `/tmp/arquivo-radial-browser-qLH0FH/`. Sem novos assets, dependências,
+backend, Prisma ou migrations; 47 WIPs preservados. Publicação autorizada pelo
+responsável ao finalizar, com backup dos artefatos ativos e preservação das frentes.

@@ -19,7 +19,7 @@ function Test(){const[camera,setCamera]=useState({x:0,y:0,zoom:1});const[visual,
   },
   bundle: true,
   jsx: "automatic",
-  external: ["/archive/*"],
+  external: ["/archive/*", "/creation/*"],
   outfile: dir + "/app.js",
 });
 const browser = await chromium.launch({

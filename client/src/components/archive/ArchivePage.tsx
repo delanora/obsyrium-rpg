@@ -277,6 +277,34 @@ export function ArchivePage() {
     lock = useRef(false),
     generation = useRef(0),
     cameras = useRef(new Map<string, ArchiveCamera>());
+  // A moldura começa após as abas, inclusive quando a navegação muda de altura.
+  useLayoutEffect(() => {
+    const page = root.current;
+    if (!page) return;
+    const nav = page
+      .closest(".app-shell")
+      ?.querySelector<HTMLElement>(".master-navigation");
+    const update = () => {
+      const top = nav
+        ? Math.max(
+            0,
+            nav.getBoundingClientRect().bottom -
+              page.getBoundingClientRect().top,
+          )
+        : 0;
+      page.style.setProperty("--archive-frame-top", `${top + 4}px`);
+    };
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    observer?.observe(page);
+    if (nav) observer?.observe(nav);
+    window.addEventListener("resize", update);
+    update();
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
   const current = useRef({
     boardId,
     graph,

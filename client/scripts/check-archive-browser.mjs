@@ -45,7 +45,7 @@ await build({
     },
   ],
   bundle: true,
-  external: ["/archive/*"],
+  external: ["/archive/*", "/creation/*"],
   jsx: "automatic",
   outfile: path.join(temp, "app.js"),
 });
