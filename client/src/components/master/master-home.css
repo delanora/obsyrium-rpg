@@ -26,3 +26,10 @@
   :root[data-theme='dark'] .master-home .home-card { transition: none; }
   :root[data-theme='dark'] .master-home .home-card:is(:hover, :focus-visible) { transform: none; }
 }
+
+/* O início usa os próprios atalhos, sem reservar a faixa de abas das outras telas. */
+.theme-master:has(> .app-main-home) > .master-navigation { display: none; }
+.theme-master > .app-main-home {
+  justify-content: flex-start;
+  padding-top: var(--space-section);
+}
