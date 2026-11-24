@@ -36,7 +36,7 @@ const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 await page.route("http://fundo.test/**", async (r) => {
   const p = new URL(r.request().url()).pathname;
-  if (p.includes("textura-marmore")) imageRequests++;
+  if (p.includes("textura-linho")) imageRequests++;
   if (p.startsWith("/api")) throw Error("O teste não pode usar APIs");
   let f =
     p === "/app.js"
@@ -63,8 +63,8 @@ const assertCamera = async (c) => {
     return { a: m.a, d: m.d, e: m.e, f: m.f };
   });
   assert.ok(Math.abs(m.a - c.zoom) < 1e-6 && Math.abs(m.d - c.zoom) < 1e-6);
-  const dx = (m.e - c.x) / (1672 * c.zoom),
-    dy = (m.f - c.y) / (941 * c.zoom);
+  const dx = (m.e - c.x) / (1254 * c.zoom),
+    dy = (m.f - c.y) / (1254 * c.zoom);
   assert.ok(
     Math.abs(dx - Math.round(dx)) < 1e-5 &&
       Math.abs(dy - Math.round(dy)) < 1e-5,
@@ -153,8 +153,8 @@ try {
   const a = await page.screenshot();
   await setCamera({
     ...base,
-    x: base.x + 1672 * 0.5 * 400,
-    y: base.y - 941 * 0.5 * 300,
+    x: base.x + 1254 * 0.5 * 400,
+    y: base.y - 1254 * 0.5 * 300,
   });
   const b = await page.screenshot();
   fs.writeFileSync(path.join(dir, "periodico-antes.png"), a);
@@ -189,8 +189,8 @@ try {
         const xSeams = [],
           ySeams = [];
         for (let n = -20; n < 25; n++) {
-          const x = Math.round(c.x + n * 1672 * c.zoom),
-            y = Math.round(c.y + n * 941 * c.zoom);
+          const x = Math.round(c.x + n * 1254 * c.zoom),
+            y = Math.round(c.y + n * 1254 * c.zoom);
           if (x > 1 && x < im.width - 2) xSeams.push(x);
           if (y > 1 && y < im.height - 2) ySeams.push(y);
         }

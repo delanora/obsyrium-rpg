@@ -1360,3 +1360,23 @@ e os artefatos publicados. Registro em commit documental separado, com push e SH
 remoto conferidos no relatório final. Permanecem os limites de DOM/layout em quadros
 grandes e o aviso de bundle grande. **Aguardar aceite visual e funcional próprio.**
 A Fase **8.5.2.3 — Propagação em Ondas e Animações não foi iniciada**.
+
+### Troca de textura por linho azul-marinho — 24/11/2026
+
+A pedido do responsável, o fundo contínuo passa a usar o PNG anexado
+“Textura de linho azul-marinho escuro.png”, preservado sem recompressão em
+`client/public/archive/textura-linho-azul-marinho.png` (1254×1254). SHA-256 do anexo
+e da cópia: `5f1e1b635271bfd8f2cb944d2de81b1360ad62155403664c99a2248b67112e2d`.
+`ArchiveBackground` e o teste de periodicidade foram ajustados às dimensões reais;
+mesmas regras de repetição, pan, zoom e escurecimento. Não houve edição dos pixels,
+nova reflexão dos tiles ou mudança de câmera. O mármore anterior permanece como
+asset disponível para recuperação.
+
+HEAD inicial `71ae3a41239f1a6d617bd00e8115b92be3543cf8`, `main`, igual ao remoto.
+47 WIPs preservados por hash. Build/typecheck frontend passaram somente em
+`/tmp/linho-validacao`; Chromium real com fixtures locais passou pan, zoom,
+arraste independente, periodicidade exata e cinco escalas de repetição. A captura
+em zoom 0,5 foi inspecionada sem emendas perceptíveis. Evidências:
+`/tmp/arquivo-fundo-vL3Wv7/`, `/tmp/linho-browser.log`, `/tmp/linho-build.log`.
+Sem mudanças de backend, Prisma, migrations ou dados. Troca implementada em commit
+isolado com push; **não publicada**, aguardando autorização específica de publicação.

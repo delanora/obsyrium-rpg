@@ -8,26 +8,26 @@ export const ArchiveBackground = memo(function ArchiveBackground({
 }: {
   camera: ArchiveCamera;
 }) {
-  const patternId = `archive-stone-${useId().replace(/:/g, "")}`;
+  const patternId = `archive-texture-${useId().replace(/:/g, "")}`;
   // Translação periódica equivalente, mantendo a matriz pequena em pans extensos.
   const phase = (value: number, period: number) =>
     ((value % period) + period) % period;
-  const x = phase(camera.x, 1672 * camera.zoom);
-  const y = phase(camera.y, 941 * camera.zoom);
+  const x = phase(camera.x, 1254 * camera.zoom);
+  const y = phase(camera.y, 1254 * camera.zoom);
   return (
     <svg className="archive-background" aria-hidden="true" focusable="false">
       <defs>
         <pattern
           id={patternId}
           patternUnits="userSpaceOnUse"
-          width={1672}
-          height={941}
+          width={1254}
+          height={1254}
           patternTransform={`translate(${x} ${y}) scale(${camera.zoom})`}
         >
           <image
-            href="/archive/textura-marmore-azul-ardosia.png"
-            width={1672}
-            height={941}
+            href="/archive/textura-linho-azul-marinho.png"
+            width={1254}
+            height={1254}
             preserveAspectRatio="none"
           />
         </pattern>
