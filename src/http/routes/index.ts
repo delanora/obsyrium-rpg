@@ -1,3 +1,4 @@
+import { archiveRouter } from '../../modules/archive/archive.routes.js';
 import { encountersRouter } from '../../modules/encounters/encounters.routes.js';
 import { mechanicalRouter } from '../../modules/mechanical/mechanical.routes.js';
 import { Router } from 'express';
@@ -58,3 +59,5 @@ apiRouter.use('/effects', effectsRouter);
 apiRouter.use('/spells', spellsRouter);
 
 apiRouter.use('/encounters', encountersRouter);
+
+apiRouter.use('/archive', archiveRouter);

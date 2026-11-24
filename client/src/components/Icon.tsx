@@ -25,6 +25,7 @@ export type IconName =
   | 'crown'
   | 'sun'
   | 'moon'
+  | 'earth'
   | 'bed'
   | 'volume'
   | 'mute'
@@ -256,6 +257,18 @@ const ICONS: Record<Exclude<IconName, 'master'>, ReactNode> = {
     <>
       <circle cx="10.5" cy="10.5" r="6.4" />
       <path d="M15.3 15.3 21 21" />
+    </>
+  ),
+  /*
+   * Planeta Terra: globo de arame — disco, meridiano central e equador. As
+   * massas de terra em traço sumiam em 16 px (viravam riscos soltos); a malha
+   * de meridiano + equador é o que continua legível nesse tamanho.
+   */
+  earth: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <ellipse cx="12" cy="12" rx="3.9" ry="8.5" />
+      <path d="M3.5 12h17" />
     </>
   ),
   home: (

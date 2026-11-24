@@ -1877,3 +1877,82 @@ model CombatTestRequest {
   @@index([combatId, status])
   @@map("combat_test_requests")
 }
+
+/// Arquivo privado, compartilhado apenas entre os Mestres da mesa única.
+model NarrativeBoard {
+  id          String @id @default(uuid())
+  name        String
+  description String @default("")
+  version     Int @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  placements  NarrativePlacement[]
+  @@map("narrative_boards")
+}
+
+/// Conteúdo independente de sua presença nos quadros.
+model NarrativeCard {
+  id          String @id @default(uuid())
+  title       String
+  category    String
+  summary     String @default("")
+  content     String @default("")
+  version     Int @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  placements  NarrativePlacement[]
+  outgoing    NarrativeLink[] @relation("NarrativeSource")
+  incoming    NarrativeLink[] @relation("NarrativeTarget")
+  @@map("narrative_cards")
+}
+
+model NarrativePlacement {
+  id      String @id @default(uuid())
+  boardId String
+  cardId  String
+  x       Float
+  y       Float
+  width   Float @default(280)
+  height  Float @default(200)
+  zIndex  Int @default(0)
+  board   NarrativeBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  card    NarrativeCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  @@unique([boardId, cardId])
+  @@index([cardId])
+  @@map("narrative_placements")
+}
+
+/// Relação sem coordenadas, visível em qualquer quadro com ambos os cards.
+model NarrativeLink {
+  id          String @id @default(uuid())
+  sourceId    String
+  targetId    String
+  relation    String
+  label       String @default("")
+  directed    Boolean @default(true)
+  description String @default("")
+  signature   String @unique
+  version     Int @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  source      NarrativeCard @relation("NarrativeSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target      NarrativeCard @relation("NarrativeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  @@index([sourceId])
+  @@index([targetId])
+  @@map("narrative_links")
+}
+
+/// Recibos sobrevivem à exclusão da entidade, permitindo replay seguro.
+model NarrativeOperation {
+  id          String @id @default(uuid())
+  actorId     String
+  operationId String
+  fingerprint String
+  result      Json
+  createdAt   DateTime @default(now())
+  @@unique([actorId, operationId])
+  @@map("narrative_operations")
+}

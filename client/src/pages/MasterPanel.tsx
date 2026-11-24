@@ -1,3 +1,4 @@
+import { ArchivePage } from '../components/archive/ArchivePage';
 import { CombatDuelsPanel } from '../combat/components/CombatDuelsPanel';
 import { HostilityDecisionPanel } from '../combat/components/HostilityDecisionPanel';
 import { PreparedEncountersTab } from '../combat/PreparedEncountersTab';
@@ -901,6 +902,8 @@ export function MasterPanel({ user }: { user: SessionUser }) {
         <Icon name="music" size={16} /> Soundpad
       </button>
 
+      <button type="button" className={tab === 'archive' ? 'tab active' : 'tab'} onClick={() => setTab('archive')}><Icon name="book" size={16} /> Fichário</button>
+
       <button type="button" className={tab === 'combat' ? 'tab active' : 'tab'}
         aria-current={tab === 'combat' ? 'page' : undefined} onClick={() => setTab('combat')}>
         <Icon name="sword" size={16} /> Combate
@@ -1033,6 +1036,8 @@ export function MasterPanel({ user }: { user: SessionUser }) {
                   />
                 }
               />
+            ) : tab === 'archive' ? (
+              <ArchivePage />
             ) : tab === 'sheets' ? (
               <SheetsTab
                 characters={characters}

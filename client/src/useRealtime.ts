@@ -1,3 +1,4 @@
+import { notifyArchiveChanged } from './archiveApi';
 import { EFFECTS_PENDING_EVENT } from './events';
 import { notifyResolutionRequestsChanged } from './combat/resolutionApi';
 import { COMBAT_AREA_VISUAL_EVENT } from './events';
@@ -135,9 +136,10 @@ export function useRealtime(handlers: RealtimeHandlers) {
   useEffect(() => {
     const socket = createSocket();
 
-    socket.on('connect', () => setConnection('online'));
+    socket.on('connect', () => { setConnection('online'); notifyArchiveChanged(); });
     socket.on('disconnect', () => setConnection('offline'));
     socket.on('connect_error', () => setConnection('offline'));
+    socket.on('archive:updated', () => notifyArchiveChanged());
     socket.on('presence:update', (payload) => {
       setOnline(payload.online);
       handlersRef.current.onPresence?.(payload);

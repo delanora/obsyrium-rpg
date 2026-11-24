@@ -50,6 +50,7 @@ import type {
 
 /** Mapa de eventos espelhando o backend (src/types/socket.ts). */
 export interface ServerToClientEvents {
+  'archive:updated': (payload: { at: string }) => void;
   'connection:ready': (payload: ConnectionReadyPayload) => void;
   'app:error': (payload: { message: string }) => void;
   'presence:update': (payload: PresencePayload) => void;

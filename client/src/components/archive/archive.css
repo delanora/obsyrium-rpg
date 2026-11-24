@@ -1,0 +1,429 @@
+.archive-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.archive-toolbar,
+.archive-tools,
+.archive-selection {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.archive-toolbar {
+  padding: 0.75rem;
+  border: 1px solid #96754280;
+  background: #15181e;
+  border-radius: 4px;
+}
+.archive-toolbar h2 {
+  font-size: 1.15rem;
+}
+.archive-toolbar small,
+.archive-help {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+.archive-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.archive-toolbar select {
+  max-width: 16rem;
+}
+.archive-save {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--gold-bright);
+}
+.archive-tools {
+  padding: 0 0.3rem;
+}
+.archive-help {
+  margin-left: auto;
+}
+.archive-viewport {
+  height: clamp(450px, 69vh, 1100px);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #ab874c;
+  border-radius: 5px;
+  touch-action: none;
+  background: radial-gradient(ellipse at center, #29292b, #101216 80%);
+  user-select: none;
+  cursor: grab;
+  isolation: isolate;
+}
+.archive-viewport:active {
+  cursor: grabbing;
+}
+.archive-viewport:focus-visible {
+  outline: 2px solid var(--gold);
+}
+.archive-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.archive-lines {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+.archive-link {
+  fill: none;
+  stroke: #b89a67;
+  stroke-width: 2;
+}
+.archive-lines marker path {
+  fill: #c9a767;
+}
+.archive-link-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 20;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.archive-lines text {
+  fill: #e5cfab;
+  font-size: 13px;
+  paint-order: stroke;
+  stroke: #14161b;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  text-anchor: middle;
+  pointer-events: all;
+  cursor: pointer;
+}
+.archive-lines .is-selected .archive-link {
+  stroke: #ffe0a0;
+  stroke-width: 3;
+}
+.archive-link.is-temporary {
+  stroke-dasharray: 6 5;
+}
+.archive-card {
+  --category-tone: #b89a67;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--category-tone);
+  border-radius: 6px 0 6px 0;
+  background: linear-gradient(135deg, #23262b, #15181ef5);
+  color: var(--ink);
+  box-shadow:
+    0 5px 12px #0006,
+    inset 3px 0 color-mix(in srgb, var(--category-tone) 35%, transparent);
+}
+.archive-card[data-category="npc"],
+.archive-card[data-category="faction"] {
+  --category-tone: #ac99bc;
+}
+.archive-card[data-category="region"],
+.archive-card[data-category="locality"] {
+  --category-tone: #94ac87;
+}
+.archive-card[data-category="dungeon"],
+.archive-card[data-category="room"],
+.archive-card[data-category="trap"] {
+  --category-tone: #bd927d;
+}
+.archive-card[data-category="creature"],
+.archive-card[data-category="encounter"] {
+  --category-tone: #b47e7a;
+}
+.archive-card[data-category="scene"],
+.archive-card[data-category="image"] {
+  --category-tone: #8ca6bf;
+}
+.archive-card[data-category="sound"],
+.archive-card[data-category="event"] {
+  --category-tone: #bba67a;
+}
+.archive-card[data-category="clue"] {
+  --category-tone: #7eaba7;
+}
+.archive-card[data-category="item"] {
+  --category-tone: #c1a464;
+}
+.archive-card.is-selected {
+  outline: 2px solid #d7b372;
+  outline-offset: 3px;
+  box-shadow: 0 0 18px #c49d5d33;
+}
+.archive-card header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid #ac874b40;
+  cursor: grab;
+  flex-shrink: 0;
+}
+.archive-card header .icon {
+  color: var(--category-tone);
+}
+.archive-card header span {
+  min-width: 0;
+}
+.archive-card small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--category-tone);
+}
+.archive-card strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.archive-card-copy {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.9rem;
+}
+.archive-card-copy p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.archive-card-copy ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  color: var(--ink-soft);
+}
+.archive-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+.archive-card footer button {
+  background: none;
+  border: 0;
+  color: var(--gold);
+  cursor: pointer;
+}
+.archive-port {
+  position: absolute;
+  right: 4px;
+  top: 36%;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #c9a463;
+  background: #292621;
+  color: #f2dbad;
+  cursor: crosshair;
+  opacity: 0;
+  z-index: 4;
+}
+.archive-card:is(:hover, :focus-within, .is-selected) .archive-port {
+  opacity: 1;
+}
+.archive-resize {
+  position: absolute;
+  z-index: 3;
+}
+.edge-n,
+.edge-s {
+  height: 7px;
+  left: 8px;
+  right: 8px;
+  cursor: ns-resize;
+}
+.edge-n {
+  top: -4px;
+}
+.edge-s {
+  bottom: -4px;
+}
+.edge-e,
+.edge-w {
+  width: 7px;
+  top: 8px;
+  bottom: 8px;
+  cursor: ew-resize;
+}
+.edge-e {
+  right: -4px;
+}
+.edge-w {
+  left: -4px;
+}
+.edge-ne,
+.edge-nw,
+.edge-se,
+.edge-sw {
+  width: 12px;
+  height: 12px;
+}
+.edge-ne {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+.edge-nw {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+.edge-se {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+  border-right: 2px solid #c8aa71;
+  border-bottom: 2px solid #c8aa71;
+}
+.edge-sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+.archive-empty {
+  position: absolute;
+  top: 45%;
+  width: 100%;
+  text-align: center;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+.archive-selection {
+  min-height: 2.6rem;
+  font-size: 0.9rem;
+}
+.archive-alert {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #ac874a;
+  background: #29231be8;
+}
+.archive-alert p {
+  margin: 0 0 0.5rem;
+}
+.archive-welcome {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: center;
+}
+.archive-dialog {
+  color: var(--ink);
+  border: 1px solid #b69051;
+  border-radius: 6px;
+  padding: 1.1rem;
+  background: linear-gradient(135deg, #24262b, #111419);
+  width: min(650px, 95vw);
+  max-height: 90dvh;
+  overflow: auto;
+  box-shadow: 0 20px 80px #0009;
+}
+.archive-dialog::backdrop {
+  background: #000a;
+}
+.archive-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.archive-dialog h2 {
+  font-size: 1.2rem;
+}
+.archive-dialog form,
+.archive-dialog label {
+  display: grid;
+  gap: 0.5rem;
+}
+.archive-dialog form {
+  gap: 1rem;
+}
+.archive-dialog input,
+.archive-dialog select,
+.archive-dialog textarea {
+  width: 100%;
+  padding: 0.55rem;
+  border: 1px solid #8e764d;
+  border-radius: 3px;
+  font: inherit;
+}
+.archive-dialog textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+.archive-dialog textarea.archive-content {
+  min-height: 13rem;
+}
+.archive-dialog label.archive-checkbox {
+  display: flex;
+  align-items: center;
+}
+.archive-dialog input[type="checkbox"] {
+  width: auto;
+}
+.archive-dialog footer {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+.archive-error {
+  color: #f3afa0;
+}
+.archive-library {
+  list-style: none;
+  padding: 0;
+  max-height: 50vh;
+  overflow: auto;
+}
+.archive-library button {
+  width: 100%;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  text-align: left;
+}
+@media (max-width: 600px) {
+  .archive-toolbar {
+    align-items: stretch;
+  }
+  .archive-toolbar label {
+    width: 100%;
+  }
+  .archive-toolbar select {
+    flex: 1;
+    max-width: 100%;
+  }
+  .archive-help {
+    margin: 0;
+    width: 100%;
+  }
+  .archive-viewport {
+    height: 65dvh;
+    min-height: 380px;
+  }
+  .archive-save {
+    margin-left: 0;
+  }
+  .archive-port {
+    opacity: 1;
+  }
+}

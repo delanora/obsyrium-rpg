@@ -35,6 +35,7 @@ import type {
  * que é a fonte de verdade em tempo de execução.
  */
 export interface ServerToClientEvents {
+  'archive:updated': (payload: { at: string }) => void;
   'connection:ready': (payload: ConnectionReadyPayload) => void;
   'app:error': (payload: { message: string }) => void;
   'presence:update': (payload: PresenceUpdatePayload) => void;

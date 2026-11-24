@@ -4,6 +4,7 @@ import { Icon, type IconName } from '../Icon';
 
 /** Abas do painel do mestre — a home concentra todas elas. */
 export type MasterTab =
+  | 'archive'
   | 'home'
   | 'sheets'
   | 'creatures'
@@ -214,13 +215,13 @@ export function MasterHome({
             </li>
           ))}
           <li>
-            <button type="button" className="home-card home-card-coming-soon" disabled>
+            <button type="button" className="home-card" onClick={() => onOpenTab('archive')}>
               <span className="home-card-icon"><Icon name="book" size={22} /></span>
               <span className="home-card-body">
                 <span className="home-card-name">Fichário do Mestre</span>
                 <span className="home-card-hint">Notas e referências da mesa.</span>
               </span>
-              <span className="home-card-status">Em breve</span>
+              <span className="home-card-status">Privado</span>
             </button>
           </li>
         </ul>

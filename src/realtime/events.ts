@@ -106,6 +106,7 @@ export const ClientEvents = {
 
 /** Eventos enviados pelo servidor para os clientes. */
 export const ServerEvents = {
+  ARCHIVE_UPDATED: 'archive:updated',
   /** Confirmação de conexão (com os dados do usuário autenticado). */
   CONNECTION_READY: 'connection:ready',
   /** Erro genérico de tempo real (payload inválido, permissão, etc.). */
