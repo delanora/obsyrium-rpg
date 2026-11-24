@@ -1380,3 +1380,19 @@ em zoom 0,5 foi inspecionada sem emendas perceptíveis. Evidências:
 `/tmp/arquivo-fundo-vL3Wv7/`, `/tmp/linho-browser.log`, `/tmp/linho-build.log`.
 Sem mudanças de backend, Prisma, migrations ou dados. Troca implementada em commit
 isolado com push; **não publicada**, aguardando autorização específica de publicação.
+
+### Publicação da textura de linho — 24/11/2026
+
+Autorizada pelo responsável. SHA funcional
+`61e940f6e5a07c528ed097ee03f27cc470d66fc0`, `main`, push e remoto conferidos.
+O espelho isolado reproduziu integralmente a versão anterior antes de receber
+somente `ArchiveBackground.tsx` e o PNG do linho. Build/typecheck e teste Chromium
+do fundo passaram nesse espelho, com fixtures locais. Backup dos artefatos anteriores
+em `/var/backups/obsyrium/20261124-linho/client-dist/`.
+Publicado `index-C_Jsd7wn.js`, mantendo `index-0lf8C0HE.css`, mais o PNG do linho.
+HTML, bundles e PNG servidos foram conferidos por SHA-256; a imagem é idêntica ao
+anexo original. Assets copiados antes da troca atômica do HTML, sem remover bundles
+anteriores. Espelho reutilizável atualizado. Health saudável; PID permanece
+2467899, sem restart. Backend, Prisma e 47 WIPs intactos por hash; nenhuma migration
+ou escrita de dados. Logs da operação preservados junto ao backup. Aceite visual
+continua com o responsável; 8.5.2.3 não iniciada.
