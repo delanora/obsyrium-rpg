@@ -473,6 +473,7 @@ body:has(.archive-page) {
   height: 100dvh;
   width: 100%;
   overflow: hidden;
+  background: #101c22 url("/archive/fundo-pedra-azul-esverdeado.png") center / cover no-repeat;
 }
 .app-shell.theme-master:has(.archive-page) .archive-page {
   flex: 1;
@@ -487,6 +488,7 @@ body:has(.archive-page) {
   min-height: 0;
   border: 0;
   border-radius: 0;
+  background: transparent;
 }
 .archive-dock {
   position: absolute;
@@ -580,7 +582,7 @@ body:has(.archive-page) {
   position: absolute;
   inset: 0;
   padding: 1rem 1rem 12rem;
-  background: radial-gradient(ellipse, #24252a, #101216 80%);
+  background: transparent;
 }
 .archive-empty {
   top: 36%;

@@ -17,6 +17,7 @@ await build({
     loader: "tsx",
   },
   bundle: true,
+  external: ["/archive/*"],
   jsx: "automatic",
   outfile: path.join(temp, "app.js"),
 });
