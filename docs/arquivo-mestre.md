@@ -128,3 +128,74 @@ recuo momentâneo ao salvar arraste ou redimensionamento. A seleção desses car
 permanece ativa. As abas superiores se sobrepõem ao quadro sem fundo, preservando
 a tipografia, os botões e a linha dourada. O teste de navegador cobre também
 recarregamento com resposta atrasada, além de desktop e celular, com API simulada.
+
+## Fase 8.5.1.1 — integração visual dos ícones (24/11/2026)
+
+O responsável informou no pedido desta fase que a fundação 8.5.1 foi aprovada
+manualmente. Este refinamento visual aguarda sua própria aprovação manual;
+não foi publicado nem exige restart, migration ou alteração da API.
+
+Auditoria: HEAD inicial `a75b463b2fdb6b0b141e0e0da2c3b05d2afcd4eb`, branch
+`main`, sincronizada com `origin/main`, staging inicialmente vazio. As 41
+alterações rastreadas preexistentes e os arquivos não rastreados de inventário,
+cenas, botões flutuantes, música e migrations de geografia/log foram preservados.
+Nenhum deles integra o commit desta fase.
+
+As 16 categorias do catálogo correspondem exatamente às 16 artes do ZIP.
+O mapeamento tipado está centralizado em `ArchiveCategoryIcon.tsx` e os PNGs
+ficam em `client/public/archive/icons/`, sem duplicatas ou recompressão:
+
+| Categoria estrutural | Arte |
+|---|---|
+| region — Região | regiao.png |
+| locality — Localidade | localidade.png |
+| dungeon — Masmorra | masmorra.png |
+| room — Sala | sala.png |
+| npc — NPC | npc.png |
+| creature — Criatura | criatura.png |
+| item — Item | item.png |
+| faction — Facção | faccao.png |
+| event — Acontecimento | acontecimento.png |
+| scene — Cena | cena.png |
+| encounter — Encontro | encontro.png |
+| trap — Armadilha | armadilha.png |
+| clue — Pista | pista.png |
+| sound — Efeito sonoro | efeito-sonoro.png |
+| image — Imagem | imagem.png |
+| note — Anotação | anotacao.png |
+
+Todos os arquivos são PNG RGBA 256 × 256, com bytes idênticos aos fornecidos.
+Os cabeçalhos usam 44 × 44 px; cards compactos (largura inferior a 230 px ou
+altura inferior a 160 px) usam 36 × 36 px. `object-fit: contain`, largura fixa no
+flex e a transformação única do quadro mantêm a proporção durante zoom e resize.
+O símbolo não recebe caixa independente, recoloração, recorte nem animação
+contínua. Sombra de contato discreta o integra ao cabeçalho; a seleção continua
+principalmente na moldura, com luz complementar mínima no símbolo. As cores
+por categoria e os demais refinamentos existentes foram preservados.
+
+Os PNGs são decorativos, pois categoria e título permanecem em texto acessível.
+Não interceptam eventos (`pointer-events: none`, `draggable=false`). O radial e
+suas animações, os contratos, a persistência e as regras mecânicas não mudaram.
+
+Arquivos de implementação: `ArchiveCategoryIcon.tsx`, `ArchiveCanvas.tsx`,
+`archive.css` e os 16 assets. O cenário de navegador existente foi ampliado em
+`client/scripts/check-archive-browser.mjs`, com API exclusivamente simulada:
+quadro com todas as categorias, diferentes dimensões, títulos extensos,
+transparência real dos pixels, correspondência categoria/arquivo, carregamento,
+proporção, ausência de sobreposição com texto e zoom sem escrita na API.
+Também passaram os cenários anteriores de pan/zoom, arraste, resize, retry,
+conexões, criação, reload e celular, incluindo amostras de 50/100/200 cards.
+Typecheck e build do frontend passaram; invariantes de câmera também foram
+executadas. Nenhum teste utiliza dados reais da campanha.
+
+Capturas para aceite, preservadas fora do Git:
+`/root/.codex/visualizations/2026/11/08/01a1b91f-bed8-7260-a9ac-7553fb7b7adb/fichario-icones/`:
+
+- `icones-16-categorias.png`: visão geral.
+- `icones-cabecalhos.png`: cabeçalhos.
+- `icones-selecionado-e-tamanhos.png`: seleção e dimensões diferentes.
+- `icones-zoom-afastado.png`: visão afastada.
+- `icones-aproximacao.png`: aproximação com a câmera real.
+
+Pendências: aprovação visual manual e autorização explícita para publicação.
+A próxima etapa não foi iniciada.

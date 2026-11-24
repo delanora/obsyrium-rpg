@@ -49,7 +49,7 @@
 | **6 — Motor de combate e regras** | 🟡 muito avançada | Núcleo jogável integrado; ampliar regras especiais, conteúdo e geometria. |
 | **7 — Reações e combate avançado** | 🟡 fundação | Opportunity Attacks existentes; faltam reações/fluxos especiais. |
 | **8 — Compêndio e ferramentas do Mestre** | 🟡 | Gestão de criaturas, itens, localidades e conteúdo operacional; ampliar. |
-| **8.5 — Arquivo do Mestre** | 🟡 fundação 8.5.1 implementada; aceite manual pendente | Quadros, cards narrativos reutilizáveis, geometria livre e relações privadas/versionadas. Publicada com migration aditiva; aceite manual pendente. Ver `docs/arquivo-mestre.md`; expansões e ações operacionais continuam futuras. |
+| **8.5 — Arquivo do Mestre** | 🟡 fundação 8.5.1 aprovada; refinamento 8.5.1.1 em aceite | Quadros, cards narrativos reutilizáveis, geometria livre e relações privadas/versionadas. Publicada com migration aditiva; aprovação da fundação informada pelo responsável em 24/11/2026. Ícones 8.5.1.1 aguardam aprovação/publicação. Ver `docs/arquivo-mestre.md`; expansões e ações operacionais continuam futuras. |
 | **9 — Compatibilidade / conteúdo complementar** | ⬜ | Importação, exportação, compatibilidade e ferramentas administrativas. |
 | **10 — Segurança, produção e escala** | 🟡 fundação | Backups, autorização, recuperação, observabilidade e deploy. |
 | **11 — UX, acessibilidade e acabamento** | 🟡 | Responsividade, feedback, navegação, gestos e polimento. |
@@ -173,7 +173,7 @@ A **sequência abaixo é direcional**, não autorização para antecipar fases. 
 ### Prioridade 4 — Mestre, robustez e UX
 
 - **Fase 8 (🟡):** enriquecer compêndio, buscas, cadastros, reutilização de conteúdo, encontros e controles administrativos.
-- **Fase 8.5.1 (🟡):** fundação do Arquivo implementada: múltiplos quadros, cards narrativos, posições/tamanhos independentes e conexões tipadas. Validação manual pendente; detalhes e testes em `docs/arquivo-mestre.md`. Expansão orgânica, execução de encontros e revelações não foram antecipadas.
+- **Fase 8.5.1 (🟡):** fundação do Arquivo implementada: múltiplos quadros, cards narrativos, posições/tamanhos independentes e conexões tipadas. Fundação aprovada manualmente conforme pedido do responsável em 24/11/2026; integração visual 8.5.1.1 aguarda aceite e publicação. Detalhes e testes em `docs/arquivo-mestre.md`. Expansão orgânica, execução de encontros e revelações não foram antecipadas.
 - **Fase 8.5 (⬜ conceito complementar):** Soundboard e áudio sincronizado por Scene/sessão, biblioteca ou upload; armadilhas com execução assistida e confirmação do Mestre, sem dano automático não autorizado.
 - **Fase 9 (⬜):** importação/exportação, compatibilidade de dados, migrações e conteúdo complementar.
 - **Fase 10 (🟡):** segurança, backups, recuperação, observabilidade, deploy e verificações operacionais.

@@ -8,6 +8,7 @@ import {
   type PointerEvent,
 } from "react";
 import { Icon, type IconName } from "../Icon";
+import { ArchiveCategoryIcon } from "./ArchiveCategoryIcon";
 import type {
   NarrativeGraphDto,
   NarrativePlacementDto,
@@ -249,6 +250,7 @@ const GraphContent = memo(function GraphContent({
             data-placement={p.id}
             data-card={p.cardId}
             data-category={p.card.category}
+            data-compact={compact || undefined}
             className={`archive-card${selected?.id === p.id ? " is-selected" : ""}`}
             style={{
               left: p.x,
@@ -269,7 +271,7 @@ const GraphContent = memo(function GraphContent({
                 )
               }
             >
-              <Icon name={CATEGORY_ICONS[p.card.category]} size={18} />
+              <ArchiveCategoryIcon category={p.card.category} />
               <span>
                 <small>{NARRATIVE_CATEGORY_LABELS[p.card.category]}</small>
                 <strong>{p.card.title}</strong>

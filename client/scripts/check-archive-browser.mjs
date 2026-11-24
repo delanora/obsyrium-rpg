@@ -516,6 +516,68 @@ try {
   );
   await page.keyboard.press("Escape");
   await page.emulateMedia({ reducedMotion: "no-preference" });
+  // Quadro isolado com todas as artes, tamanhos livres e títulos extensos.
+  const categories = [
+    ["region", "regiao"], ["locality", "localidade"], ["dungeon", "masmorra"],
+    ["room", "sala"], ["npc", "npc"], ["creature", "criatura"], ["item", "item"],
+    ["faction", "faccao"], ["event", "acontecimento"], ["scene", "cena"],
+    ["encounter", "encontro"], ["trap", "armadilha"], ["clue", "pista"],
+    ["sound", "efeito-sonoro"], ["image", "imagem"], ["note", "anotacao"],
+  ];
+  populate(16);
+  links.length = 0;
+  categories.forEach(([category], i) => {
+    cards[i].category = category;
+    cards[i].title = i % 3 === 0 ? `Título extenso de exemplo para ${category}` : `Card ${category}`;
+    placements[i].x = 70 + (i % 4) * 350;
+    placements[i].y = 90 + Math.floor(i / 4) * 235;
+    placements[i].width = i % 3 === 0 ? 200 : i % 3 === 1 ? 280 : 330;
+    placements[i].height = i % 3 === 0 ? 140 : 210;
+  });
+  const beforeIcons = operations;
+  await page.reload();
+  await page.waitForFunction(() => document.querySelectorAll(".archive-category-icon").length === 16 &&
+    [...document.querySelectorAll(".archive-category-icon")].every(i => i.complete && i.naturalWidth === 256));
+  for (const [category, filename] of categories) {
+    const image = page.locator(`[data-category="${category}"] .archive-category-icon`);
+    assert.ok((await image.getAttribute("src")).endsWith(`/${filename}.png`));
+    const geometry = await image.evaluate(el => {
+      const style = getComputedStyle(el), canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext("2d"); ctx.drawImage(el, 0, 0);
+      const pixels = ctx.getImageData(0, 0, 256, 256).data;
+      let transparent = 0, visible = 0;
+      for (let i = 3; i < pixels.length; i += 4) { if (!pixels[i]) transparent++; if (pixels[i] > 200) visible++; }
+      const span = el.nextElementSibling.getBoundingClientRect(), rect = el.getBoundingClientRect();
+      return { width: style.width, height: style.height, fit: style.objectFit,
+        pointer: style.pointerEvents, overlap: rect.right > span.left, transparent, visible };
+    });
+    assert.equal(geometry.width, geometry.height);
+    assert.ok(["36px", "44px"].includes(geometry.width));
+    assert.equal(geometry.fit, "contain");
+    assert.equal(geometry.pointer, "none");
+    assert.equal(geometry.overlap, false);
+    assert.ok(geometry.transparent > 0 && geometry.visible > 0);
+  }
+  await page.screenshot({path: path.join(temp, "icones-16-categorias.png"), fullPage: true});
+  const headerGroup = await page.locator(".archive-card").first().boundingBox();
+  await page.screenshot({path: path.join(temp, "icones-cabecalhos.png"), clip: {
+    x: Math.max(0, headerGroup.x - 10), y: Math.max(0, headerGroup.y - 10),
+    width: Math.min(1100, 1440 - Math.max(0, headerGroup.x - 10)), height: 210,
+  }});
+  await page.locator('.archive-card[data-category="region"] .archive-card-copy').click();
+  await page.screenshot({path: path.join(temp, "icones-selecionado-e-tamanhos.png"), fullPage: true});
+  for (let i = 0; i < 3; i++) await page.getByRole("button", {name: "Afastar", exact: true}).click();
+  await page.screenshot({path: path.join(temp, "icones-zoom-afastado.png"), fullPage: true});
+  await page.getByRole("button", {name: "Enquadrar", exact: true}).click();
+  // Aproximação usa a mesma transformação da câmera para card e PNG.
+  const cardBounds = await page.locator('.archive-card[data-category="npc"]').boundingBox();
+  await page.mouse.move(cardBounds.x + cardBounds.width / 2, cardBounds.y + 40);
+  await page.mouse.wheel(0, -340);
+  await page.waitForTimeout(150);
+  await page.screenshot({path: path.join(temp, "icones-aproximacao.png"), fullPage: true});
+  assert.equal(operations, beforeIcons, "Inspeção visual e zoom não escrevem na API");
+  console.log("16 categorias: PNG correto, transparência, proporções, títulos e zoom conferidos.");
   const metrics = [];
   for (const count of [50, 100, 200]) {
     populate(count);
