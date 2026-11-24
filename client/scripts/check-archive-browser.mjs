@@ -12,7 +12,7 @@ const root = process.cwd(),
   temp = fs.mkdtempSync(path.join(os.tmpdir(), "arquivo-browser-"));
 await build({
   stdin: {
-    contents: `import React from 'react';import{createRoot}from'react-dom/client';import{ArchivePage}from'${root}/client/src/components/archive/ArchivePage';createRoot(document.getElementById('root')).render(<ArchivePage/>);`,
+    contents: `import React from 'react';import{createRoot}from'react-dom/client';import{ArchivePage}from'${root}/client/src/components/archive/ArchivePage';createRoot(document.getElementById('root')).render(<div className="app-shell theme-master"><header className="app-header" style={{height:48,flexShrink:0}}>Obsyrium</header><nav className="tabs tabs-inline master-navigation"><button className="tab">Início</button><button className="tab">Fichas</button><button className="tab">Fichário</button></nav><main className="app-main app-main-wide"><ArchivePage/></main></div>);`,
     resolveDir: path.join(root, "client"),
     loader: "tsx",
   },
@@ -187,12 +187,103 @@ await page.route("http://arquivo.test/**", async (route) => {
     });
   return route.fulfill({
     contentType: "text/html",
-    body: '<!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/app.css"><style>body{margin:0;padding:14px}</style><div id="root"></div><script src="/app.js"></script></html>',
+    body: '<!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/app.css"><style>body{margin:0;padding:0}</style><div id="root"></div><script src="/app.js"></script></html>',
   });
 });
+const chooseRadial = async (name) => {
+  const button = page.getByRole("menuitem", { name, exact: true });
+  await button.waitFor();
+  const point = await button.evaluate((el) => {
+    const menu = el.closest('[role="menu"]');
+    const rect = menu.getBoundingClientRect();
+    const buttons = [
+      ...menu.querySelectorAll(".scene-editor-radial-sector button"),
+    ];
+    const angle =
+      -Math.PI / 2 + (buttons.indexOf(el) * Math.PI * 2) / buttons.length;
+    return {
+      x: rect.left + rect.width / 2 + Math.cos(angle) * rect.width * 0.35,
+      y: rect.top + rect.height / 2 + Math.sin(angle) * rect.height * 0.35,
+    };
+  });
+  await page.mouse.click(point.x, point.y);
+};
 try {
   await page.goto("http://arquivo.test");
   await page.locator(".archive-card").nth(1).waitFor();
+  const layout = await page.evaluate(() => {
+    const rect = document
+      .querySelector(".archive-viewport")
+      .getBoundingClientRect();
+    const nav = document
+      .querySelector(".master-navigation")
+      .getBoundingClientRect();
+    const dock = document
+      .querySelector(".archive-dock")
+      .getBoundingClientRect();
+    return {
+      left: rect.left,
+      right: rect.right,
+      bottom: rect.bottom,
+      top: rect.top,
+      navBottom: nav.bottom,
+      width: innerWidth,
+      height: innerHeight,
+      dockBottom: dock.bottom,
+      dockTop: dock.top,
+      border: getComputedStyle(document.querySelector(".archive-viewport"))
+        .borderWidth,
+    };
+  });
+  assert.equal(layout.left, 0);
+  assert.equal(layout.right, layout.width);
+  assert.equal(layout.bottom, layout.height);
+  assert.ok(Math.abs(layout.top - layout.navBottom) < 1);
+  assert.equal(layout.border, "0px");
+  assert.ok(layout.dockBottom < layout.height && layout.dockTop > layout.top);
+  const blank = await page.locator(".archive-viewport").boundingBox();
+  await page.mouse.click(blank.x + 70, blank.y + 70, { button: "right" });
+  await page.getByRole("menu", { name: "Novo card", exact: true }).waitFor();
+  const menu = await page
+    .getByRole("menu", { name: "Novo card", exact: true })
+    .boundingBox();
+  assert.ok(menu.x >= 0 && menu.y >= 0);
+  await page.screenshot({
+    path: path.join(temp, "arquivo-radial.png"),
+    fullPage: true,
+  });
+  const hovered = page
+    .getByRole("menu", { name: "Novo card", exact: true })
+    .locator(".scene-editor-radial-sector")
+    .first();
+  const ring = await page
+    .getByRole("menu", { name: "Novo card", exact: true })
+    .boundingBox();
+  await page.mouse.move(ring.x + ring.width / 2, ring.y + ring.height * 0.15);
+  await page.waitForTimeout(200);
+  assert.ok((await hovered.getAttribute("class")).includes("is-highlighted"));
+  assert.notEqual(
+    await hovered
+      .locator(".scene-editor-radial-face")
+      .evaluate((el) => getComputedStyle(el).transform),
+    "none",
+  );
+  assert.ok(
+    (
+      await hovered
+        .locator(".scene-editor-radial-face")
+        .evaluate((el) => getComputedStyle(el).transitionDuration)
+    ).includes("0.18s"),
+  );
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowRight");
+  assert.equal(
+    await page.locator(":focus").getAttribute("aria-label"),
+    "Pessoas",
+  );
+  await page.keyboard.press("Escape");
+  assert.equal(await page.getByRole("menu").count(), 0);
+  assert.equal(operations, 0);
   // Pan e zoom são locais: nenhuma operação HTTP e coordenadas intactas.
   const original = JSON.stringify(placements);
   const viewport = await page.locator(".archive-viewport").boundingBox();
@@ -319,7 +410,11 @@ try {
   await page
     .getByRole("button", { name: /Card 0 — Protege — Card 1/ })
     .click({ force: true });
-  await page.getByRole("button", { name: "Editar relação" }).waitFor();
+  await page.getByRole("button", { name: "Ações", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Editar relação", exact: true })
+    .waitFor();
+  await page.keyboard.press("Escape");
   assert.equal(links.length, 1);
   await page.getByRole("button", { name: "Enquadrar", exact: true }).click();
   await page.screenshot({
@@ -327,6 +422,8 @@ try {
     fullPage: true,
   });
   await page.getByRole("button", { name: "Novo card", exact: true }).click();
+  await chooseRadial("Pistas");
+  await chooseRadial("Pista");
   await page.getByLabel("Título", { exact: true }).fill("Pista nova");
   await page.getByLabel("Categoria", { exact: true }).selectOption("clue");
   await page.getByLabel("Resumo", { exact: true }).fill("Uma pista");
@@ -349,6 +446,62 @@ try {
   assert.equal(boards.length, 2);
   await page.selectOption('[aria-label="Quadro narrativo"]', boardId);
   await page.getByRole("article", { name: "Pista nova" }).waitFor();
+  await page
+    .getByRole("button", { name: "Ações de Card 0", exact: true })
+    .focus();
+  await page.keyboard.press("Shift+F10");
+  await page
+    .getByRole("menu", { name: "Ações do card", exact: true })
+    .waitFor();
+  await page.keyboard.press("Escape");
+  await page.locator(".archive-card").first().click({ button: "right" });
+  await page
+    .getByRole("menu", { name: "Ações do card", exact: true })
+    .waitFor();
+  await chooseRadial("Editar conteúdo");
+  await page
+    .getByRole("dialog", { name: "Card narrativo", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Fechar editor", exact: true })
+    .click();
+  const vp = await page.locator(".archive-viewport").boundingBox();
+  const click = { x: vp.x + 90, y: vp.y + 65 };
+  const expected = await page.locator(".archive-world").evaluate(
+    (el, { x, y, vp }) => {
+      const m = new DOMMatrix(getComputedStyle(el).transform);
+      return {
+        x: (x - vp.x - m.e) / m.a - 140,
+        y: (y - vp.y - m.f) / m.a - 100,
+      };
+    },
+    { ...click, vp },
+  );
+  await page.mouse.click(click.x, click.y, { button: "right" });
+  await chooseRadial("Criar anotação");
+  await page.getByLabel("Título", { exact: true }).fill("No ponto clicado");
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await page.getByRole("article", { name: "No ponto clicado" }).waitFor();
+  const added = placements.find(
+    (p) => cards.find((c) => c.id === p.cardId)?.title === "No ponto clicado",
+  );
+  assert.ok(
+    Math.abs(added.x - expected.x) < 1 && Math.abs(added.y - expected.y) < 1,
+  );
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Novo card", exact: true }).click();
+  assert.ok(
+    await page
+      .locator(".scene-editor-radial-face")
+      .first()
+      .evaluate((el) =>
+        getComputedStyle(el)
+          .transitionDuration.split(",")
+          .every((value) => parseFloat(value) <= 0.001),
+      ),
+  );
+  await page.keyboard.press("Escape");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   const metrics = [];
   for (const count of [50, 100, 200]) {
     populate(count);
@@ -406,6 +559,16 @@ try {
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   );
+  assert.ok(
+    await page.locator(".archive-dock").evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth;
+    }),
+  );
+  await page.screenshot({
+    path: path.join(temp, "arquivo-mobile.png"),
+    fullPage: true,
+  });
   assert.deepEqual(errors, []);
   console.log(
     "Browser real: pan, zoom, arraste, resize, falha/retry, conexão/cancelamento/seleção, criação, reload e celular passaram.",

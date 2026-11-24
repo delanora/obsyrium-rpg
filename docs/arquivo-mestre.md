@@ -110,3 +110,13 @@ Amostra prática única com API simulada, incluindo recarga/renderização e 12 
 Esses tempos são observações locais da fixture, não SLA, benchmark de rede/servidor ou promessa de FPS. Não houve requisições de escrita durante pan/zoom. Textos curtos de teste não representam o pior caso de conteúdo máximo.
 
 Falhas encontradas durante o desenvolvimento foram investigadas e corrigidas: serialização do tipo `void` no advisory lock; preparo do enum de usuários no schema descartável; ID de operação em contexto HTTP; nomes acessíveis dos seletores; competição de portas com alças de cards adjacentes; restauração de câmera ao alternar quadros. Ajustes de fixture separaram os cards para selecionar linhas não ocluídas. Nenhuma falha nova foi classificada como flake. Não há aceite manual do responsável nem teste de sessão real nesta etapa.
+
+## Superfície integral e radial contextual
+
+O Fichário ocupa toda a área disponível abaixo do cabeçalho e das abas, sem moldura de container nem rolagem da página. As regras de tela cheia são condicionais à presença de `.archive-page`; as outras abas mantêm seu layout. Um dock flutuante persistente na base reúne seleção/gestão de quadros, novo card, biblioteca, zoom, enquadramento e estado de salvamento, com espaço para os atalhos laterais existentes.
+
+Botão direito no fundo abre a criação na posição clicada, convertida pela câmera em coordenadas do quadro. As categorias são agrupadas em Lugares, Pessoas, Histórias, Pistas e Recursos, além da Anotação direta. Escolher uma categoria abre o editor de conteúdo. Botão direito em um card abre edição, novo card, remoção do quadro e exclusão definitiva; a confirmação destrutiva permanece obrigatória. Relações também têm radial de ações. O botão de engrenagem do card, o acesso inferior e Shift+F10/tecla de contexto oferecem alternativas para toque e teclado.
+
+O componente reutilizado é `SceneEditorRadialMenu`, com os mesmos setores, transições, realce por ponteiro, navegação por setas, Escape e movimento reduzido. A única extensão no componente compartilhado é um rótulo acessível opcional para o botão central; os consumidores de cenas mantêm os textos e comportamentos anteriores. Não foi copiado um motor de menus nem alterado o backend.
+
+Validação desta revisão: typecheck/build do frontend; 38 verificações do editor unificado; 16 verificações de câmera; Chromium real com API simulada para ocupação da área útil, dock em desktop/celular, radial por botão direito, submenus, edição, criação na coordenada do clique com câmera aplicada, persistência/retry e gestos anteriores. A aprovação manual continua pendente.

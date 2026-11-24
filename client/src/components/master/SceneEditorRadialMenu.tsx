@@ -20,6 +20,7 @@ export function SceneEditorRadialMenu({
   options,
   onBack,
   onClose,
+  centerLabel,
 }: {
   point: { x: number; y: number };
   menuId: string;
@@ -27,6 +28,8 @@ export function SceneEditorRadialMenu({
   options: SceneRadialOption[];
   onBack?: () => void;
   onClose: () => void;
+  /** Rótulo contextual quando reutilizado em outra superfície. */
+  centerLabel?: string;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [highlight, setHighlight] = useState<string | null>(null);
@@ -261,7 +264,7 @@ export function SceneEditorRadialMenu({
         type="button"
         role="menuitem"
         className="scene-editor-radial-center"
-        aria-label={onBack ? 'Voltar no menu da cena' : 'Fechar menu da cena'}
+        aria-label={centerLabel ?? (onBack ? 'Voltar no menu da cena' : 'Fechar menu da cena')}
         onClick={onBack ?? onClose}
       >
         <strong>

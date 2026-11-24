@@ -30,7 +30,13 @@ import {
 } from "../../../../src/modules/shared/narrative";
 import { Icon } from "../Icon";
 import {
+  SceneEditorRadialMenu,
+  type SceneRadialOption,
+} from "../master/SceneEditorRadialMenu";
+import "../master/scenes.css";
+import {
   ArchiveCanvas,
+  CATEGORY_ICONS,
   type ArchiveSelection,
   type Geometry,
 } from "./ArchiveCanvas";
@@ -46,6 +52,44 @@ type Command = ArchiveOperation extends infer T
     ? Omit<T, "operationId">
     : never
   : never;
+type Radial = {
+  point: { x: number; y: number };
+  kind: "create" | "category" | "card" | "link";
+  group?: string;
+  targetId?: string;
+};
+const CARD_GROUPS = [
+  {
+    id: "places",
+    label: "Lugares",
+    icon: "earth",
+    categories: ["region", "locality", "dungeon", "room"],
+  },
+  {
+    id: "people",
+    label: "Pessoas",
+    icon: "users",
+    categories: ["npc", "creature", "faction"],
+  },
+  {
+    id: "stories",
+    label: "Histórias",
+    icon: "scroll",
+    categories: ["event", "scene", "encounter"],
+  },
+  {
+    id: "clues",
+    label: "Pistas",
+    icon: "search",
+    categories: ["clue", "trap"],
+  },
+  {
+    id: "resources",
+    label: "Recursos",
+    icon: "bag",
+    categories: ["item", "image", "sound"],
+  },
+] as const;
 type Editor =
   | {
       kind: "board" | "card" | "link";
@@ -104,6 +148,10 @@ export function ArchivePage() {
   const [boards, setBoards] = useState<NarrativeBoardDto[]>([]),
     [boardId, setBoardId] = useState(""),
     [graph, setGraph] = useState<NarrativeGraphDto | null>(null);
+  const [radial, setRadial] = useState<Radial | null>(null);
+  const radialRef = useRef<Radial | null>(null);
+  radialRef.current = radial;
+  const draftPosition = useRef<{ x: number; y: number } | null>(null);
   const [selected, setSelected] = useState<ArchiveSelection>(null),
     [camera, setCamera] = useState<ArchiveCamera>({ x: 60, y: 60, zoom: 1 });
   const [visual, setVisual] = useState<Record<string, Geometry>>({}),
@@ -196,7 +244,13 @@ export function ArchivePage() {
   useEffect(() => {
     const update = () => {
       const c = current.current;
-      if (c.busy || c.editor || c.pending || interacting.current) {
+      if (
+        c.busy ||
+        c.editor ||
+        c.pending ||
+        interacting.current ||
+        radialRef.current
+      ) {
         setChanged(true);
         return;
       }
@@ -222,6 +276,7 @@ export function ArchivePage() {
       setVisual({});
       setEditor(null);
       setSelected(null);
+      draftPosition.current = null;
       await refresh(
         input.action === "board.create" ? receipt.id : current.current.boardId,
       );
@@ -245,10 +300,12 @@ export function ArchivePage() {
     const r = root.current
       ?.querySelector(".archive-viewport")
       ?.getBoundingClientRect();
-    const center = cameraPoint(camera, {
-      x: (r?.width ?? 800) / 2,
-      y: (r?.height ?? 600) / 2,
-    });
+    const center =
+      draftPosition.current ??
+      cameraPoint(camera, {
+        x: (r?.width ?? 800) / 2,
+        y: (r?.height ?? 600) / 2,
+      });
     return {
       x: center.x - 140,
       y: center.y - 100,
@@ -285,18 +342,18 @@ export function ArchivePage() {
     }));
     setEditor({ kind: "card", id: card.id, version: card.version });
   }, []);
-  const newCard = () => {
+  const newCard = (category: NarrativeCategory = "note") => {
     setDraft((d) => ({
       ...d,
       title: "",
-      category: "note",
+      category,
       summary: "",
       content: "",
     }));
     setEditor({ kind: "card" });
   };
-  const openLink = (sourceId?: string, targetId?: string) => {
-    const link = graph?.links.find((l) => l.id === selected?.id);
+  const openLink = (sourceId?: string, targetId?: string, linkId?: string) => {
+    const link = graph?.links.find((l) => l.id === (linkId ?? selected?.id));
     setDraft((d) => ({
       ...d,
       relation: sourceId ? "related" : (link?.relation ?? "related"),
@@ -320,169 +377,220 @@ export function ArchivePage() {
       ? graph?.links.find((l) => l.id === selected.id)
       : undefined;
   const guarded = busy || pending !== null;
+  const closeRadial = useCallback(() => setRadial(null), []);
+  const openContextMenu = useCallback(
+    (point: { x: number; y: number }, selection: ArchiveSelection) => {
+      const c = current.current;
+      if (c.busy || c.pending || c.editor) return;
+      setSelected(selection);
+      if (!selection) {
+        const rect = root.current
+          ?.querySelector(".archive-viewport")
+          ?.getBoundingClientRect();
+        draftPosition.current = rect
+          ? cameraPoint(c.camera, {
+              x: point.x - rect.left,
+              y: point.y - rect.top,
+            })
+          : null;
+      }
+      setRadial({
+        kind: selection?.kind ?? "create",
+        targetId: selection?.id,
+        point,
+      });
+    },
+    [],
+  );
+  const radialAction = (action: () => void) => () => {
+    setRadial(null);
+    action();
+  };
+  const targetPlace = graph?.placements.find((p) => p.id === radial?.targetId);
+  const targetLink = graph?.links.find((l) => l.id === radial?.targetId);
+  let radialOptions: SceneRadialOption[] = [];
+  let radialTitle = "Novo card";
+  if (radial?.kind === "category") {
+    const group = CARD_GROUPS.find((g) => g.id === radial.group);
+    radialTitle = group?.label ?? "Categoria";
+    radialOptions = (group?.categories ?? []).map((category) => ({
+      id: category,
+      label: NARRATIVE_CATEGORY_LABELS[category],
+      caption: NARRATIVE_CATEGORY_LABELS[category],
+      icon: CATEGORY_ICONS[category],
+      disabled: guarded,
+      action: radialAction(() => newCard(category)),
+    }));
+  } else if (radial?.kind === "create") {
+    radialOptions = graph
+      ? [
+          ...CARD_GROUPS.map((group) => ({
+            id: group.id,
+            label: group.label,
+            caption: group.label,
+            icon: group.icon,
+            disabled: guarded,
+            action: () =>
+              setRadial({ ...radial, kind: "category", group: group.id }),
+          })),
+          {
+            id: "note",
+            label: "Criar anotação",
+            caption: "Anotação",
+            icon: "quill",
+            disabled: guarded,
+            action: radialAction(() => newCard("note")),
+          },
+        ]
+      : [
+          {
+            id: "board",
+            label: "Criar quadro",
+            caption: "Quadro",
+            icon: "plus",
+            disabled: guarded,
+            action: radialAction(() => openBoard()),
+          },
+        ];
+  } else if (radial?.kind === "card" && targetPlace && graph) {
+    radialTitle = "Ações do card";
+    radialOptions = [
+      {
+        id: "edit",
+        label: "Editar conteúdo",
+        caption: "Editar",
+        icon: "quill",
+        disabled: guarded,
+        action: radialAction(() => editCard(targetPlace.id)),
+      },
+      {
+        id: "new",
+        label: "Novo card",
+        caption: "Novo card",
+        icon: "plus",
+        disabled: guarded,
+        action: () => {
+          draftPosition.current = null;
+          setRadial({ ...radial, kind: "create", targetId: undefined });
+        },
+      },
+      {
+        id: "remove",
+        label: "Remover do quadro",
+        caption: "Remover",
+        icon: "minus",
+        disabled: guarded,
+        action: radialAction(() =>
+          setEditor({
+            kind: "confirm",
+            message:
+              "Remover somente deste quadro? O conteúdo e suas relações continuam no Arquivo.",
+            command: {
+              action: "placement.remove",
+              boardId,
+              placementId: targetPlace.id,
+              expectedVersion: graph.board.version,
+            },
+          }),
+        ),
+      },
+      {
+        id: "delete",
+        label: "Excluir card definitivamente",
+        caption: "Excluir",
+        icon: "trash",
+        disabled: guarded,
+        action: radialAction(() =>
+          setEditor({
+            kind: "confirm",
+            message:
+              "Excluir definitivamente este card de todos os quadros e apagar suas relações? Esta ação não pode ser revertida.",
+            command: {
+              action: "card.delete",
+              cardId: targetPlace.cardId,
+              expectedVersion: targetPlace.card.version,
+            },
+          }),
+        ),
+      },
+    ];
+  } else if (radial?.kind === "link" && targetLink) {
+    radialTitle = "Relação";
+    radialOptions = [
+      {
+        id: "edit",
+        label: "Editar relação",
+        caption: "Editar",
+        icon: "quill",
+        disabled: guarded,
+        action: radialAction(() =>
+          openLink(undefined, undefined, targetLink.id),
+        ),
+      },
+      {
+        id: "delete",
+        label: "Excluir relação",
+        caption: "Excluir",
+        icon: "trash",
+        disabled: guarded,
+        action: radialAction(() =>
+          setEditor({
+            kind: "confirm",
+            message: "Excluir esta relação? Os cards serão preservados.",
+            command: {
+              action: "link.delete",
+              linkId: targetLink.id,
+              expectedVersion: targetLink.version,
+            },
+          }),
+        ),
+      },
+    ];
+  }
+
   return (
     <section
       className="archive-page"
       ref={root}
       aria-label="Fichário do Mestre"
     >
-      <header className="archive-toolbar">
-        <div>
-          <h2>
-            <Icon name="book" /> Fichário do Mestre
-          </h2>
-          <small>Arquivo privado · malha narrativa</small>
-        </div>
-        <label>
-          Quadro
-          <select
-            aria-label="Quadro narrativo"
-            value={boardId}
-            disabled={guarded || !!editor}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelected(null);
-              void refresh(id).catch((e) => setError(e.message));
-            }}
-          >
-            <option value="" disabled>
-              Selecione
-            </option>
-            {boards.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="btn"
-          type="button"
-          disabled={guarded}
-          onClick={() => openBoard()}
-        >
-          Novo quadro
-        </button>
-        {graph ? (
-          <>
-            <button
-              className="btn"
-              type="button"
-              disabled={guarded}
-              onClick={() => openBoard(true)}
-            >
-              Editar quadro
-            </button>
-            <button
-              className="btn btn-primary"
-              type="button"
-              disabled={guarded}
-              onClick={newCard}
-            >
-              <Icon name="plus" size={14} /> Novo card
-            </button>
-            <button
-              className="btn"
-              type="button"
-              disabled={guarded}
-              onClick={() => {
-                setEditor({ kind: "library" });
-                void listCards()
-                  .then((r) => setLibrary(r.cards))
-                  .catch((e) => setError(e.message));
-              }}
-            >
-              Adicionar existente
-            </button>
-          </>
-        ) : null}
-        <span className="archive-save" role="status">
-          {busy
-            ? "Salvando…"
-            : pending
-              ? "Alterações não salvas"
-              : loading
-                ? "Carregando…"
-                : "Salvo"}
-        </span>
-      </header>
-      {error ? (
-        <div className="archive-alert" role="alert">
-          <p>{error}</p>
-          {pending && !conflict ? (
+      <div className="archive-notices">
+        {error ? (
+          <div className="archive-alert" role="alert">
+            <p>{error}</p>
+            {pending && !conflict ? (
+              <button
+                className="btn"
+                disabled={busy}
+                onClick={() => void perform(pending)}
+              >
+                Tentar salvar novamente
+              </button>
+            ) : null}
             <button
               className="btn"
               disabled={busy}
-              onClick={() => void perform(pending)}
+              onClick={() => {
+                setPending(null);
+                setVisual({});
+                setEditor(null);
+                setError("");
+                void refresh(boardId).catch((e) => setError(e.message));
+              }}
             >
-              Tentar salvar novamente
+              {pending ? "Descartar alterações e recarregar" : "Recarregar"}
             </button>
-          ) : null}
-          <button
-            className="btn"
-            disabled={busy}
-            onClick={() => {
-              setPending(null);
-              setVisual({});
-              setEditor(null);
-              setError("");
-              void refresh(boardId).catch((e) => setError(e.message));
-            }}
-          >
-            {pending ? "Descartar alterações e recarregar" : "Recarregar"}
-          </button>
-        </div>
-      ) : null}
-      {changed ? (
-        <div className="archive-alert">
-          O Arquivo foi alterado em outra janela. Suas alterações locais estão
-          preservadas.
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+        {changed ? (
+          <div className="archive-alert">
+            O Arquivo foi alterado em outra janela. Suas alterações locais estão
+            preservadas.
+          </div>
+        ) : null}
+      </div>
       {graph ? (
         <>
-          <div className="archive-tools">
-            <button
-              className="btn btn-small"
-              onClick={() => {
-                const r = root
-                  .current!.querySelector(".archive-viewport")!
-                  .getBoundingClientRect();
-                onCamera(
-                  zoomArchive(
-                    camera,
-                    { x: r.width / 2, y: r.height / 2 },
-                    1 / 1.2,
-                  ),
-                );
-              }}
-              aria-label="Afastar"
-            >
-              −
-            </button>
-            <span>{Math.round(camera.zoom * 100)}%</span>
-            <button
-              className="btn btn-small"
-              onClick={() => {
-                const r = root
-                  .current!.querySelector(".archive-viewport")!
-                  .getBoundingClientRect();
-                onCamera(
-                  zoomArchive(camera, { x: r.width / 2, y: r.height / 2 }, 1.2),
-                );
-              }}
-              aria-label="Aproximar"
-            >
-              +
-            </button>
-            <button className="btn btn-small" onClick={fit}>
-              Enquadrar
-            </button>
-            <span className="archive-help">
-              Arraste o fundo para navegar · roda para zoom · arraste o + para
-              conectar
-            </span>
-          </div>
           <ArchiveCanvas
             key={graph.board.id}
             graph={graph}
@@ -490,7 +598,7 @@ export function ArchivePage() {
             onCamera={onCamera}
             selected={selected}
             onSelect={setSelected}
-            onEdit={editCard}
+            onMenu={openContextMenu}
             visual={visual}
             onVisual={setVisual}
             onMove={(id, g) =>
@@ -506,91 +614,6 @@ export function ArchivePage() {
             busy={guarded}
             onInteraction={onInteraction}
           />
-          <div className="archive-selection" aria-live="polite">
-            {selectedPlace ? (
-              <>
-                <strong>{selectedPlace.card.title}</strong>
-                <button
-                  className="btn btn-small"
-                  disabled={guarded}
-                  onClick={() => editCard()}
-                >
-                  Editar conteúdo
-                </button>
-                <button
-                  className="btn btn-small"
-                  disabled={guarded}
-                  onClick={() =>
-                    setEditor({
-                      kind: "confirm",
-                      message:
-                        "Remover somente deste quadro? O conteúdo e suas relações continuam no Arquivo.",
-                      command: {
-                        action: "placement.remove",
-                        boardId,
-                        placementId: selectedPlace.id,
-                        expectedVersion: graph.board.version,
-                      },
-                    })
-                  }
-                >
-                  Remover do quadro
-                </button>
-                <button
-                  className="btn btn-danger btn-small"
-                  disabled={guarded}
-                  onClick={() =>
-                    setEditor({
-                      kind: "confirm",
-                      message:
-                        "Excluir definitivamente este card de todos os quadros e apagar suas relações? Esta ação não pode ser revertida.",
-                      command: {
-                        action: "card.delete",
-                        cardId: selectedPlace.cardId,
-                        expectedVersion: selectedPlace.card.version,
-                      },
-                    })
-                  }
-                >
-                  Excluir card
-                </button>
-              </>
-            ) : selectedLink ? (
-              <>
-                <strong>
-                  {selectedLink.label ||
-                    NARRATIVE_RELATION_LABELS[selectedLink.relation]}
-                </strong>
-                <button
-                  className="btn btn-small"
-                  disabled={guarded}
-                  onClick={() => openLink()}
-                >
-                  Editar relação
-                </button>
-                <button
-                  className="btn btn-danger btn-small"
-                  disabled={guarded}
-                  onClick={() =>
-                    setEditor({
-                      kind: "confirm",
-                      message:
-                        "Excluir esta relação em todos os quadros? Os cards serão preservados.",
-                      command: {
-                        action: "link.delete",
-                        linkId: selectedLink.id,
-                        expectedVersion: selectedLink.version,
-                      },
-                    })
-                  }
-                >
-                  Excluir relação
-                </button>
-              </>
-            ) : (
-              <span>Selecione um card ou uma conexão para editar.</span>
-            )}
-          </div>
         </>
       ) : !loading ? (
         <div className="archive-welcome">
@@ -608,6 +631,187 @@ export function ArchivePage() {
             Criar primeiro quadro
           </button>
         </div>
+      ) : null}
+      <footer className="archive-dock" aria-label="Controles do Fichário">
+        <header className="archive-toolbar">
+          <div>
+            <h2>
+              <Icon name="book" /> Fichário do Mestre
+            </h2>
+            <small>Arquivo privado · malha narrativa</small>
+          </div>
+          <label>
+            Quadro
+            <select
+              aria-label="Quadro narrativo"
+              value={boardId}
+              disabled={guarded || !!editor}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelected(null);
+                void refresh(id).catch((e) => setError(e.message));
+              }}
+            >
+              <option value="" disabled>
+                Selecione
+              </option>
+              {boards.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="btn"
+            type="button"
+            disabled={guarded}
+            onClick={() => openBoard()}
+          >
+            Novo quadro
+          </button>
+          {graph ? (
+            <>
+              <button
+                className="btn"
+                type="button"
+                disabled={guarded}
+                onClick={() => openBoard(true)}
+              >
+                Editar quadro
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={guarded}
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  draftPosition.current = null;
+                  setRadial({
+                    kind: "create",
+                    point: { x: rect.left + rect.width / 2, y: rect.top - 112 },
+                  });
+                }}
+              >
+                <Icon name="plus" size={14} /> Novo card
+              </button>
+              <button
+                className="btn"
+                type="button"
+                disabled={guarded}
+                onClick={() => {
+                  draftPosition.current = null;
+                  setEditor({ kind: "library" });
+                  void listCards()
+                    .then((r) => setLibrary(r.cards))
+                    .catch((e) => setError(e.message));
+                }}
+              >
+                Adicionar existente
+              </button>
+            </>
+          ) : null}
+          <span className="archive-save" role="status">
+            {busy
+              ? "Salvando…"
+              : pending
+                ? "Alterações não salvas"
+                : loading
+                  ? "Carregando…"
+                  : "Salvo"}
+          </span>
+        </header>
+        {graph ? (
+          <div className="archive-dock-secondary">
+            <div className="archive-tools">
+              <button
+                className="btn btn-small"
+                onClick={() => {
+                  const r = root
+                    .current!.querySelector(".archive-viewport")!
+                    .getBoundingClientRect();
+                  onCamera(
+                    zoomArchive(
+                      camera,
+                      { x: r.width / 2, y: r.height / 2 },
+                      1 / 1.2,
+                    ),
+                  );
+                }}
+                aria-label="Afastar"
+              >
+                −
+              </button>
+              <span>{Math.round(camera.zoom * 100)}%</span>
+              <button
+                className="btn btn-small"
+                onClick={() => {
+                  const r = root
+                    .current!.querySelector(".archive-viewport")!
+                    .getBoundingClientRect();
+                  onCamera(
+                    zoomArchive(
+                      camera,
+                      { x: r.width / 2, y: r.height / 2 },
+                      1.2,
+                    ),
+                  );
+                }}
+                aria-label="Aproximar"
+              >
+                +
+              </button>
+              <button className="btn btn-small" onClick={fit}>
+                Enquadrar
+              </button>
+              <span className="archive-help">
+                Botão direito para criar e editar · roda para zoom
+              </span>
+            </div>
+
+            {selectedPlace || selectedLink ? (
+              <div className="archive-selection">
+                <strong>
+                  {selectedPlace?.card.title ??
+                    (selectedLink?.label ||
+                      NARRATIVE_RELATION_LABELS[selectedLink!.relation])}
+                </strong>
+                <button
+                  className="btn btn-small"
+                  disabled={guarded}
+                  onClick={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    openContextMenu(
+                      { x: rect.left + rect.width / 2, y: rect.top - 112 },
+                      selected,
+                    );
+                  }}
+                >
+                  Ações
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </footer>
+      {radial && !editor ? (
+        <SceneEditorRadialMenu
+          point={radial.point}
+          menuId={`${radial.kind}:${radial.group ?? radial.targetId ?? ""}`}
+          title={radialTitle}
+          options={radialOptions}
+          onClose={closeRadial}
+          onBack={
+            radial.kind === "category"
+              ? () => setRadial({ ...radial, kind: "create", group: undefined })
+              : undefined
+          }
+          centerLabel={
+            radial.kind === "category"
+              ? "Voltar no menu do Fichário"
+              : "Fechar menu do Fichário"
+          }
+        />
       ) : null}
       {editor ? (
         <ArchiveDialog

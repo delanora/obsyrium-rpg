@@ -52,7 +52,10 @@ interface Props {
   onCamera: (c: ArchiveCamera) => void;
   selected: ArchiveSelection;
   onSelect: (s: ArchiveSelection) => void;
-  onEdit: (id?: string) => void;
+  onMenu: (
+    point: { x: number; y: number },
+    selection: ArchiveSelection,
+  ) => void;
   visual: Record<string, Geometry>;
   onVisual: (v: Record<string, Geometry>) => void;
   onMove: (id: string, g: Geometry) => void;
@@ -79,7 +82,7 @@ const GraphContent = memo(function GraphContent({
   selected,
   onStart,
   onSelect,
-  onEdit,
+  onMenu,
   temporary,
 }: {
   graph: NarrativeGraphDto;
@@ -92,7 +95,10 @@ const GraphContent = memo(function GraphContent({
     edge?: string,
   ) => void;
   onSelect: (s: ArchiveSelection) => void;
-  onEdit: (id?: string) => void;
+  onMenu: (
+    point: { x: number; y: number },
+    selection: ArchiveSelection,
+  ) => void;
   temporary: { from: string; point: { x: number; y: number } } | null;
 }) {
   const places = useMemo(
@@ -162,6 +168,7 @@ const GraphContent = memo(function GraphContent({
           return (
             <g
               key={link.id}
+              data-link={link.id}
               className={selected?.id === link.id ? "is-selected" : ""}
             >
               <path
@@ -236,10 +243,12 @@ const GraphContent = memo(function GraphContent({
           >
             <header
               onPointerDown={(e) => onStart(e, "move", p)}
-              onDoubleClick={() => {
-                onSelect({ kind: "card", id: p.id });
-                onEdit(p.id);
-              }}
+              onDoubleClick={(event) =>
+                onMenu(
+                  { x: event.clientX, y: event.clientY },
+                  { kind: "card", id: p.id },
+                )
+              }
             >
               <Icon name={CATEGORY_ICONS[p.card.category]} size={18} />
               <span>
@@ -269,13 +278,16 @@ const GraphContent = memo(function GraphContent({
               <span>{titles.length} conexões</span>
               <button
                 type="button"
-                aria-label={`Editar ${p.card.title}`}
-                onClick={() => {
-                  onSelect({ kind: "card", id: p.id });
-                  onEdit(p.id);
+                aria-label={`Ações de ${p.card.title}`}
+                onClick={(event) => {
+                  const rect = event.currentTarget.getBoundingClientRect();
+                  onMenu(
+                    { x: rect.left + rect.width / 2, y: rect.top },
+                    { kind: "card", id: p.id },
+                  );
                 }}
               >
-                <Icon name="quill" size={14} />
+                <Icon name="gear" size={14} />
               </button>
             </footer>
             <button
@@ -306,7 +318,7 @@ export function ArchiveCanvas({
   onCamera,
   selected,
   onSelect,
-  onEdit,
+  onMenu,
   visual,
   onVisual,
   onMove,
@@ -435,6 +447,47 @@ export function ArchiveCanvas({
       className="archive-viewport"
       tabIndex={0}
       aria-label="Quadro narrativo. Arraste o fundo para navegar e use a roda para ampliar."
+      onContextMenu={(event) => {
+        event.preventDefault();
+        cancel();
+        if (busy) return;
+        const target = event.target instanceof Element ? event.target : null;
+        const cardId =
+          target?.closest<HTMLElement>("[data-placement]")?.dataset.placement;
+        const linkId = target
+          ?.closest<SVGElement>("[data-link]")
+          ?.getAttribute("data-link");
+        onMenu(
+          { x: event.clientX, y: event.clientY },
+          cardId
+            ? { kind: "card", id: cardId }
+            : linkId
+              ? { kind: "link", id: linkId }
+              : null,
+        );
+      }}
+      onKeyDown={(event) => {
+        if (
+          event.key !== "ContextMenu" &&
+          !(event.shiftKey && event.key === "F10")
+        )
+          return;
+        event.preventDefault();
+        const target = event.target instanceof Element ? event.target : null;
+        const card = target?.closest<HTMLElement>("[data-placement]");
+        const link = target
+          ?.closest<SVGElement>("[data-link]")
+          ?.getAttribute("data-link");
+        const rect = (card ?? event.currentTarget).getBoundingClientRect();
+        onMenu(
+          { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+          card
+            ? { kind: "card", id: card.dataset.placement! }
+            : link
+              ? { kind: "link", id: link }
+              : selected,
+        );
+      }}
       onPointerDown={(e) => start(e, "pan")}
       onPointerCancel={cancel}
       onLostPointerCapture={() => {
@@ -522,7 +575,7 @@ export function ArchiveCanvas({
           selected={selected}
           onStart={start}
           onSelect={onSelect}
-          onEdit={onEdit}
+          onMenu={onMenu}
           temporary={temporary}
         />
       </div>
