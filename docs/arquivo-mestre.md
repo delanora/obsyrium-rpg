@@ -120,3 +120,11 @@ Botão direito no fundo abre a criação na posição clicada, convertida pela c
 O componente reutilizado é `SceneEditorRadialMenu`, com os mesmos setores, transições, realce por ponteiro, navegação por setas, Escape e movimento reduzido. A única extensão no componente compartilhado é um rótulo acessível opcional para o botão central; os consumidores de cenas mantêm os textos e comportamentos anteriores. Não foi copiado um motor de menus nem alterado o backend.
 
 Validação desta revisão: typecheck/build do frontend; 38 verificações do editor unificado; 16 verificações de câmera; Chromium real com API simulada para ocupação da área útil, dock em desktop/celular, radial por botão direito, submenus, edição, criação na coordenada do clique com câmera aplicada, persistência/retry e gestos anteriores. A aprovação manual continua pendente.
+
+### Refinamento do arraste e das abas
+
+A geometria local permanece visível até o grafo confirmado ser aplicado, evitando
+recuo momentâneo ao salvar arraste ou redimensionamento. A seleção desses cards
+permanece ativa. As abas superiores se sobrepõem ao quadro sem fundo, preservando
+a tipografia, os botões e a linha dourada. O teste de navegador cobre também
+recarregamento com resposta atrasada, além de desktop e celular, com API simulada.

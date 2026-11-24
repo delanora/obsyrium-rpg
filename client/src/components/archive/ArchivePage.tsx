@@ -194,7 +194,7 @@ export function ArchivePage() {
     camera,
   });
   current.current = { boardId, graph, editor, busy, pending, selected, camera };
-  const refresh = useCallback(async (id?: string) => {
+  const refresh = useCallback(async (id?: string, onApplied?: () => void) => {
     const request = ++generation.current;
     const all = await listBoards();
     if (request !== generation.current) return;
@@ -212,6 +212,7 @@ export function ArchivePage() {
       setGraph(null);
       setBoardId("");
     }
+    onApplied?.();
     setLoading(false);
     setChanged(false);
   }, []);
@@ -272,13 +273,16 @@ export function ArchivePage() {
     setPending(input);
     try {
       const receipt = await archiveOperation(input);
-      setPending(null);
-      setVisual({});
-      setEditor(null);
-      setSelected(null);
-      draftPosition.current = null;
+      // Mantém a geometria local até aplicar o grafo confirmado, na mesma renderização.
       await refresh(
         input.action === "board.create" ? receipt.id : current.current.boardId,
+        () => {
+          setPending(null);
+          setVisual({});
+          setEditor(null);
+          if (input.action !== "placement.update") setSelected(null);
+          draftPosition.current = null;
+        },
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível salvar.");

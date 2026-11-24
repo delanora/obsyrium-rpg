@@ -35,7 +35,8 @@ const cards = [],
   placements = [],
   links = [];
 let operations = 0,
-  failNext = false;
+  failNext = false,
+  graphDelay = 0;
 function populate(count) {
   cards.length = 0;
   placements.length = 0;
@@ -161,8 +162,10 @@ await page.route("http://arquivo.test/**", async (route) => {
     }
     if (p === "/api/archive/boards") return route.fulfill({ json: { boards } });
     if (p === "/api/archive/cards") return route.fulfill({ json: { cards } });
-    if (p.startsWith("/api/archive/boards/"))
+    if (p.startsWith("/api/archive/boards/")) {
+      if (graphDelay) await new Promise((resolve) => setTimeout(resolve, graphDelay));
       return route.fulfill({ json: graph(p.split("/").pop()) });
+    }
   }
   let file =
     p === "/app.js"
@@ -227,6 +230,8 @@ try {
       bottom: rect.bottom,
       top: rect.top,
       navBottom: nav.bottom,
+      headerBottom: document.querySelector(".app-header").getBoundingClientRect().bottom,
+      navBackground: getComputedStyle(document.querySelector(".master-navigation")).backgroundColor,
       width: innerWidth,
       height: innerHeight,
       dockBottom: dock.bottom,
@@ -238,7 +243,9 @@ try {
   assert.equal(layout.left, 0);
   assert.equal(layout.right, layout.width);
   assert.equal(layout.bottom, layout.height);
-  assert.ok(Math.abs(layout.top - layout.navBottom) < 1);
+  assert.ok(Math.abs(layout.top - layout.headerBottom) < 1);
+  assert.equal(layout.navBackground, "rgba(0, 0, 0, 0)");
+  assert.ok(layout.navBottom > layout.top);
   assert.equal(layout.border, "0px");
   assert.ok(layout.dockBottom < layout.height && layout.dockTop > layout.top);
   const blank = await page.locator(".archive-viewport").boundingBox();
@@ -301,8 +308,14 @@ try {
   await page.mouse.move(rect.x + 40, rect.y + 30);
   await page.mouse.down();
   await page.mouse.move(rect.x + 110, rect.y + 70, { steps: 8 });
+  const draggedStyle = await header.locator("..").getAttribute("style");
+  graphDelay = 650;
   await page.mouse.up();
   await page.waitForResponse((r) => r.url().endsWith("/operations"));
+  await page.waitForTimeout(180);
+  assert.equal(await header.locator("..").getAttribute("style"), draggedStyle,
+    "O card não deve voltar à posição antiga enquanto o grafo é recarregado");
+  graphDelay = 0;
   await page.waitForFunction(
     () => document.querySelector(".archive-save")?.textContent === "Salvo",
   );
