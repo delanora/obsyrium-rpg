@@ -47,9 +47,15 @@ import {
   zoomArchive,
   type ArchiveCamera,
 } from "./archiveCamera";
+import {
+  layoutArchive,
+  archiveGestureCommit,
+  type ArchiveAnchor,
+} from "./archiveLayout";
 import { projectArchive } from "./archiveProjection";
 import "./archive.css";
 const EMPTY_EXPANSION = new Set<string>();
+const EMPTY_ANCHORS: Record<string, ArchiveAnchor> = {};
 type Command = ArchiveOperation extends infer T
   ? T extends { operationId: string }
     ? Omit<T, "operationId">
@@ -160,6 +166,16 @@ export function ArchivePage() {
     () => (graph ? projectArchive(graph, expanded) : null),
     [graph, expanded],
   );
+  const [layoutAnchors, setLayoutAnchors] = useState<
+    Record<string, Record<string, ArchiveAnchor>>
+  >({});
+  const anchors = layoutAnchors[boardId] ?? EMPTY_ANCHORS;
+  // Nenhuma dependência de câmera/ponteiro: o layout permanece congelado durante os gestos.
+  const layout = useMemo(
+    () => (projection ? layoutArchive(projection, { anchors }) : null),
+    [projection, anchors],
+  );
+  const gestureCommit = useRef<{ id: string; visual: Geometry } | null>(null);
   const [branchRelationEnabled, setBranchRelationEnabled] = useState(false);
   const [branchRelation, setBranchRelation] =
     useState<NarrativeRelation>("contains");
@@ -222,8 +238,20 @@ export function ArchivePage() {
     pending,
     selected,
     camera,
+    layout,
+    expanded,
   });
-  current.current = { boardId, graph, editor, busy, pending, selected, camera };
+  current.current = {
+    boardId,
+    graph,
+    editor,
+    busy,
+    pending,
+    selected,
+    camera,
+    layout,
+    expanded,
+  };
   const refresh = useCallback(async (id?: string, onApplied?: () => void) => {
     const request = ++generation.current;
     const all = await listBoards();
@@ -237,6 +265,15 @@ export function ArchivePage() {
       const next = await loadGraph(chosen);
       if (request !== generation.current) return;
       setGraph(next);
+      setLayoutAnchors((previous) => {
+        if (!previous[chosen]) return previous;
+        const valid: Record<string, ArchiveAnchor> = {};
+        for (const p of next.placements) {
+          const pin = previous[chosen][p.id];
+          if (pin && pin.baseX === p.x && pin.baseY === p.y) valid[p.id] = pin;
+        }
+        return { ...previous, [chosen]: valid };
+      });
       setExpansion((previous) => {
         if (!previous[chosen]) return previous;
         const ids = new Set(next.placements.map((p) => p.id));
@@ -271,7 +308,7 @@ export function ArchivePage() {
     if (!viewport) return;
     const next =
       cameras.current.get(graph.board.id) ??
-      fitArchive(projection?.graph.placements ?? [], viewport);
+      fitArchive(layout?.graph.placements ?? [], viewport);
     cameras.current.set(graph.board.id, next);
     setCamera(next);
   }, [graph?.board.id]);
@@ -303,13 +340,23 @@ export function ArchivePage() {
     }
   }, [projection, selected, graph, radial]);
   const toggleBranches = useCallback((id: string) => {
-    if (current.current.busy || current.current.pending) return;
+    const c = current.current;
+    if (c.busy || c.pending || interacting.current) return;
+    const opening = !c.expanded.has(id);
+    const base = c.graph?.placements.find((p) => p.id === id),
+      shown = c.layout?.geometry.get(id);
+    setLayoutAnchors((previous) => {
+      const next = { ...(previous[c.boardId] ?? {}) };
+      if (opening && base && shown)
+        next[id] = { x: shown.x, y: shown.y, baseX: base.x, baseY: base.y };
+      else delete next[id];
+      return { ...previous, [c.boardId]: next };
+    });
     setExpansion((previous) => {
-      const key = current.current.boardId,
-        next = new Set(previous[key] ?? []);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return { ...previous, [key]: next };
+      const next = new Set(previous[c.boardId] ?? []);
+      if (opening) next.add(id);
+      else next.delete(id);
+      return { ...previous, [c.boardId]: next };
     });
   }, []);
   const onCamera = useCallback((value: ArchiveCamera) => {
@@ -367,6 +414,45 @@ export function ArchivePage() {
             }));
             setSelected({ kind: "card", id: receipt.id });
           }
+          const c = current.current;
+          if (
+            input.action === "placement.update" &&
+            gestureCommit.current?.id === input.placementId &&
+            c.expanded.has(input.placementId)
+          ) {
+            const final = gestureCommit.current.visual;
+            setLayoutAnchors((previous) => ({
+              ...previous,
+              [c.boardId]: {
+                ...(previous[c.boardId] ?? {}),
+                [input.placementId]: {
+                  x: final.x,
+                  y: final.y,
+                  baseX: input.geometry.x,
+                  baseY: input.geometry.y,
+                },
+              },
+            }));
+          }
+          if ("parentPlacementId" in input && input.parentPlacementId) {
+            const id = input.parentPlacementId,
+              base = c.graph?.placements.find((p) => p.id === id),
+              shown = c.layout?.geometry.get(id);
+            if (base && shown && !c.expanded.has(id))
+              setLayoutAnchors((previous) => ({
+                ...previous,
+                [c.boardId]: {
+                  ...(previous[c.boardId] ?? {}),
+                  [id]: {
+                    x: shown.x,
+                    y: shown.y,
+                    baseX: base.x,
+                    baseY: base.y,
+                  },
+                },
+              }));
+          }
+          gestureCommit.current = null;
           draftPosition.current = null;
         },
       );
@@ -384,7 +470,13 @@ export function ArchivePage() {
     const r = root.current
       ?.querySelector(".archive-viewport")
       ?.getBoundingClientRect();
-    if (r && projection) onCamera(fitArchive(projection.graph.placements, r));
+    if (r && layout)
+      onCamera(
+        fitArchive(
+          layout.graph.placements.map((p) => ({ ...p, ...visual[p.id] })),
+          r,
+        ),
+      );
   };
   const geometry = (parentId?: string): Geometry => {
     const parent = graph?.placements.find((p) => p.id === parentId);
@@ -757,6 +849,7 @@ export function ArchivePage() {
               disabled={busy}
               onClick={() => {
                 setPending(null);
+                gestureCommit.current = null;
                 setVisual({});
                 setEditor(null);
                 setError("");
@@ -778,7 +871,7 @@ export function ArchivePage() {
         <>
           <ArchiveCanvas
             key={graph.board.id}
-            graph={projection!.graph}
+            graph={layout!.graph}
             nodes={projection!.nodes}
             onToggle={toggleBranches}
             camera={camera}
@@ -788,15 +881,18 @@ export function ArchivePage() {
             onMenu={openContextMenu}
             visual={visual}
             onVisual={setVisual}
-            onMove={(id, g) =>
+            onMove={(id, g, mode, start) => {
+              const persisted = graph.placements.find((p) => p.id === id);
+              if (!persisted) return;
+              gestureCommit.current = { id, visual: g };
               run({
                 action: "placement.update",
                 boardId,
                 placementId: id,
                 expectedVersion: graph.board.version,
-                geometry: g,
-              })
-            }
+                geometry: archiveGestureCommit(persisted, start, g, mode),
+              });
+            }}
             onConnect={(a, b) => openLink(a, b)}
             busy={guarded}
             onInteraction={onInteraction}
@@ -897,6 +993,15 @@ export function ArchivePage() {
                 Adicionar existente
               </button>
             </>
+          ) : null}
+          {layout?.diagnostics.residuals.length ? (
+            <small
+              role="status"
+              className="archive-layout-status"
+              title="Os limites locais de organização foram atingidos. Você pode ajustar os cards manualmente."
+            >
+              {layout.diagnostics.residuals.length} conflitos de layout
+            </small>
           ) : null}
           <span className="archive-save" role="status">
             {busy

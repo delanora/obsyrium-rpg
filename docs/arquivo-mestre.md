@@ -601,3 +601,174 @@ alterações backend WIP. Artefatos anteriores foram guardados em
 `/tmp/expansao-publicacao-backup/`. A migração é compatível com o código anterior;
 um eventual rollback de artefatos não deve remover a coluna nem apagar relações.
 As microfases 8.5.2.2–4 continuam planejadas e não iniciadas.
+
+## Fase 8.5.2.2 — distribuição radial e colisões — 24/11/2026
+
+### Estado auditado e escopo
+
+HEAD inicial e `origin/main`: `feae51c043f21d94615a0c3d4286a92e38735812`,
+branch `main`. A implementação da 8.5.2.1 é `ddb5e7c742b241663b18b545f095610d29549e8e`;
+sua publicação foi registrada por `feae51c`, ambos conferidos no remoto.
+A migration `20261124150000_narrative_branches` está aplicada (ledger consultado
+somente para leitura, término em 24/11/2026 11:48:32 UTC). O responsável informa
+aceite manual de **13/13 da 8.5.2.1**, substituindo a pendência histórica acima.
+
+Foram preservados 41 arquivos rastreados com WIPs e seis grupos não rastreados:
+combate/preparação, inventário, geografia/criaturas, música, busca/log de dados,
+modelos e migrations de outras frentes. Nenhum integra esta entrega.
+Não há mudança de backend, banco, dependência, asset, estética, regra de jogo ou
+animação. Os builds desta fase foram executados em `/tmp/radial-validacao`;
+`client/dist`, Prisma e serviço ativos não foram alterados. **Não publicado.**
+
+### Arquitetura e decisões
+
+O pipeline é **snapshot persistido → projectArchive (visibilidade) → layoutArchive
+(geometria temporária) → override do gesto → câmera**. Reutiliza os contratos
+estruturais, seleção, menu radial, operações/CAS e o lifecycle de confirmação da
+fase anterior. Não existe segundo caminho de escrita.
+
+O novo `archiveLayout.ts` é puro, sem DOM, câmera, relógio ou HTTP. Ordena núcleos
+por profundidade estrutural/ID e filhos por ângulo persistido/ID. Usa dimensões
+reais, folga de 32 unidades e anéis adaptativos (capacidade inicial oito, mais
+quatro por anel). Preserva direções significativas; filhos inicialmente
+coincidentes recebem espaçamento angular equilibrado. Avalia posições em até
+24 direções e 12 expansões de raio. Núcleos ativos são obstáculos fixos.
+
+Abrir um núcleo captura sua posição **visual atual** como âncora local, inclusive
+se outro núcleo já o deslocou. Essa restrição permanece enquanto ele está aberto;
+fechar remove sua âncora. Assim, a mesma entrada normalizada (snapshot, expansão,
+âncoras) produz o mesmo resultado, mas históricos que capturam âncoras diferentes
+podem produzir resultados diferentes. Não se somam offsets sucessivos. Mudança
+externa da posição persistida invalida a âncora antiga. O estado é por quadro e
+janela; reload inicia recolhido.
+
+A detecção usa AABB com folga. Colisões introduzidas ou agravadas pela expansão
+entram numa fila; o deslocamento busca uma saída curta com preferência para fora
+do núcleo responsável. O vizinho movido propaga a verificação aos próximos.
+Sobreposições preexistentes de independentes que não pioraram são preservadas;
+a expansão não reorganiza globalmente o quadro. Ramos e núcleos são reservados
+antes dos independentes. Prioridades e desempates são estáveis.
+
+O cálculo termina com limites explícitos: 750.000 verificações no resolvedor,
+4.000 movimentos totais, 16 por card e coordenadas entre ±1.000.000. A varredura
+final dos pares é quadrática e separada desse orçamento. Não há promessa de
+resolver qualquer densidade: retorna conflitos residuais, sinaliza limite atingido
+e mostra contagem discreta na barra inferior quando necessário. Nenhum card é
+ocultado ou excluído para resolver colisões.
+
+A saída inclui geometria, offsets, afetados com origem/destino, núcleo responsável,
+profundidade/distância e diagnósticos. `archiveLayoutTransition` compara geometrias
+anterior/nova e prepara a fronteira para a 8.5.2.3; **não anima nada** nesta fase.
+
+### Gestos, conexões e reconciliação
+
+Cards, portas, endpoints, rótulos/seleção de conexões e Enquadrar consomem o mesmo
+grafo visual, sobreposto pelo gesto ativo. Pan/zoom não recalculam o layout nem
+persistem a câmera como posição de card. Abertura/recolhimento não muda a câmera.
+A memoização depende da projeção/snapshot e das âncoras, não dos frames do ponteiro.
+Uma atualização de snapshot ainda recalcula, mesmo se for apenas conteúdo.
+
+Arraste explícito confirma a posição visual final escolhida pelo Mestre somente
+para aquele card. Resize confirma dimensões e delta da borda sobre a origem
+persistida, sem incorporar o deslocamento temporário. O início visual é capturado
+no pointerdown; Escape cancela. O override permanece até ACK; retry conserva
+operationId, conflito permite descartar/recarregar. Se o card é núcleo aberto,
+a âncora é reconciliada com a geometria confirmada. Outros offsets não são gravados.
+Fechar todas as expansões restaura exatamente a organização persistida atual,
+respeitando movimentos que o Mestre confirmou explicitamente.
+
+Arquivos: novo `archiveLayout.ts`; integração em `ArchivePage.tsx` e
+`ArchiveCanvas.tsx`; novos `check-archive-layout.ts` e
+`check-archive-radial-browser.mjs`; ampliação de `check-archive-browser.mjs`;
+este relatório e o trecho correspondente de `roadmap.md`.
+
+### Validação e desempenho
+
+- Typecheck e build de backend/frontend passaram no checkout isolado. O Vite
+  mantém aviso de bundle acima de 500 kB; não é comprovação de falha funcional.
+- **499 verificações puras**: 0/1/2/4/8/24/48 filhos, dimensões heterogêneas,
+  coordenadas negativas/extremas, coincidências, obstáculos e cadeia B→C,
+  independentes distantes, múltiplos núcleos, aninhamento, limites/fallback,
+  âncoras, gestos, determinismo e **100 ciclos** sem acumulação.
+- Regressões anteriores: **25 invariantes de projeção e 16 de câmera** passaram.
+- **121 verificações HTTP/PostgreSQL** da 8.5.2.1 passaram em schema descartável
+  exclusivo, com limpeza seletiva e hash dos dados `public` **ANTES = DEPOIS**.
+  A rejeição esperada de pai igual ao próprio ID aparece no log do Prisma; foi
+  assertada pelo teste, não ignorada como flake.
+- Chromium real com **API simulada**, sem requisições ao servidor da campanha:
+  expansão/recolhimento, dois núcleos, vizinhos, restauração, gestos sobre núcleo,
+  ramo e vizinho deslocado, Escape, falha503/retry, conflito409/descarte, criação,
+  associação/desanexação, conexão via porta, seleção de linha, atualização externa,
+  alternância de quadro, reload, enquadramento e celular passaram. O cenário de
+  demonstração exige zero colisões residuais. Capturas foram inspecionadas.
+- Regressão geral do Chromium: categorias/assets, radial e gestos com
+  50/100/200/500 cards, três ciclos por tamanho. Instrumentação exclusiva do teste
+  confirmou ausência de recálculo durante pan/zoom/frames dos gestos e uma escrita
+  por confirmação. Não foram executados smokes de combate, pois não foram alterados.
+
+Algoritmo puro em Node: cinco aquecimentos e 12 medições por cenário. Tempos locais
+em ms, sem garantia de SLA/FPS. Aplicação abaixo é sobreposição de mapas puros,
+**não renderização React/DOM**.
+
+| Cards | Densidade | Mediana | p95 | Aplicação mediana | Movimentos | Residuais |
+|---|---|---:|---:|---:|---:|---:|
+| 50 | esparsa | 0,734 | 1,183 | 0,009 | 7 | 0 |
+| 50 | extrema | 1,093 | 1,261 | 0,007 | 99 | 0 |
+| 100 | esparsa | 1,280 | 1,659 | 0,014 | 26 | 0 |
+| 100 | extrema | 9,348 | 10,701 | 0,016 | 655 | 6 |
+| 200 | esparsa | 3,786 | 4,706 | 0,026 | 42 | 0 |
+| 200 | extrema | 39,400 | 44,427 | 0,026 | 2247 | 466 |
+| 500 | esparsa | 7,989 | 10,447 | 0,077 | 44 | 0 |
+| 500 | extrema | 30,569 | 45,461 | 0,065 | 4000 | 23254 |
+
+Os cenários extremos de 100/200/500 atingem limites e preservam conflitos
+explicitamente. Menor tempo em 500 não significa melhor resolução: o orçamento
+encerra o trabalho antes. Os cenários esparsos e a demonstração não têm residuais.
+
+Comparação Chromium contra HEAD inicial, mesmo script, três ciclos por tamanho:
+
+| Cards | Render inicial antes/depois (ms) | Gestos mediana antes/depois (ms) | Maior intervalo de frame antes/depois (ms) |
+|---|---:|---:|---:|
+| 50 | 244 / 315 | 568 / 677 | 16,7 / 16,7 |
+| 100 | 360 / 419 | 928 / 1025 | 33,3 / 66,8 |
+| 200 | 566 / 746 | 1619 / 1757 | 33,4 / 50,1 |
+| 500 | 884 / 931 | 3175 / 3758 | 66,7 / 83,4 |
+
+Essas durações incluem automação, eventos e renderização, têm variância e não
+isolam custo do algoritmo. A rodada atual ficou mais lenta; não se afirma ganho
+de FPS nem equivalência de desempenho. O contador confirma que o resolvedor não
+roda nos frames medidos dos gestos. Cards/linhas numerosos continuam caros no DOM.
+No cenário radial com gravação, evento→segundo rAF variou de 62,9 a 116,9 ms;
+o cálculo puro instrumentado do cenário ficou em torno de 0–0,6 ms. Não confundir
+essas métricas nem extrapolar o resultado local para dispositivos dos jogadores.
+
+Durante a validação, o teste de endpoints precisou tolerar 0,01 unidade do quadro:
+o CSSOM serializa pixels com arredondamento (diferença observada de 0,00045).
+As invariantes puras continuam exatas. O helper de clique radial foi corrigido para
+usar a mesma ordem angular do componente existente. A aritmética de resize foi
+agrupada como origem + (final − início), preservando decimais quando o delta é zero.
+Nenhuma falha nova foi classificada como flake; testes anteriores foram mantidos.
+
+### Evidências, aceite e próxima fase
+
+Evidências locais em
+`/root/.codex/visualizations/2026/11/08/01a1b91f-bed8-7260-a9ac-7553fb7b7adb/fichario-radial/`:
+organização global, recolhido, expandido com vizinhos, dois núcleos, somente facção,
+restaurado, gestos, conexão selecionada, enquadramento e celular; logs de testes,
+comparação antes/depois e gravação real WebM completa + `demonstracao.webm` (14s).
+São fixtures simuladas; não representam edição/aceite manual da campanha real.
+
+Checklist manual: expandir Templo/filhos e observar vizinhos; abrir segundo núcleo;
+recolher um sem mover o outro; recolher ambos; mover/redimensionar um vizinho;
+verificar portas/linhas e Enquadrar; alternar quadro; reload; avaliar legibilidade e
+comportamento em região densa. Testar em hardware/browser do responsável antes de
+aprovar a experiência. Risco principal: conflitos residuais e custo DOM em áreas
+densas. A solução é limitada e observável, não um empacotador global ótimo.
+
+Entrega em um commit isolado em `main`, com push sem force e conferência do SHA
+remoto; o SHA final consta no relatório da entrega (não autorreferenciar o commit
+neste documento). WIPs anteriores devem permanecer fora do staging.
+**Aguarda aprovação manual; sem deploy, restart ou migration nesta fase.**
+8.5.2.3/4 não foram iniciadas. Para a 8.5.2.3, consumir os snapshots da transição,
+animando somente a projeção temporária, sem alterar autoridade/persistência e sem
+inserir o resolvedor no loop de frames.

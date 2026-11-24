@@ -67,7 +67,12 @@ interface Props {
   ) => void;
   visual: Record<string, Geometry>;
   onVisual: (v: Record<string, Geometry>) => void;
-  onMove: (id: string, g: Geometry) => void;
+  onMove: (
+    id: string,
+    g: Geometry,
+    mode: "move" | "resize",
+    start: Geometry,
+  ) => void;
   onConnect: (from: string, to: string) => void;
   busy: boolean;
   onInteraction: (active: boolean) => void;
@@ -610,7 +615,7 @@ export function ArchiveCanvas({
         ) {
           const next =
             g.currentGeometry ?? state.current.visual[g.placement.id];
-          if (next) onMove(g.placement.id, next);
+          if (next) onMove(g.placement.id, next, g.mode, g.geometry!);
         }
       }}
     >

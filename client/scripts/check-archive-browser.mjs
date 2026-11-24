@@ -16,6 +16,31 @@ await build({
     resolveDir: path.join(root, "client"),
     loader: "tsx",
   },
+  plugins: [
+    {
+      name: "medicao-layout-isolada",
+      setup(builder) {
+        builder.onLoad({ filter: /archiveLayout\.ts$/ }, (args) => ({
+          contents:
+            fs
+              .readFileSync(args.path, "utf8")
+              .replace(
+                "export function layoutArchive(",
+                "function computeArchiveLayout(",
+              ) +
+            `
+        export function layoutArchive(...args: Parameters<typeof computeArchiveLayout>) {
+          const start=performance.now();
+          window.__archiveLayoutCalls=(window.__archiveLayoutCalls??0)+1;
+          const result=computeArchiveLayout(...args);
+          (window.__archiveLayoutTimes??=[]).push(performance.now()-start);
+          return result;
+        }`,
+          loader: "ts",
+        }));
+      },
+    },
+  ],
   bundle: true,
   external: ["/archive/*"],
   jsx: "automatic",
@@ -1140,7 +1165,7 @@ try {
     fullPage: true,
   });
   const metrics = [];
-  for (const count of [50, 100, 200]) {
+  for (const count of [50, 100, 200, 500]) {
     populate(count);
     const start = Date.now();
     await page.reload();
@@ -1149,6 +1174,9 @@ try {
       count,
     );
     const rendered = Date.now() - start;
+    const callsBeforeCamera = await page.evaluate(
+      () => window.__archiveLayoutCalls ?? 0,
+    );
     const times = await page.evaluate(async () => {
       const result = [];
       let last = performance.now();
@@ -1186,76 +1214,103 @@ try {
       loadedAssets,
       "Zoom não requisita novas texturas",
     );
-    const gestureStart = Date.now();
-    await page.mouse.move(viewport.x + 20, viewport.y + 150);
-    await page.mouse.down();
-    await page.mouse.move(viewport.x + 50, viewport.y + 170, { steps: 4 });
-    await page.mouse.up();
-    assert.equal(operations, ops, "Pan não grava estado narrativo");
-    const movedIndex = Math.floor(count / 2);
-    const moved = page.locator(".archive-card").nth(movedIndex);
-    const movedHeader = await moved.locator("header").boundingBox();
-    const priorPath = await page
-      .locator(".archive-link")
-      .nth(Math.max(0, movedIndex - 1))
-      .getAttribute("d");
-    await page.mouse.move(
-      movedHeader.x + movedHeader.width / 2,
-      movedHeader.y + movedHeader.height / 2,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      movedHeader.x + movedHeader.width / 2 + 15,
-      movedHeader.y + movedHeader.height / 2 + 10,
-      { steps: 5 },
-    );
-    await page.mouse.up();
-    await page.waitForFunction(
-      () => document.querySelector(".archive-save")?.textContent === "Salvo",
-    );
     assert.equal(
-      operations,
-      ops + 1,
-      "Arraste extenso salva uma única operação",
+      await page.evaluate(() => window.__archiveLayoutCalls ?? 0),
+      callsBeforeCamera,
+      "Pan e zoom não recalculam o layout",
     );
-    assert.notEqual(
-      await page
+    const cycles = [];
+    for (let sample = 0; sample < 3; sample++) {
+      const cycleOps = operations;
+      const gestureStart = Date.now();
+      await page.mouse.move(viewport.x + 20, viewport.y + 150);
+      await page.mouse.down();
+      await page.mouse.move(viewport.x + 50, viewport.y + 170, { steps: 4 });
+      await page.mouse.up();
+      assert.equal(operations, cycleOps, "Pan não grava estado narrativo");
+      const callsBeforeDrag = await page.evaluate(
+        () => window.__archiveLayoutCalls ?? 0,
+      );
+      const movedIndex = Math.floor(count / 2);
+      const moved = page.locator(".archive-card").nth(movedIndex);
+      const movedHeader = await moved.locator("header").boundingBox();
+      const priorPath = await page
         .locator(".archive-link")
         .nth(Math.max(0, movedIndex - 1))
-        .getAttribute("d"),
-      priorPath,
-    );
-    const handle = await moved.locator(".edge-se").boundingBox();
-    await page.mouse.move(
-      handle.x + handle.width / 2,
-      handle.y + handle.height / 2,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-      handle.x + handle.width / 2 + 8,
-      handle.y + handle.height / 2 + 6,
-      { steps: 4 },
-    );
-    await page.mouse.up();
-    await page.waitForFunction(
-      () => document.querySelector(".archive-save")?.textContent === "Salvo",
-    );
-    assert.equal(
-      operations,
-      ops + 2,
-      "Resize extenso salva uma única operação",
-    );
-    assert.equal(
-      assetRequests.length,
-      loadedAssets,
-      "Pan, arraste e resize reutilizam texturas carregadas",
-    );
-    const gesturesMs = Date.now() - gestureStart;
+        .getAttribute("d");
+      await page.mouse.move(
+        movedHeader.x + movedHeader.width / 2,
+        movedHeader.y + movedHeader.height / 2,
+      );
+      await page.mouse.down();
+      await page.mouse.move(
+        movedHeader.x + movedHeader.width / 2 + 15,
+        movedHeader.y + movedHeader.height / 2 + 10,
+        { steps: 5 },
+      );
+      assert.equal(
+        await page.evaluate(() => window.__archiveLayoutCalls ?? 0),
+        callsBeforeDrag,
+        "Arraste não recalcula por frame",
+      );
+      await page.mouse.up();
+      await page.waitForFunction(
+        () => document.querySelector(".archive-save")?.textContent === "Salvo",
+      );
+      assert.equal(
+        operations,
+        cycleOps + 1,
+        "Arraste extenso salva uma única operação",
+      );
+      assert.notEqual(
+        await page
+          .locator(".archive-link")
+          .nth(Math.max(0, movedIndex - 1))
+          .getAttribute("d"),
+        priorPath,
+      );
+      const callsBeforeResize = await page.evaluate(
+        () => window.__archiveLayoutCalls ?? 0,
+      );
+      const handle = await moved.locator(".edge-se").boundingBox();
+      await page.mouse.move(
+        handle.x + handle.width / 2,
+        handle.y + handle.height / 2,
+      );
+      await page.mouse.down();
+      await page.mouse.move(
+        handle.x + handle.width / 2 + 8,
+        handle.y + handle.height / 2 + 6,
+        { steps: 4 },
+      );
+      assert.equal(
+        await page.evaluate(() => window.__archiveLayoutCalls ?? 0),
+        callsBeforeResize,
+        "Resize não recalcula por frame",
+      );
+      await page.mouse.up();
+      await page.waitForFunction(
+        () => document.querySelector(".archive-save")?.textContent === "Salvo",
+      );
+      assert.equal(
+        operations,
+        cycleOps + 2,
+        "Resize extenso salva uma única operação",
+      );
+      assert.equal(
+        assetRequests.length,
+        loadedAssets,
+        "Pan, arraste e resize reutilizam texturas carregadas",
+      );
+      cycles.push(Date.now() - gestureStart);
+    }
+    const gesturesMs = [...cycles].sort((a, b) => a - b)[1];
     metrics.push({
       cards: count,
       lines: count - 1,
       renderMs: rendered,
       gesturesMs,
+      cycles,
       maxFrameMs: Math.round(Math.max(...times) * 10) / 10,
     });
   }
