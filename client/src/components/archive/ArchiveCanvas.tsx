@@ -8,7 +8,10 @@ import {
   type PointerEvent,
 } from "react";
 import { Icon, type IconName } from "../Icon";
-import { ArchiveCategoryIcon } from "./ArchiveCategoryIcon";
+import {
+  ArchiveCategoryIcon,
+  archiveCategoryStyle,
+} from "./ArchiveCategoryIcon";
 import type {
   NarrativeGraphDto,
   NarrativePlacementDto,
@@ -18,6 +21,7 @@ import {
   NARRATIVE_CATEGORY_LABELS,
   NARRATIVE_RELATION_LABELS,
 } from "../../../../src/modules/shared/narrative";
+import { ArchiveRelationLabel } from "./ArchiveRelationLabel";
 import {
   cameraPoint,
   linkEndpoints,
@@ -167,7 +171,6 @@ const GraphContent = memo(function GraphContent({
           };
           const path = `M${from.x},${from.y} Q${mid.x},${mid.y} ${to.x},${to.y}`;
           const label = link.label || NARRATIVE_RELATION_LABELS[link.relation];
-          const labelWidth = Math.max(84, Array.from(label).length * 7.5 + 28);
           const labelPoint = {
             x: (from.x + 2 * mid.x + to.x) / 4,
             y: (from.y + 2 * mid.y + to.y) / 4,
@@ -200,29 +203,11 @@ const GraphContent = memo(function GraphContent({
                   }
                 }}
               />
-              <rect
-                className="archive-link-label"
-                x={labelPoint.x - labelWidth / 2}
-                y={labelPoint.y - 15}
-                width={labelWidth}
-                height={30}
-                rx={15}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  onSelect({ kind: "link", id: link.id });
-                }}
+              <ArchiveRelationLabel
+                label={label}
+                point={labelPoint}
+                onSelect={() => onSelect({ kind: "link", id: link.id })}
               />
-              <text
-                x={labelPoint.x}
-                y={labelPoint.y}
-                dominantBaseline="central"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  onSelect({ kind: "link", id: link.id });
-                }}
-              >
-                {label}
-              </text>
             </g>
           );
         })}
@@ -251,8 +236,10 @@ const GraphContent = memo(function GraphContent({
             data-card={p.cardId}
             data-category={p.card.category}
             data-compact={compact || undefined}
+            data-tiny={p.height < 148 || undefined}
             className={`archive-card${selected?.id === p.id ? " is-selected" : ""}`}
             style={{
+              ...archiveCategoryStyle(p.card.category),
               left: p.x,
               top: p.y,
               width: p.width,
@@ -273,7 +260,10 @@ const GraphContent = memo(function GraphContent({
             >
               <ArchiveCategoryIcon category={p.card.category} />
               <span>
-                <small>{NARRATIVE_CATEGORY_LABELS[p.card.category]}</small>
+                <small>
+                  {NARRATIVE_CATEGORY_LABELS[p.card.category] ??
+                    "Card narrativo"}
+                </small>
                 <strong>{p.card.title}</strong>
               </span>
             </header>

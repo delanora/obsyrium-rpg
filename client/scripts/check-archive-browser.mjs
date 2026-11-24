@@ -96,6 +96,11 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
 const errors = [];
+const assetRequests = [];
+page.on("request", (r) => {
+  if (/\/archive\/(icons|card-parts)\//.test(r.url()))
+    assetRequests.push(r.url());
+});
 page.on("pageerror", (e) => errors.push(e.message));
 await page.route("http://arquivo.test/**", async (route) => {
   const url = new URL(route.request().url()),
@@ -164,7 +169,8 @@ await page.route("http://arquivo.test/**", async (route) => {
     if (p === "/api/archive/boards") return route.fulfill({ json: { boards } });
     if (p === "/api/archive/cards") return route.fulfill({ json: { cards } });
     if (p.startsWith("/api/archive/boards/")) {
-      if (graphDelay) await new Promise((resolve) => setTimeout(resolve, graphDelay));
+      if (graphDelay)
+        await new Promise((resolve) => setTimeout(resolve, graphDelay));
       return route.fulfill({ json: graph(p.split("/").pop()) });
     }
   }
@@ -231,8 +237,12 @@ try {
       bottom: rect.bottom,
       top: rect.top,
       navBottom: nav.bottom,
-      headerBottom: document.querySelector(".app-header").getBoundingClientRect().bottom,
-      navBackground: getComputedStyle(document.querySelector(".master-navigation")).backgroundColor,
+      headerBottom: document
+        .querySelector(".app-header")
+        .getBoundingClientRect().bottom,
+      navBackground: getComputedStyle(
+        document.querySelector(".master-navigation"),
+      ).backgroundColor,
       width: innerWidth,
       height: innerHeight,
       dockBottom: dock.bottom,
@@ -314,8 +324,11 @@ try {
   await page.mouse.up();
   await page.waitForResponse((r) => r.url().endsWith("/operations"));
   await page.waitForTimeout(180);
-  assert.equal(await header.locator("..").getAttribute("style"), draggedStyle,
-    "O card não deve voltar à posição antiga enquanto o grafo é recarregado");
+  assert.equal(
+    await header.locator("..").getAttribute("style"),
+    draggedStyle,
+    "O card não deve voltar à posição antiga enquanto o grafo é recarregado",
+  );
   graphDelay = 0;
   await page.waitForFunction(
     () => document.querySelector(".archive-save")?.textContent === "Salvo",
@@ -518,17 +531,31 @@ try {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   // Quadro isolado com todas as artes, tamanhos livres e títulos extensos.
   const categories = [
-    ["region", "regiao"], ["locality", "localidade"], ["dungeon", "masmorra"],
-    ["room", "sala"], ["npc", "npc"], ["creature", "criatura"], ["item", "item"],
-    ["faction", "faccao"], ["event", "acontecimento"], ["scene", "cena"],
-    ["encounter", "encontro"], ["trap", "armadilha"], ["clue", "pista"],
-    ["sound", "efeito-sonoro"], ["image", "imagem"], ["note", "anotacao"],
+    ["region", "regiao"],
+    ["locality", "localidade"],
+    ["dungeon", "masmorra"],
+    ["room", "sala"],
+    ["npc", "npc"],
+    ["creature", "criatura"],
+    ["item", "item"],
+    ["faction", "faccao"],
+    ["event", "acontecimento"],
+    ["scene", "cena"],
+    ["encounter", "encontro"],
+    ["trap", "armadilha"],
+    ["clue", "pista"],
+    ["sound", "efeito-sonoro"],
+    ["image", "imagem"],
+    ["note", "anotacao"],
   ];
   populate(16);
   links.length = 0;
   categories.forEach(([category], i) => {
     cards[i].category = category;
-    cards[i].title = i % 3 === 0 ? `Título extenso de exemplo para ${category}` : `Card ${category}`;
+    cards[i].title =
+      i % 3 === 0
+        ? `Título extenso de exemplo para ${category}`
+        : `Card ${category}`;
     placements[i].x = 70 + (i % 4) * 350;
     placements[i].y = 90 + Math.floor(i / 4) * 235;
     placements[i].width = i % 3 === 0 ? 200 : i % 3 === 1 ? 280 : 330;
@@ -536,21 +563,55 @@ try {
   });
   const beforeIcons = operations;
   await page.reload();
-  await page.waitForFunction(() => document.querySelectorAll(".archive-category-icon").length === 16 &&
-    [...document.querySelectorAll(".archive-category-icon")].every(i => i.complete && i.naturalWidth === 256));
+  await page.waitForFunction(
+    () =>
+      document.querySelectorAll(".archive-category-icon").length === 16 &&
+      [...document.querySelectorAll(".archive-category-icon")].every(
+        (i) => i.complete && i.naturalWidth === 256,
+      ),
+  );
   for (const [category, filename] of categories) {
-    const image = page.locator(`[data-category="${category}"] .archive-category-icon`);
+    const image = page.locator(
+      `[data-category="${category}"] .archive-category-icon`,
+    );
     assert.ok((await image.getAttribute("src")).endsWith(`/${filename}.png`));
-    const geometry = await image.evaluate(el => {
-      const style = getComputedStyle(el), canvas = document.createElement("canvas");
+    const geometry = await image.evaluate(async (el) => {
+      const card = el.closest(".archive-card");
+      for (const source of [
+        getComputedStyle(card.querySelector("header"), "::before")
+          .backgroundImage,
+        getComputedStyle(card.querySelector("header"), "::after")
+          .backgroundImage,
+      ]) {
+        for (const match of source.matchAll(/url\(["']?([^"')]+)["']?\)/g)) {
+          const decoration = new Image();
+          decoration.src = match[1];
+          await decoration.decode();
+        }
+      }
+      const style = getComputedStyle(el),
+        canvas = document.createElement("canvas");
       canvas.width = canvas.height = 256;
-      const ctx = canvas.getContext("2d"); ctx.drawImage(el, 0, 0);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(el, 0, 0);
       const pixels = ctx.getImageData(0, 0, 256, 256).data;
-      let transparent = 0, visible = 0;
-      for (let i = 3; i < pixels.length; i += 4) { if (!pixels[i]) transparent++; if (pixels[i] > 200) visible++; }
-      const span = el.nextElementSibling.getBoundingClientRect(), rect = el.getBoundingClientRect();
-      return { width: style.width, height: style.height, fit: style.objectFit,
-        pointer: style.pointerEvents, overlap: rect.right > span.left, transparent, visible };
+      let transparent = 0,
+        visible = 0;
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (!pixels[i]) transparent++;
+        if (pixels[i] > 200) visible++;
+      }
+      const span = el.nextElementSibling.getBoundingClientRect(),
+        rect = el.getBoundingClientRect();
+      return {
+        width: style.width,
+        height: style.height,
+        fit: style.objectFit,
+        pointer: style.pointerEvents,
+        overlap: rect.right > span.left,
+        transparent,
+        visible,
+      };
     });
     assert.equal(geometry.width, geometry.height);
     assert.ok(["36px", "44px"].includes(geometry.width));
@@ -559,25 +620,198 @@ try {
     assert.equal(geometry.overlap, false);
     assert.ok(geometry.transparent > 0 && geometry.visible > 0);
   }
-  await page.screenshot({path: path.join(temp, "icones-16-categorias.png"), fullPage: true});
+  await page.getByRole("button", { name: "Afastar", exact: true }).click();
+  await page.screenshot({
+    path: path.join(temp, "icones-16-categorias.png"),
+    fullPage: true,
+  });
   const headerGroup = await page.locator(".archive-card").first().boundingBox();
-  await page.screenshot({path: path.join(temp, "icones-cabecalhos.png"), clip: {
-    x: Math.max(0, headerGroup.x - 10), y: Math.max(0, headerGroup.y - 10),
-    width: Math.min(1100, 1440 - Math.max(0, headerGroup.x - 10)), height: 210,
-  }});
-  await page.locator('.archive-card[data-category="region"] .archive-card-copy').click();
-  await page.screenshot({path: path.join(temp, "icones-selecionado-e-tamanhos.png"), fullPage: true});
-  for (let i = 0; i < 3; i++) await page.getByRole("button", {name: "Afastar", exact: true}).click();
-  await page.screenshot({path: path.join(temp, "icones-zoom-afastado.png"), fullPage: true});
-  await page.getByRole("button", {name: "Enquadrar", exact: true}).click();
+  await page.screenshot({
+    path: path.join(temp, "icones-cabecalhos.png"),
+    clip: {
+      x: Math.max(0, headerGroup.x - 10),
+      y: Math.max(0, headerGroup.y - 10),
+      width: Math.min(1100, 1440 - Math.max(0, headerGroup.x - 10)),
+      height: 210,
+    },
+  });
+  await page
+    .locator('.archive-card[data-category="region"] .archive-card-copy')
+    .click();
+  await page.screenshot({
+    path: path.join(temp, "icones-selecionado-e-tamanhos.png"),
+    fullPage: true,
+  });
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: "Afastar", exact: true }).click();
+  await page.screenshot({
+    path: path.join(temp, "icones-zoom-afastado.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Enquadrar", exact: true }).click();
   // Aproximação usa a mesma transformação da câmera para card e PNG.
-  const cardBounds = await page.locator('.archive-card[data-category="npc"]').boundingBox();
+  const cardBounds = await page
+    .locator('.archive-card[data-category="npc"]')
+    .boundingBox();
   await page.mouse.move(cardBounds.x + cardBounds.width / 2, cardBounds.y + 40);
   await page.mouse.wheel(0, -340);
   await page.waitForTimeout(150);
-  await page.screenshot({path: path.join(temp, "icones-aproximacao.png"), fullPage: true});
-  assert.equal(operations, beforeIcons, "Inspeção visual e zoom não escrevem na API");
-  console.log("16 categorias: PNG correto, transparência, proporções, títulos e zoom conferidos.");
+  await page.screenshot({
+    path: path.join(temp, "icones-aproximacao.png"),
+    fullPage: true,
+  });
+  assert.equal(
+    operations,
+    beforeIcons,
+    "Inspeção visual e zoom não escrevem na API",
+  );
+  console.log(
+    "16 categorias: PNG correto, transparência, proporções, títulos e zoom conferidos.",
+  );
+  // Moldura e faixas: cantos fixos, suporte proporcional e assets realmente carregados.
+  populate(2);
+  cards[0].category = "faction";
+  cards[0].title = "Gangue do Pé Sujo";
+  cards[1].category = "encounter";
+  cards[1].title = "Emboscada na estrada";
+  placements[0] = { ...placements[0], x: 80, y: 170, width: 360, height: 250 };
+  placements[1] = { ...placements[1], x: 960, y: 360, width: 360, height: 250 };
+  links[0].label = "Está relacionado a";
+  links.push({
+    ...links[0],
+    id: randomUUID(),
+    label: "Controla os caminhos secretos e os acessos à fortaleza",
+    relation: "custom",
+  });
+  await page.reload();
+  await page.waitForFunction(
+    () => document.querySelectorAll(".archive-relation-text").length === 2,
+  );
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(100);
+  for (const relation of await page.locator(".archive-relation-label").all()) {
+    assert.ok(
+      await relation.evaluate((el) => {
+        const text = el.querySelector("text"),
+          hit = el.querySelector("rect");
+        return (
+          Number(hit.getAttribute("width")) >= text.getComputedTextLength() + 30
+        );
+      }),
+      "Relações personalizadas não devem ser cortadas",
+    );
+  }
+  const appearance = await page
+    .locator(".archive-card")
+    .first()
+    .evaluate(async (el) => {
+      const sources = [
+        getComputedStyle(el, "::after").borderImageSource,
+        getComputedStyle(el, "::before").backgroundImage,
+        getComputedStyle(el.querySelector("header"), "::before")
+          .backgroundImage,
+        getComputedStyle(el.querySelector("header"), "::after").backgroundImage,
+        getComputedStyle(el.querySelector("footer"), "::before")
+          .backgroundImage,
+      ];
+      for (const source of sources) {
+        for (const match of source.matchAll(/url\(["']?([^"')]+)["']?\)/g)) {
+          const image = new Image();
+          image.src = match[1];
+          await image.decode();
+        }
+      }
+      const frame = getComputedStyle(el, "::after");
+      return {
+        slice: frame.borderImageSlice,
+        width: frame.borderImageWidth,
+        pointer: frame.pointerEvents,
+      };
+    });
+  assert.equal(appearance.slice, "56");
+  assert.equal(appearance.width, "28px");
+  assert.equal(appearance.pointer, "none");
+  await page.screenshot({
+    path: path.join(temp, "componentes-faccao-encontro-conexoes.png"),
+    fullPage: true,
+  });
+  await page
+    .locator('.archive-card[data-category="faction"] .archive-card-copy')
+    .click();
+  await page.screenshot({
+    path: path.join(temp, "componentes-selecionado.png"),
+    fullPage: true,
+  });
+  const faction = page.locator('.archive-card[data-category="faction"]');
+  await faction.screenshot({
+    path: path.join(temp, "componentes-detalhe.png"),
+  });
+  await faction
+    .getByRole("button", { name: "Ações de Gangue do Pé Sujo" })
+    .click();
+  await page.getByRole("menu").waitFor();
+  await page.screenshot({
+    path: path.join(temp, "componentes-menu-radial.png"),
+    fullPage: true,
+  });
+  await page.keyboard.press("Escape");
+  for (let i = 0; i < 3; i++)
+    await page.getByRole("button", { name: "Afastar", exact: true }).click();
+  await page.screenshot({
+    path: path.join(temp, "componentes-conexoes-afastado.png"),
+    fullPage: true,
+  });
+  // Fallback usa peças comuns e ícone de anotação, sem inventar nova categoria.
+  cards[0].category = "categoria-sem-asset";
+  await page.reload();
+  const fallback = page.locator('[data-category="categoria-sem-asset"]');
+  await fallback.waitFor();
+  assert.ok(
+    (await fallback.locator("img").getAttribute("src")).endsWith(
+      "/anotacao.png",
+    ),
+  );
+  assert.ok(
+    await fallback.evaluate((el) =>
+      getComputedStyle(el)
+        .getPropertyValue("--archive-header-left")
+        .includes("/comuns/"),
+    ),
+  );
+  populate(5);
+  links.length = 0;
+  const sizes = [
+    [180, 120],
+    [440, 180],
+    [220, 420],
+    [520, 200],
+    [360, 300],
+  ];
+  sizes.forEach(([width, height], i) => {
+    cards[i].category = categories[i][0];
+    Object.assign(placements[i], {
+      x: [60, 320, 850, 70, 400][i],
+      y: [120, 120, 120, 400, 400][i],
+      width,
+      height,
+    });
+  });
+  await page.reload();
+  await page.waitForFunction(
+    () => document.querySelectorAll(".archive-card").length === 5,
+  );
+  const dimensions = await page
+    .locator(".archive-card")
+    .evaluateAll((els) => els.map((el) => [el.offsetWidth, el.offsetHeight]));
+  assert.deepEqual(
+    dimensions,
+    sizes,
+    "A composição não altera as dimensões persistidas",
+  );
+  await page.screenshot({
+    path: path.join(temp, "componentes-proporcoes-livres.png"),
+    fullPage: true,
+  });
   const metrics = [];
   for (const count of [50, 100, 200]) {
     populate(count);
@@ -613,15 +847,88 @@ try {
       }
       return result;
     });
+    await page.waitForLoadState("networkidle");
+    const loadedAssets = assetRequests.length;
     const ops = operations;
     await page.mouse.move(viewport.x + 20, viewport.y + 20);
     await page.mouse.wheel(0, -60);
     await page.waitForTimeout(100);
     assert.equal(operations, ops);
+    assert.equal(
+      assetRequests.length,
+      loadedAssets,
+      "Zoom não requisita novas texturas",
+    );
+    const gestureStart = Date.now();
+    await page.mouse.move(viewport.x + 20, viewport.y + 150);
+    await page.mouse.down();
+    await page.mouse.move(viewport.x + 50, viewport.y + 170, { steps: 4 });
+    await page.mouse.up();
+    assert.equal(operations, ops, "Pan não grava estado narrativo");
+    const movedIndex = Math.floor(count / 2);
+    const moved = page.locator(".archive-card").nth(movedIndex);
+    const movedHeader = await moved.locator("header").boundingBox();
+    const priorPath = await page
+      .locator(".archive-link")
+      .nth(Math.max(0, movedIndex - 1))
+      .getAttribute("d");
+    await page.mouse.move(
+      movedHeader.x + movedHeader.width / 2,
+      movedHeader.y + movedHeader.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      movedHeader.x + movedHeader.width / 2 + 15,
+      movedHeader.y + movedHeader.height / 2 + 10,
+      { steps: 5 },
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector(".archive-save")?.textContent === "Salvo",
+    );
+    assert.equal(
+      operations,
+      ops + 1,
+      "Arraste extenso salva uma única operação",
+    );
+    assert.notEqual(
+      await page
+        .locator(".archive-link")
+        .nth(Math.max(0, movedIndex - 1))
+        .getAttribute("d"),
+      priorPath,
+    );
+    const handle = await moved.locator(".edge-se").boundingBox();
+    await page.mouse.move(
+      handle.x + handle.width / 2,
+      handle.y + handle.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      handle.x + handle.width / 2 + 8,
+      handle.y + handle.height / 2 + 6,
+      { steps: 4 },
+    );
+    await page.mouse.up();
+    await page.waitForFunction(
+      () => document.querySelector(".archive-save")?.textContent === "Salvo",
+    );
+    assert.equal(
+      operations,
+      ops + 2,
+      "Resize extenso salva uma única operação",
+    );
+    assert.equal(
+      assetRequests.length,
+      loadedAssets,
+      "Pan, arraste e resize reutilizam texturas carregadas",
+    );
+    const gesturesMs = Date.now() - gestureStart;
     metrics.push({
       cards: count,
       lines: count - 1,
       renderMs: rendered,
+      gesturesMs,
       maxFrameMs: Math.round(Math.max(...times) * 10) / 10,
     });
   }

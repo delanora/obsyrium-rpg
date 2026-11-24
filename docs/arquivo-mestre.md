@@ -199,3 +199,140 @@ Capturas para aceite, preservadas fora do Git:
 
 Pendências: aprovação visual manual e autorização explícita para publicação.
 A próxima etapa não foi iniciada.
+
+## Fase 8.5.1.1 — composição completa com asset pack (24/11/2026)
+
+Estado atual: implementação concluída, aguardando aceite manual e autorização
+específica para publicação. A integração anterior dos 16 ícones foi autorizada e
+publicada pelo responsável antes deste novo pedido. Nenhuma Expansão Orgânica foi
+iniciada.
+
+### Auditoria e escopo
+
+HEAD inicial `2ff8d713a01a84afbdfcfe11412f5b1a7f1d0a1e`, branch `main`,
+`origin/main` coincidente, staging vazio. As 41 modificações rastreadas e os seis
+grupos não rastreados preexistentes (inventário, cenas, FABs, música e migrations)
+foram preservados. O commit desta fase contém apenas componentes/estilos/teste do
+Fichário, assets e documentação pertinente.
+
+Foram lidos o prompt, `LEIA-ME.txt` e `manifest.json` do ZIP, além de AGENTS,
+roadmap, documentação e código atual. As 16 categorias coincidem com a tabela da
+integração anterior: `region`, `locality`, `dungeon`, `room`, `npc`, `creature`,
+`item`, `faction`, `event`, `scene`, `encounter`, `trap`, `clue`, `sound`, `image`,
+`note`. Slugs e cores seguem o manifesto. `ArchiveCategoryIcon.tsx` centraliza
+ícone, pasta, cor e variáveis dos componentes; uma categoria inesperada usa as
+peças comuns e a arte de anotação, sem mudar catálogo ou contratos.
+
+### Assets e composição
+
+Fonte: `obsyrium-componentes-cards-16-categorias (1).zip`. A prévia de 1600 × 1120
+foi inspecionada e comparada aos cards renderizados, sobretudo Facção e Encontro.
+Todos os componentes são RGBA; apenas a prévia é RGB. As molduras, texturas e
+divisores repetidos nas pastas têm hashes idênticos. Os ícones também são
+idênticos aos já instalados, portanto não foram duplicados.
+
+- `client/public/archive/card-parts/`: 106 PNGs únicos. São 16 conjuntos temáticos
+  com cinco recortes de cabeçalho e um suporte, mais dez peças comuns (cinco
+  recortes, suporte genérico, moldura, fundo, divisor e rótulo).
+- Os 16 ícones existentes em `archive/icons/` são reutilizados. Peças não
+  recortadas permanecem byte a byte idênticas às do ZIP.
+- O plano de fundo geral do Fichário não foi alterado.
+
+A moldura original de 497 × 318 usa `border-image` com slice **56** e largura
+visual **28 px**, em pseudo-elemento absoluto sem preenchimento central e sem
+alterar o box do card. Cantos mantêm a escala; apenas as faixas laterais se
+expandem. Não é o PNG inteiro esticado. As nove partes separadas do ZIP não
+precisam ser duplicadas no projeto porque o navegador faz o mesmo recorte.
+
+O cabeçalho (495 × 136) usa cinco segmentos em vez de três para preservar também
+a gema central, além dos cantos e do adorno direito. Cortes horizontais em
+**0, 80, 230, 266, 359, 495**, mantendo os 136 px de altura. Apenas os dois miolos
+sem ornamentos se expandem. A altura do cabeçalho é **78 px**, ou **74 px** nos
+cards compactos; a área da arte tem 76/72 px devido ao inset de 1 px. As larguras
+dos três adornos fixos seguem essa mesma razão. Recortes foram feitos sem
+reamostragem e recompostos em Chromium: os 17 cabeçalhos (16 categorias + comum)
+produziram pixels renderizados idênticos aos originais. A recompressão PNG sem
+perdas economizou 312.135 bytes nos recortes, sem mudar o conteúdo descomprimido.
+
+Suportes mantêm a proporção original **239:296**, com **64 × 79,26 px** nos cards
+normais e **48 × 59,45 px** nos compactos. Os ícones continuam em **44 × 44** ou
+**36 × 36 px**, sem filtro de recoloração nem caixa adicional. O suporte normal
+avança cerca de 7 px sobre o conteúdo, com espaçamento que preserva a leitura.
+
+A textura interna vem de `fundo.png`, em `cover` com escurecimento leve. O divisor
+comum aparece uma vez no rodapé com altura fixa de 10 px, preservando a gema
+central; não é repetido sobre a linha já incorporada ao cabeçalho. Em cards com
+menos de 148 px de altura, esse divisor é omitido e o resumo fica em uma linha
+com reticências para não interceptar o texto. Categoria, título, resumo, relações,
+quantidade e controles continuam sendo texto/HTML/SVG do aplicativo.
+
+`ArchiveRelationLabel.tsx` usa o PNG fornecido em três segmentos via
+`border-image` dentro de `foreignObject`; as extremidades têm 16 px e a altura
+34 px. A largura é medida a partir do texto SVG real, acrescida de 32 px de
+margem. Relações personalizadas não são cortadas. A medição é compartilhada por
+texto/fonte/estado de carregamento em cache limitado a 512 entradas. Direção,
+caminho das linhas, hit area acessível e seleção continuam no mecanismo anterior.
+
+Normal e hover usam moldura fosca com realce leve de opacidade. Seleção evidencia
+principalmente a moldura, sem animação contínua. Os assets decorativos não recebem
+ponteiro; portas, oito alças, botões e menu radial permanecem funcionais. Não houve
+mudança de schema, API, persistência, autorização, realtime, versionamento,
+idempotência, câmera ou regras mecânicas.
+
+### Validação e desempenho observado
+
+Passaram typecheck e build do frontend e as 16 verificações puras de câmera.
+O build mantém o aviso existente de chunks acima de 500 kB, sem erro de compilação.
+Chromium real, com API exclusivamente simulada em memória, cobriu:
+
+- 16 categorias, PNGs e camadas decodificados, transparência e proporções;
+- títulos extensos, cards de 180 × 120 até 520 × 200 e 220 × 420;
+- dimensões persistidas preservadas, 9-slice de 56/28 px e fallback;
+- pan/zoom, arraste, resize, seleção, conexões e atualização de suas extremidades;
+- relações curtas/personalizadas, radial, botões, criação, reload, falha/retry;
+- desktop/celular e quadros de 50/100/200 cards com conexões;
+- ausência de novas requisições de assets durante pan, zoom, arraste e resize.
+
+A comparação anterior usa um checkout do HEAD inicial e os mesmos gestos. Valores
+pontuais de Chromium headless local, API simulada, sem promessa de FPS ou SLA:
+
+| Cards | Render anterior/atual (ms) | Ciclo pan+arraste+resize anterior/atual (ms) | Maior intervalo de frame anterior/atual (ms) |
+|---|---|---|---|
+| 50 | 223 / 234 | 623 / 688 | 16,8 / 16,8 |
+| 100 | 277 / 433 | 801 / 854 | 33,3 / 33,4 |
+| 200 | 445 / 566 | 1186 / 1621 | 50 / 50 |
+
+A composição aumentou o custo inicial e o ciclo automatizado de interação em
+quadros extensos. Foram removidos filtros permanentes dos ícones, compartilhados
+assets e medições e reduzido o rótulo para uma única superfície segmentada. O
+cache natural do navegador é reutilizado. O aceite deve incluir avaliação de
+fluidez no equipamento do responsável; estes números isolados não substituem
+uma sessão real.
+
+Os testes não se conectam à aplicação nem ao banco da campanha. Nenhum registro
+real é usado como fixture, alterado ou restaurado.
+
+### Capturas e publicação
+
+Capturas preservadas em
+`/root/.codex/visualizations/2026/11/08/01a1b91f-bed8-7260-a9ac-7553fb7b7adb/fichario-componentes/`:
+
+- `componentes-16-categorias.png`: todas as categorias e dimensões variadas.
+- `componentes-faccao-encontro-conexoes.png`: composição e rótulos curtos/longos.
+- `componentes-detalhe.png`: moldura, cabeçalho, suporte, ícone e divisor.
+- `componentes-proporcoes-livres.png`: cards mínimos, horizontais e verticais.
+- `componentes-selecionado.png` e `componentes-menu-radial.png`: estados e ações.
+- `componentes-16-categorias-afastado.png` e `componentes-conexoes-afastado.png`.
+- `componentes-mobile.png` e `referencia-fornecida.png`.
+- `validacao-atual.txt` e `comparacao-anterior.txt`: resultados observados.
+
+Durante a validação, um build foi executado por engano no diretório ativo.
+A versão aprovada anterior foi imediatamente restaurada a partir do espelho de
+publicação; os 108 artefatos novos foram removidos. Comparação integral dos
+arquivos, bundles HTTP `index-DNFxFHA8.js`/`index-BNg-a_mO.css`, health saudável e
+PID `2042000` inalterado comprovaram a restauração. Não houve restart nem escrita
+em dados. A nova composição **não permanece publicada**. A validação final foi
+repetida em checkout isolado.
+
+Pendências: aceite visual/fluidez e autorização explícita para publicação.
+Não foi iniciada a próxima fase.
