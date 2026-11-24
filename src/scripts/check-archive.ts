@@ -78,6 +78,25 @@ try {
     assert.equal(parentPlacementId, null);
     assert.deepEqual(unchanged, legacyBefore);
     checks += 2;
+    const relative = await readFile(
+      new URL(
+        "../../prisma/migrations/20261124170000_narrative_relative_positions/migration.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    for (const statement of relative.split(";").filter((s) => s.trim()))
+      await tx.$executeRawUnsafe(statement);
+    const [legacyRelative] = await tx.$queryRaw<
+      Record<string, unknown>[]
+    >`SELECT "branchOffsetX", "branchOffsetY", x, y FROM narrative_placements WHERE id=${legacyPlacement}`;
+    assert.deepEqual(legacyRelative, {
+      branchOffsetX: null,
+      branchOffsetY: null,
+      x: -123,
+      y: 456,
+    });
+    checks++;
     await tx.$executeRaw`DELETE FROM narrative_boards WHERE id=${legacyBoard}`;
     await tx.$executeRaw`DELETE FROM narrative_cards WHERE id=${legacyCard}`;
     await tx.$executeRawUnsafe(
@@ -658,6 +677,180 @@ try {
     0,
   );
   checks++;
+
+  // Preferências espaciais: fixtures exclusivamente deste schema e operações HTTP reais.
+  const relBoard = await op({
+    action: "board.create",
+    name: "Relativo",
+    description: "",
+  });
+  let rv = 0;
+  const createRelative = async (title: string, parentPlacementId?: string) => {
+    const r = await op({
+      action: "card.create",
+      boardId: relBoard.id,
+      expectedVersion: rv++,
+      title,
+      category: "note",
+      summary: "",
+      content: "",
+      geometry: geo,
+      ...(parentPlacementId ? { parentPlacementId } : {}),
+    });
+    return r.id as string;
+  };
+  const rp = await createRelative("Pai"),
+    rc = await createRelative("Filho", rp),
+    rs = await createRelative("Irmão", rp);
+  const relGraph = () => req(`/boards/${relBoard.id}`);
+  assert.equal(
+    (await relGraph()).placements.find((p: any) => p.id === rc).branchOffsetX,
+    null,
+  );
+  checks++;
+  const custom = {
+    action: "placement.update",
+    operationId: randomUUID(),
+    boardId: relBoard.id,
+    expectedVersion: rv,
+    placementId: rc,
+    geometry: geo,
+    relative: { parentPlacementId: rp, x: 720, y: -230 },
+  };
+  const { operationId: customId, ...customInput } = custom;
+  await req("/operations", custom);
+  rv++;
+  const customReplay = await req("/operations", custom);
+  assert.equal(customReplay.replayed, true);
+  checks++;
+  await req(
+    "/operations",
+    { ...custom, relative: { ...custom.relative, x: 800 } },
+    mt,
+    409,
+  );
+  checks++;
+  let rg = await relGraph();
+  assert.equal(rg.placements.find((p: any) => p.id === rc).branchOffsetX, 720);
+  assert.equal(rg.placements.find((p: any) => p.id === rc).x, geo.x);
+  checks += 2;
+  await op({ ...customInput, expectedVersion: rv, placementId: rp }, 409);
+  checks++;
+  await op(
+    {
+      ...customInput,
+      expectedVersion: rv,
+      relative: { parentPlacementId: rs, x: 1, y: 1 },
+    },
+    409,
+  );
+  checks++;
+  for (const relative of [
+    { parentPlacementId: rp, x: 1 },
+    { parentPlacementId: rp, x: 2002001, y: 0 },
+    { parentPlacementId: rp, x: "NaN", y: 0 },
+  ]) {
+    await op({ ...customInput, expectedVersion: rv, relative }, 400);
+    checks++;
+  }
+  await req(
+    "/operations",
+    { ...custom, operationId: randomUUID(), expectedVersion: rv },
+    pt,
+    403,
+  );
+  checks++;
+  await assert.rejects(
+    prisma.narrativePlacement.update({
+      where: { id: rc },
+      data: { branchOffsetY: null },
+    }),
+  );
+  checks++;
+  const reset = {
+    action: "placement.reset",
+    operationId: randomUUID(),
+    boardId: relBoard.id,
+    placementId: rp,
+    children: true,
+    expectedVersion: rv,
+  };
+  await req("/operations", reset);
+  rv++;
+  await req("/operations", { ...reset, operationId: randomUUID() }, mt, 409);
+  checks++;
+  assert.equal((await req("/operations", reset)).replayed, true);
+  checks++;
+  assert.equal(
+    (await relGraph()).placements.find((p: any) => p.id === rc).branchOffsetX,
+    null,
+  );
+  checks++;
+  await op({ ...customInput, expectedVersion: rv++ });
+  await op({
+    action: "placement.parent",
+    boardId: relBoard.id,
+    placementId: rc,
+    parentPlacementId: null,
+    expectedVersion: rv++,
+  });
+  assert.equal(
+    (await relGraph()).placements.find((p: any) => p.id === rc).branchOffsetX,
+    null,
+  );
+  checks++;
+  await op({
+    action: "placement.parent",
+    boardId: relBoard.id,
+    placementId: rc,
+    parentPlacementId: rs,
+    expectedVersion: rv++,
+  });
+  await op({
+    ...customInput,
+    expectedVersion: rv++,
+    relative: { parentPlacementId: rs, x: -700, y: 400 },
+  });
+  await op({
+    action: "placement.reset",
+    boardId: relBoard.id,
+    placementId: rp,
+    children: true,
+    expectedVersion: rv++,
+  });
+  assert.equal(
+    (await relGraph()).placements.find((p: any) => p.id === rc).branchOffsetX,
+    -700,
+  );
+  checks++;
+  await op({
+    action: "placement.reset",
+    boardId: relBoard.id,
+    placementId: rc,
+    children: false,
+    expectedVersion: rv++,
+  });
+  assert.equal(
+    (await relGraph()).placements.find((p: any) => p.id === rc).branchOffsetX,
+    null,
+  );
+  checks++;
+  await op({
+    ...customInput,
+    expectedVersion: rv++,
+    relative: { parentPlacementId: rs, x: -700, y: 400 },
+  });
+  await op({
+    action: "placement.remove",
+    boardId: relBoard.id,
+    placementId: rs,
+    expectedVersion: rv++,
+  });
+  rg = await relGraph();
+  const promoted = rg.placements.find((p: any) => p.id === rc);
+  assert.equal(promoted.parentPlacementId, null);
+  assert.equal(promoted.branchOffsetX, null);
+  checks += 2;
   await prisma.$disconnect();
   console.log(
     `Arquivo: ${checks} verificações HTTP/PostgreSQL; CAS, replay, privacidade, referências, persistência e exclusões passaram.`,

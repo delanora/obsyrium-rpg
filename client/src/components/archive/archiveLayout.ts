@@ -38,6 +38,7 @@ export interface ArchiveLayout {
     capped: boolean;
     residuals: [string, string][];
     preservedOverlaps: number;
+    manualOverlaps: [string, string][];
   };
 }
 const EPS = 1e-7,
@@ -72,6 +73,61 @@ export function archiveOverlapArea(
 }
 export const archiveIntersects = (a: ArchiveRect, b: ArchiveRect, gap = 32) =>
   archiveOverlapArea(a, b, gap) > EPS;
+
+export const isCustomBranch = (
+  p: Pick<
+    NarrativePlacementDto,
+    "parentPlacementId" | "branchOffsetX" | "branchOffsetY"
+  >,
+) =>
+  !!p.parentPlacementId &&
+  p.branchOffsetX != null &&
+  p.branchOffsetY != null &&
+  Number.isFinite(p.branchOffsetX) &&
+  Number.isFinite(p.branchOffsetY);
+
+/** Vetor entre centros no espaço do quadro, sem câmera ou offset orgânico. */
+export function branchVector(child: ArchiveGeometry, parent: ArchiveGeometry) {
+  return {
+    x: child.x + child.width / 2 - parent.x - parent.width / 2,
+    y: child.y + child.height / 2 - parent.y - parent.height / 2,
+  };
+}
+export function relativeGeometry(
+  child: NarrativePlacementDto,
+  parent: ArchiveGeometry,
+): ArchiveGeometry {
+  return {
+    ...geometryOf(child),
+    x: parent.x + parent.width / 2 + child.branchOffsetX! - child.width / 2,
+    y: parent.y + parent.height / 2 + child.branchOffsetY! - child.height / 2,
+  };
+}
+/** Acompanha centros durante o gesto sem executar o resolvedor de colisões. */
+export function relativeGestureVisual(
+  graph: ArchiveProjection["graph"],
+  visual: Record<string, ArchiveGeometry>,
+) {
+  const result = { ...visual };
+  const queue = Object.keys(visual);
+  const visited = new Set(queue);
+  for (let i = 0; i < queue.length; i++) {
+    const parentId = queue[i],
+      parent = result[parentId];
+    for (const child of graph.placements) {
+      if (
+        child.parentPlacementId !== parentId ||
+        !isCustomBranch(child) ||
+        visited.has(child.id)
+      )
+        continue;
+      visited.add(child.id);
+      queue.push(child.id);
+      result[child.id] = relativeGeometry(child, parent);
+    }
+  }
+  return result;
+}
 
 /** Posição final do arraste é uma escolha explícita. Resize preserva o offset
  * temporário: só seu delta de borda e dimensões pertencem ao commit. */
@@ -121,6 +177,7 @@ export function layoutArchive(
     capped: false,
     residuals: [],
     preservedOverlaps: 0,
+    manualOverlaps: [],
   };
   const causes = new Map<string, { sourceId: string; depth: number }>();
   const depth = (id: string) => {
@@ -162,7 +219,8 @@ export function layoutArchive(
       pin.baseX === p.x &&
       pin.baseY === p.y &&
       Number.isFinite(pin.x) &&
-      Number.isFinite(pin.y)
+      Number.isFinite(pin.y) &&
+      !isCustomBranch(p)
     ) {
       pinned.add(p.id);
       result.set(p.id, {
@@ -172,8 +230,15 @@ export function layoutArchive(
       });
     }
   }
+  const custom = new Set(cards.filter(isCustomBranch).map((p) => p.id));
   const radial = new Set<string>(),
-    reserved = new Set(anchors);
+    reserved = new Set([...anchors, ...custom]);
+  // Reserva antecipada das intenções manuais, em ordem pai→filho.
+  for (const p of [...cards].sort(
+    (a, b) => depth(a.id) - depth(b.id) || order(a.id, b.id),
+  ))
+    if (custom.has(p.id) && result.has(p.parentPlacementId!))
+      result.set(p.id, relativeGeometry(p, result.get(p.parentPlacementId!)!));
   const exhausted = () => {
     if (
       diagnostics.checks >= config.maxChecks ||
@@ -206,6 +271,11 @@ export function layoutArchive(
       : (Math.atan2(dy, dx) + TAU) % TAU;
   };
   for (const group of groups) {
+    if (custom.has(group.id) && result.has(group.parentPlacementId!))
+      result.set(
+        group.id,
+        relativeGeometry(group, result.get(group.parentPlacementId!)!),
+      );
     const core = result.get(group.id)!,
       c = center(core);
     const children = projection.nodes
@@ -214,6 +284,12 @@ export function layoutArchive(
       .sort(
         (a, b) => angleOf(a, group) - angleOf(b, group) || order(a.id, b.id),
       );
+    for (const child of children) {
+      if (!custom.has(child.id)) continue;
+      result.set(child.id, relativeGeometry(child, core));
+      radial.add(child.id);
+      causes.set(child.id, { sourceId: group.id, depth: 0 });
+    }
     let first = 0,
       ring = 0,
       previousOuter = Math.hypot(core.width, core.height) / 2;
@@ -255,7 +331,10 @@ export function layoutArchive(
       let outer = previousOuter;
       batch.forEach((child, index) => {
         radial.add(child.id);
-        if (anchors.has(child.id) && pinned.has(child.id)) {
+        if (
+          custom.has(child.id) ||
+          (anchors.has(child.id) && pinned.has(child.id))
+        ) {
           reserved.add(child.id);
           return;
         }
@@ -445,6 +524,14 @@ export function layoutArchive(
         b = cards[j].id;
       if (archiveIntersects(result.get(a)!, result.get(b)!, config.gap)) {
         if (
+          (custom.has(a) &&
+            (custom.has(b) || raw.get(a)?.parentPlacementId === b)) ||
+          (custom.has(b) && raw.get(b)?.parentPlacementId === a)
+        ) {
+          diagnostics.manualOverlaps.push([a, b]);
+          continue;
+        }
+        if (
           (radial.has(a) ||
             radial.has(b) ||
             offsets.has(a) ||
@@ -474,6 +561,10 @@ export function layoutArchive(
 export function archiveLayoutTransition(
   previous: ReadonlyMap<string, ArchiveGeometry>,
   next: ArchiveLayout,
+  context?: {
+    graph: ArchiveProjection["graph"];
+    previous?: ReadonlyMap<string, ArchiveGeometry>;
+  },
 ) {
   const affected = new Map(next.affected.map((p) => [p.id, p]));
   return [...new Set([...previous.keys(), ...next.geometry.keys()])]
@@ -490,12 +581,28 @@ export function archiveLayoutTransition(
         from.height === to.height
       )
         return [];
+      const placement = context?.graph.placements.find((p) => p.id === id);
+      const sourceId =
+        placement?.parentPlacementId ?? affected.get(id)?.sourceId ?? id;
+      const nucleus = next.geometry.get(sourceId) ?? previous.get(sourceId);
+      const core = nucleus ? center(nucleus) : null;
+      const collapsed =
+        core && placement
+          ? {
+              ...geometryOf(placement),
+              x: core.x - placement.width / 2,
+              y: core.y - placement.height / 2,
+            }
+          : null;
       return [
         {
           id,
           from: from ? { ...from } : null,
           to: to ? { ...to } : null,
-          sourceId: affected.get(id)?.sourceId ?? id,
+          entryOrigin: !from ? collapsed : null,
+          exitTarget: !to ? collapsed : null,
+          mode: placement && isCustomBranch(placement) ? "custom" : "automatic",
+          sourceId,
           depth: affected.get(id)?.depth ?? 0,
         },
       ];

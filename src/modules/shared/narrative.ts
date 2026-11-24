@@ -86,6 +86,9 @@ export interface NarrativeCardDto {
 export interface NarrativePlacementDto {
   /** Pai estrutural no quadro; ausente em clientes anteriores à expansão. */
   parentPlacementId?: string | null;
+  /** Vetor entre centros, em unidades do quadro; ambos nulos = automático. */
+  branchOffsetX?: number | null;
+  branchOffsetY?: number | null;
   id: string;
   boardId: string;
   cardId: string;

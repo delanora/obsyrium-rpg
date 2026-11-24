@@ -56,6 +56,7 @@ export type Geometry = Pick<
 interface Props {
   nodes?: Map<string, ArchiveNodeProjection>;
   onToggle?: (id: string) => void;
+  onConsult?: (id: string, pointer?: boolean) => void;
   graph: NarrativeGraphDto;
   camera: ArchiveCamera;
   onCamera: (c: ArchiveCamera) => void;
@@ -93,6 +94,7 @@ interface Gesture {
 const GraphContent = memo(function GraphContent({
   nodes,
   onToggle,
+  onConsult,
   graph,
   visual,
   selected,
@@ -103,6 +105,7 @@ const GraphContent = memo(function GraphContent({
 }: {
   nodes?: Map<string, ArchiveNodeProjection>;
   onToggle?: (id: string) => void;
+  onConsult?: (id: string, pointer?: boolean) => void;
   graph: NarrativeGraphDto;
   visual: Record<string, Geometry>;
   selected: ArchiveSelection;
@@ -261,17 +264,21 @@ const GraphContent = memo(function GraphContent({
               zIndex: p.zIndex + 1 + (selected?.id === p.id ? 1000001 : 0),
             }}
             aria-label={p.card.title}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.target === e.currentTarget && e.key === "Enter") {
+                e.preventDefault();
+                onConsult?.(p.cardId);
+              }
+            }}
+            onDoubleClick={(e) => {
+              const target = e.target as Element;
+              if (target.closest("button, .archive-resize")) return;
+              onConsult?.(p.cardId, true);
+            }}
             onPointerDown={(e) => e.stopPropagation()}
           >
-            <header
-              onPointerDown={(e) => onStart(e, "move", p)}
-              onDoubleClick={(event) =>
-                onMenu(
-                  { x: event.clientX, y: event.clientY },
-                  { kind: "card", id: p.id },
-                )
-              }
-            >
+            <header onPointerDown={(e) => onStart(e, "move", p)}>
               <ArchiveCategoryIcon category={p.card.category} />
               <span>
                 <small>
@@ -364,6 +371,7 @@ const GraphContent = memo(function GraphContent({
 export function ArchiveCanvas({
   nodes,
   onToggle,
+  onConsult,
   graph,
   camera,
   onCamera,
@@ -379,6 +387,13 @@ export function ArchiveCanvas({
 }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
+  const suppressConsultUntil = useRef(0);
+  const lastTap = useRef<{
+    id: string;
+    at: number;
+    x: number;
+    y: number;
+  } | null>(null);
   const [temporary, setTemporary] = useState<{
     from: string;
     point: { x: number; y: number };
@@ -389,6 +404,7 @@ export function ArchiveCanvas({
     visual,
     onVisual,
     onMove,
+    onConsult,
     onConnect,
     busy,
     onSelect,
@@ -400,14 +416,24 @@ export function ArchiveCanvas({
     visual,
     onVisual,
     onMove,
+    onConsult,
     onConnect,
     busy,
     onSelect,
     onInteraction,
   };
+  const consultCard = useCallback((id: string, pointer = false) => {
+    if (
+      !state.current.busy &&
+      (!pointer || Date.now() >= suppressConsultUntil.current)
+    )
+      state.current.onConsult?.(id);
+  }, []);
   const cancel = () => {
     const g = gesture.current;
     if (!g) return;
+    lastTap.current = null;
+    if (g.moved) suppressConsultUntil.current = Date.now() + 350;
     gesture.current = null;
     state.current.onInteraction(false);
     if (g.mode !== "pan") state.current.onVisual({});
@@ -615,7 +641,31 @@ export function ArchiveCanvas({
         ) {
           const next =
             g.currentGeometry ?? state.current.visual[g.placement.id];
+          lastTap.current = null;
+          suppressConsultUntil.current = Date.now() + 350;
           if (next) onMove(g.placement.id, next, g.mode, g.geometry!);
+        } else if (g.mode !== "pan") {
+          onVisual({});
+          // O capture no viewport suprime o dblclick nativo do cabeçalho.
+          if (g.mode === "move" && g.placement) {
+            const last = lastTap.current,
+              now = Date.now();
+            if (
+              last?.id === g.placement.id &&
+              now - last.at < 350 &&
+              Math.hypot(e.clientX - last.x, e.clientY - last.y) < 8 &&
+              now >= suppressConsultUntil.current
+            ) {
+              state.current.onConsult?.(g.placement.cardId);
+              lastTap.current = null;
+            } else
+              lastTap.current = {
+                id: g.placement.id,
+                at: now,
+                x: e.clientX,
+                y: e.clientY,
+              };
+          }
         }
       }}
     >
@@ -628,6 +678,7 @@ export function ArchiveCanvas({
         <GraphContent
           nodes={nodes}
           onToggle={busy ? undefined : onToggle}
+          onConsult={busy ? undefined : consultCard}
           graph={graph}
           visual={visual}
           selected={selected}

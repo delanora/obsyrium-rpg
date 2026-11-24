@@ -866,3 +866,128 @@ body:has(.archive-page) {
 .archive-branch-relation input[type="checkbox"] { width: auto; }
 .archive-card footer > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .archive-card footer > button { flex-shrink: 0; }
+
+/* Consulta sobreposta: sua rolagem e abas não participam da geometria do quadro. */
+.archive-reader {
+  position: absolute;
+  z-index: 30;
+  right: 16px;
+  top: 16px;
+  bottom: 130px;
+  width: min(440px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #a78549;
+  border-radius: 12px;
+  padding: 18px;
+  background: linear-gradient(135deg, #20242a, #0c1115 75%);
+  box-shadow: 0 10px 35px #0009;
+  color: #dfd0af;
+  overflow: hidden;
+}
+.archive-reader header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.archive-reader header > .archive-category-icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.archive-reader h2 {
+  margin: 4px 0;
+  font-size: 1.3rem;
+  overflow-wrap: anywhere;
+}
+.archive-reader header > div {
+  flex: 1;
+  min-width: 0;
+}
+.archive-reader button {
+  color: inherit;
+  border: 1px solid #8c713e;
+  background: #141a1e;
+  border-radius: 5px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.archive-reader button[aria-pressed="true"] {
+  border-color: #e0b862;
+  background: #3c3323;
+}
+.archive-reader button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.archive-reader-actions,
+.archive-reader nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.archive-reader nav {
+  border-bottom: 1px solid #8c713e66;
+  padding-bottom: 12px;
+}
+.archive-reader-scroll {
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 0 6px 10px 0;
+}
+.archive-reader-scroll p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+.archive-reader-scroll h3 {
+  font-size: 1rem;
+  color: #d9b978;
+  margin: 22px 0 8px;
+}
+.archive-reader-scroll ul {
+  padding: 0;
+  list-style: none;
+}
+.archive-reader-scroll li {
+  margin: 10px 0;
+}
+.archive-reader-scroll li button {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+}
+.archive-reader-scroll li button > .archive-category-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.archive-reader-scroll li button span {
+  display: block;
+}
+.archive-reader-scroll small {
+  display: block;
+  opacity: 0.8;
+  margin: 5px 0;
+}
+@media (max-width: 600px) {
+  .archive-reader {
+    top: 8px;
+    bottom: 8px;
+    right: 8px;
+    width: calc(100% - 16px);
+    padding: 14px;
+  }
+}
+
+.archive-reader::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 14px solid transparent;
+  border-image: url("/archive/card-parts/comuns/moldura.png") 56 / 22px / 0
+    stretch;
+}

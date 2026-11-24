@@ -365,7 +365,11 @@ export async function operateArchive(
               : null;
             await db.narrativePlacement.update({
               where: { id: child.id },
-              data: { parentPlacementId: parent?.id ?? null },
+              data: {
+                parentPlacementId: parent?.id ?? null,
+                branchOffsetX: null,
+                branchOffsetY: null,
+              },
             });
             if (parent)
               await branchLink(
@@ -374,6 +378,24 @@ export async function operateArchive(
                 input.branchRelation,
               );
             receipt = { id: child.id, version };
+            break;
+          }
+          case "placement.reset": {
+            const version = await boardVersion(
+              input.boardId,
+              input.expectedVersion,
+            );
+            await placement(input.placementId, input.boardId);
+            await db.narrativePlacement.updateMany({
+              where: input.children
+                ? {
+                    boardId: input.boardId,
+                    parentPlacementId: input.placementId,
+                  }
+                : { boardId: input.boardId, id: input.placementId },
+              data: { branchOffsetX: null, branchOffsetY: null },
+            });
+            receipt = { id: input.placementId, version };
             break;
           }
           case "placement.update":
@@ -393,14 +415,42 @@ export async function operateArchive(
             if (input.action === "placement.remove") {
               await db.narrativePlacement.updateMany({
                 where: { parentPlacementId: r.id },
-                data: { parentPlacementId: null },
+                data: {
+                  parentPlacementId: null,
+                  branchOffsetX: null,
+                  branchOffsetY: null,
+                },
               });
               await db.narrativePlacement.delete({ where: { id: r.id } });
-            } else
+            } else {
+              if (input.relative) {
+                if (
+                  !r.parentPlacementId ||
+                  r.parentPlacementId !== input.relative.parentPlacementId
+                )
+                  throw new HttpError(
+                    "O núcleo desta ramificação mudou. Recarregue o quadro.",
+                    409,
+                    "CONFLICT",
+                  );
+                await placement(
+                  input.relative.parentPlacementId,
+                  input.boardId,
+                );
+              }
               await db.narrativePlacement.update({
                 where: { id: r.id },
-                data: input.geometry,
+                data: {
+                  ...input.geometry,
+                  ...(input.relative
+                    ? {
+                        branchOffsetX: input.relative.x,
+                        branchOffsetY: input.relative.y,
+                      }
+                    : {}),
+                },
               });
+            }
             receipt = { id: r.id, version };
             break;
           }
@@ -427,7 +477,11 @@ export async function operateArchive(
               });
               await db.narrativePlacement.updateMany({
                 where: { parentPlacementId: { in: places.map((p) => p.id) } },
-                data: { parentPlacementId: null },
+                data: {
+                  parentPlacementId: null,
+                  branchOffsetX: null,
+                  branchOffsetY: null,
+                },
               });
               await db.narrativeCard.delete({ where: { id: input.cardId } });
             } else

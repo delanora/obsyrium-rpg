@@ -225,10 +225,41 @@ await page.route("http://radial.test/**", async (route) => {
           placements.find((p) => p.id === id),
           input.geometry,
         );
+        if (input.relative)
+          Object.assign(
+            placements.find((p) => p.id === id),
+            {
+              branchOffsetX: input.relative.x,
+              branchOffsetY: input.relative.y,
+            },
+          );
         board.version++;
+      } else if (input.action === "placement.reset") {
+        for (const p of placements)
+          if (input.children ? p.parentPlacementId === id : p.id === id) {
+            p.branchOffsetX = null;
+            p.branchOffsetY = null;
+          }
+        board.version++;
+      } else if (input.action === "card.update") {
+        id = input.cardId;
+        Object.assign(
+          cards.find((c) => c.id === id),
+          {
+            title: input.title,
+            summary: input.summary,
+            content: input.content,
+            category: input.category,
+          },
+        );
+        cards.find((c) => c.id === id).version++;
       } else if (input.action === "placement.parent") {
         placements.find((p) => p.id === id).parentPlacementId =
           input.parentPlacementId;
+        Object.assign(
+          placements.find((p) => p.id === id),
+          { branchOffsetX: null, branchOffsetY: null },
+        );
         board.version++;
       } else if (input.action === "card.create") {
         const c = {
@@ -277,21 +308,19 @@ await page.route("http://radial.test/**", async (route) => {
 });
 const world = () => page.locator(".archive-world").getAttribute("style");
 const state = () =>
-  page
-    .locator(".archive-card")
-    .evaluateAll((els) =>
-      Object.fromEntries(
-        els.map((el) => [
-          el.dataset.placement,
-          {
-            x: parseFloat(el.style.left),
-            y: parseFloat(el.style.top),
-            width: parseFloat(el.style.width),
-            height: parseFloat(el.style.height),
-          },
-        ]),
-      ),
-    );
+  page.locator(".archive-card").evaluateAll((els) =>
+    Object.fromEntries(
+      els.map((el) => [
+        el.dataset.placement,
+        {
+          x: parseFloat(el.style.left),
+          y: parseFloat(el.style.top),
+          width: parseFloat(el.style.width),
+          height: parseFloat(el.style.height),
+        },
+      ]),
+    ),
+  );
 const calls = () => page.evaluate(() => window.__calls ?? 0);
 const settled = () =>
   page.waitForFunction(
@@ -433,7 +462,16 @@ const saveGesture = async (id, mode, dx, dy, expected = "ok") => {
   } else await settled();
   const saved = placements.find((p) => p.id === id),
     input = requests[op].geometry;
-  if (mode === "move") {
+  if (mode === "move" && saved.parentPlacementId) {
+    assert.equal(saved.x, raw.x);
+    assert.equal(saved.y, raw.y);
+    assert.ok(requests[op].relative);
+    const shown = (await state())[id];
+    assert.ok(
+      Math.abs(shown.x - final.x) < 0.01 && Math.abs(shown.y - final.y) < 0.01,
+      "Intenção manual não é desfeita",
+    );
+  } else if (mode === "move") {
     assert.ok(Math.abs(saved.x - final.x) < 0.01);
     assert.ok(Math.abs(saved.y - final.y) < 0.01);
   } else {
@@ -586,6 +624,187 @@ try {
   assert.ok(branch);
   await saveGesture(branch, "move", 12, 9);
   await saveGesture(branch, "resize", 8, 8);
+  await saveGesture(branch, "move", 70, -40);
+  await saveGesture(branch, "move", -45, 25);
+  const vectorBeforeRoot = {
+    x: placements.find((p) => p.id === branch).branchOffsetX,
+    y: placements.find((p) => p.id === branch).branchOffsetY,
+  };
+  await saveGesture(uuid(200), "move", 20, 12);
+  assert.deepEqual(
+    {
+      x: placements.find((p) => p.id === branch).branchOffsetX,
+      y: placements.find((p) => p.id === branch).branchOffsetY,
+    },
+    vectorBeforeRoot,
+  );
+
+  // Consulta usa o snapshot integral, inclusive quando a representação é recolhida.
+  const branchPlace = placements.find((p) => p.id === branch);
+  const branchCard = cards.find((c) => c.id === branchPlace.cardId);
+  branchCard.summary = "Resumo integral\nSegunda linha";
+  branchCard.content =
+    "Conteúdo narrativo completo\n<script>window.__unsafe=true</script>\n" +
+    "Segredo de sessão. ".repeat(1500);
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("obsyrium:archive-changed")),
+  );
+  await page.waitForTimeout(120);
+  await page.getByRole("button", { name: "Enquadrar", exact: true }).click();
+  await page.waitForTimeout(400); // Não confundir o fim do resize anterior com duplo clique.
+  await page.locator(`[data-placement="${branch}"] header`).dblclick();
+  const reader = page.getByRole("complementary", {
+    name: "Consulta narrativa",
+  });
+  await reader.waitFor();
+  const readOps = requests.length,
+    readHTTP = reads,
+    readerCamera = await world(),
+    readerCalls = await calls();
+  assert.ok((await reader.textContent()).includes(branchCard.content));
+  assert.equal(await page.evaluate(() => window.__unsafe), undefined);
+  await shot("consulta-narrativa");
+  await reader.getByRole("button", { name: "Relações", exact: true }).click();
+  await reader
+    .getByRole("button", { name: new RegExp(names[0]) })
+    .first()
+    .click();
+  assert.ok((await reader.locator("h2").textContent()).includes(names[0]));
+  await reader
+    .getByRole("button", { name: "Voltar à consulta anterior" })
+    .click();
+  assert.equal(await reader.locator("h2").textContent(), branchCard.title);
+  assert.equal(await calls(), readerCalls);
+  assert.equal(await world(), readerCamera);
+  assert.equal(requests.length, readOps);
+  assert.equal(reads, readHTTP, "Leitura do snapshot não duplica HTTP");
+  await saveGesture(branch, "move", 10, 7);
+  assert.equal(
+    await reader.locator("h2").textContent(),
+    branchCard.title,
+    "Movimento não troca o registro consultado",
+  );
+  await reader
+    .getByRole("button", { name: "Fixar consulta", exact: true })
+    .click();
+  await page
+    .locator(`[data-placement="${uuid(200)}"] .archive-card-copy`)
+    .click();
+  assert.equal(await reader.locator("h2").textContent(), names[0]);
+  await reader
+    .getByRole("button", { name: "Fixar consulta", exact: true })
+    .click();
+  await page.locator(`[data-placement="${branch}"]`).focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await reader.locator("h2").textContent(), branchCard.title);
+  const customOffset = {
+    x: branchPlace.branchOffsetX,
+    y: branchPlace.branchOffsetY,
+  };
+  await toggle(0, true);
+  assert.equal(
+    await reader.locator("h2").textContent(),
+    branchCard.title,
+    "Recolher não interrompe consulta",
+  );
+  await toggle(0, false);
+  const currentState = await state(),
+    pa = currentState[uuid(200)],
+    ch = currentState[branch];
+  assert.ok(
+    Math.abs(ch.x + ch.width / 2 - pa.x - pa.width / 2 - customOffset.x) < 0.01,
+  );
+  assert.ok(
+    Math.abs(ch.y + ch.height / 2 - pa.y - pa.height / 2 - customOffset.y) <
+      0.01,
+  );
+  await reader
+    .getByRole("button", { name: "Editar card", exact: true })
+    .click();
+  await page
+    .getByLabel("Conteúdo narrativo", { exact: true })
+    .fill("Texto confirmado da consulta\nLinha preservada");
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await settled();
+  assert.ok(
+    (await reader.textContent()).includes("Texto confirmado da consulta"),
+  );
+  await reader
+    .getByRole("button", { name: "Editar card", exact: true })
+    .click();
+  await page
+    .getByLabel("Conteúdo narrativo", { exact: true })
+    .fill("Rascunho cancelado");
+  await page
+    .getByRole("button", { name: "Fechar editor", exact: true })
+    .click();
+  assert.ok(!(await reader.textContent()).includes("Rascunho cancelado"));
+  await page.keyboard.press("Escape");
+  await reader.waitFor({ state: "hidden" });
+  await page
+    .getByRole("button", { name: `Ações de ${branchCard.title}`, exact: true })
+    .click();
+  await chooseRadial("Consultar");
+  await reader.waitFor();
+  await reader.getByRole("button", { name: "Fechar consulta" }).click();
+  await page.reload();
+  await settled();
+  await toggle(0, false);
+  await page.getByRole("button", { name: "Enquadrar", exact: true }).click();
+  const reloadedState = await state(),
+    reloadedBranch = reloadedState[branch],
+    reloadedRoot = reloadedState[uuid(200)];
+  assert.ok(
+    Math.abs(
+      reloadedBranch.x +
+        reloadedBranch.width / 2 -
+        reloadedRoot.x -
+        reloadedRoot.width / 2 -
+        branchPlace.branchOffsetX,
+    ) < 0.01,
+    "Preferência sobrevive ao reload",
+  );
+  await page.locator(`[data-placement="${branch}"]`).focus();
+  await page.keyboard.press("Enter");
+  await reader.waitFor();
+  branchCard.summary = "Atualização externa confirmada";
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("obsyrium:archive-changed")),
+  );
+  await reader
+    .getByText("Atualização externa confirmada", { exact: true })
+    .waitFor();
+  const removedIndex = placements.findIndex((p) => p.id === branch);
+  placements.splice(removedIndex, 1);
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("obsyrium:archive-changed")),
+  );
+  await reader.waitFor({ state: "hidden" });
+  placements.splice(removedIndex, 0, branchPlace);
+  await page.evaluate(() =>
+    window.dispatchEvent(new Event("obsyrium:archive-changed")),
+  );
+  await page.waitForTimeout(100);
+  await page
+    .getByRole("button", { name: `Ações de ${branchCard.title}`, exact: true })
+    .click();
+  await chooseRadial("Ramificações");
+  await chooseRadial("Restaurar posição automática");
+  await settled();
+  assert.equal(branchPlace.branchOffsetX, null);
+  await page.getByRole("button", { name: "Enquadrar", exact: true }).click();
+  await saveGesture(branch, "move", 14, 8);
+  await page
+    .getByRole("button", { name: `Ações de ${names[0]}`, exact: true })
+    .click();
+  await chooseRadial("Ramificações");
+  await chooseRadial("Restaurar distribuição automática");
+  assert.ok(
+    (await page.getByRole("dialog").textContent()).includes("1 posições"),
+  );
+  await page.getByRole("button", { name: "Confirmar", exact: true }).click();
+  await settled();
+  assert.equal(branchPlace.branchOffsetX, null);
   await shot("radial-gestos-confirmados");
   // Hit testing/radial usam a geometria orgânica. Conexões novas seguem o fluxo existente.
   await page
@@ -705,6 +924,18 @@ try {
     ),
   );
   await shot("radial-mobile");
+  await page
+    .getByRole("button", { name: `Ações de ${names[0]}`, exact: true })
+    .click();
+  await chooseRadial("Consultar");
+  const mobileReader = page.getByRole("complementary", {
+    name: "Consulta narrativa",
+  });
+  await mobileReader.waitFor();
+  const mobileBox = await mobileReader.boundingBox();
+  assert.ok(mobileBox.x >= 0 && mobileBox.x + mobileBox.width <= 390);
+  await shot("consulta-mobile");
+  await mobileReader.getByRole("button", { name: "Fechar consulta" }).click();
   assert.deepEqual(errors, []);
   console.log(
     "Radial no Chromium: âncoras, vizinhos, restauração, gestos, Escape, retry, conflito, estruturas, externo, quadros e celular passaram.",

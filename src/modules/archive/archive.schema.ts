@@ -128,6 +128,24 @@ export const archiveOperationSchema = z.discriminatedUnion("action", [
       boardId: id,
       placementId: id,
       geometry: narrativeGeometrySchema,
+      relative: z
+        .object({
+          parentPlacementId: id,
+          x: z.number().finite().min(-2002000).max(2002000),
+          y: z.number().finite().min(-2002000).max(2002000),
+        })
+        .strict()
+        .optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...receipt,
+      ...version,
+      action: z.literal("placement.reset"),
+      boardId: id,
+      placementId: id,
+      children: z.boolean(),
     })
     .strict(),
   z

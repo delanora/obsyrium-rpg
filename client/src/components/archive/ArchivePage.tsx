@@ -51,7 +51,11 @@ import {
   layoutArchive,
   archiveGestureCommit,
   type ArchiveAnchor,
+  isCustomBranch,
+  branchVector,
+  relativeGestureVisual,
 } from "./archiveLayout";
+import { ArchiveReader, type ArchiveReaderHandle } from "./ArchiveReader";
 import { projectArchive } from "./archiveProjection";
 import "./archive.css";
 const EMPTY_EXPANSION = new Set<string>();
@@ -156,6 +160,8 @@ function ArchiveDialog({
   );
 }
 export function ArchivePage() {
+  const reader = useRef<ArchiveReaderHandle>(null);
+  const consult = useCallback((id: string) => reader.current?.consult(id), []);
   const [boards, setBoards] = useState<NarrativeBoardDto[]>([]),
     [boardId, setBoardId] = useState(""),
     [graph, setGraph] = useState<NarrativeGraphDto | null>(null);
@@ -252,6 +258,19 @@ export function ArchivePage() {
     layout,
     expanded,
   };
+  const selectIntentional = useCallback((selection: ArchiveSelection) => {
+    setSelected(selection);
+    if (selection?.kind === "card") {
+      const p = current.current.graph?.placements.find(
+        (p) => p.id === selection.id,
+      );
+      if (p) reader.current?.select(p.cardId);
+    }
+  }, []);
+  const visualGesture = useCallback((v: Record<string, Geometry>) => {
+    const layout = current.current.layout;
+    setVisual(layout ? relativeGestureVisual(layout.graph, v) : v);
+  }, []);
   const refresh = useCallback(async (id?: string, onApplied?: () => void) => {
     const request = ++generation.current;
     const all = await listBoards();
@@ -415,6 +434,21 @@ export function ArchivePage() {
             setSelected({ kind: "card", id: receipt.id });
           }
           const c = current.current;
+          if (
+            input.action === "placement.reset" ||
+            input.action === "placement.parent"
+          ) {
+            setLayoutAnchors((previous) => {
+              const next = { ...(previous[c.boardId] ?? {}) };
+              if (input.action === "placement.reset" && input.children)
+                for (const p of c.graph?.placements ?? []) {
+                  if (p.parentPlacementId === input.placementId)
+                    delete next[p.id];
+                }
+              else delete next[input.placementId];
+              return { ...previous, [c.boardId]: next };
+            });
+          }
           if (
             input.action === "placement.update" &&
             gestureCommit.current?.id === input.placementId &&
@@ -584,6 +618,10 @@ export function ArchivePage() {
       const c = current.current;
       if (c.busy || c.pending || c.editor) return;
       setSelected(selection);
+      if (selection?.kind === "card") {
+        const p = c.graph?.placements.find((p) => p.id === selection.id);
+        if (p) reader.current?.select(p.cardId);
+      }
       if (!selection) {
         const rect = root.current
           ?.querySelector(".archive-viewport")
@@ -659,6 +697,14 @@ export function ArchivePage() {
     radialTitle = "Ações do card";
     radialOptions = [
       {
+        id: "consult",
+        label: "Consultar",
+        caption: "Consultar",
+        icon: "book",
+        disabled: guarded,
+        action: radialAction(() => consult(targetPlace.cardId)),
+      },
+      {
         id: "edit",
         label: "Editar conteúdo",
         caption: "Editar",
@@ -728,6 +774,9 @@ export function ArchivePage() {
   } else if (radial?.kind === "branches" && targetPlace && graph) {
     radialTitle = "Ramificações";
     const info = projection?.nodes.get(targetPlace.id);
+    const customChildren = graph.placements.filter(
+      (p) => p.parentPlacementId === targetPlace.id && isCustomBranch(p),
+    );
     radialOptions = [
       ...(info?.children.length
         ? [
@@ -770,6 +819,50 @@ export function ArchivePage() {
             .catch((e) => setError(e.message));
         }),
       },
+      ...(isCustomBranch(targetPlace)
+        ? [
+            {
+              id: "reset-one",
+              label: "Restaurar posição automática",
+              caption: "Automática",
+              icon: "gear" as const,
+              disabled: guarded,
+              action: radialAction(() =>
+                run({
+                  action: "placement.reset",
+                  boardId,
+                  placementId: targetPlace.id,
+                  children: false,
+                  expectedVersion: graph.board.version,
+                }),
+              ),
+            },
+          ]
+        : []),
+      ...(customChildren.length
+        ? [
+            {
+              id: "reset-children",
+              label: "Restaurar distribuição automática",
+              caption: "Restaurar",
+              icon: "gear" as const,
+              disabled: guarded,
+              action: radialAction(() =>
+                setEditor({
+                  kind: "confirm",
+                  message: `Restaurar a distribuição automática? ${customChildren.length} posições personalizadas de ramificações diretas serão descartadas.`,
+                  command: {
+                    action: "placement.reset",
+                    boardId,
+                    placementId: targetPlace.id,
+                    children: true,
+                    expectedVersion: graph.board.version,
+                  },
+                }),
+              ),
+            },
+          ]
+        : []),
       ...(targetPlace.parentPlacementId
         ? [
             {
@@ -853,7 +946,10 @@ export function ArchivePage() {
                 setVisual({});
                 setEditor(null);
                 setError("");
-                void refresh(boardId).catch((e) => setError(e.message));
+                setBusy(true);
+                void refresh(boardId)
+                  .catch((e) => setError(e.message))
+                  .finally(() => setBusy(false));
               }}
             >
               {pending ? "Descartar alterações e recarregar" : "Recarregar"}
@@ -869,6 +965,18 @@ export function ArchivePage() {
       </div>
       {graph ? (
         <>
+          <ArchiveReader
+            ref={reader}
+            graph={graph}
+            projection={projection}
+            busy={guarded}
+            onEdit={(cardId) => {
+              const p = current.current.graph?.placements.find(
+                (p) => p.cardId === cardId,
+              );
+              if (p) editCard(p.id);
+            }}
+          />
           <ArchiveCanvas
             key={graph.board.id}
             graph={layout!.graph}
@@ -877,20 +985,38 @@ export function ArchivePage() {
             camera={camera}
             onCamera={onCamera}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={selectIntentional}
+            onConsult={consult}
             onMenu={openContextMenu}
             visual={visual}
-            onVisual={setVisual}
+            onVisual={visualGesture}
             onMove={(id, g, mode, start) => {
               const persisted = graph.placements.find((p) => p.id === id);
               if (!persisted) return;
               gestureCommit.current = { id, visual: g };
+              const parent = persisted.parentPlacementId
+                ? layout?.geometry.get(persisted.parentPlacementId)
+                : null;
+              const relative =
+                parent && (mode === "move" || isCustomBranch(persisted))
+                  ? {
+                      parentPlacementId: persisted.parentPlacementId!,
+                      ...branchVector(g, parent),
+                    }
+                  : undefined;
+              const geometry = archiveGestureCommit(persisted, start, g, mode);
+              // Arraste de ramo guarda intenção relativa, sem reescrever sua geometria independente.
+              if (relative && mode === "move") {
+                geometry.x = persisted.x;
+                geometry.y = persisted.y;
+              }
               run({
                 action: "placement.update",
                 boardId,
                 placementId: id,
                 expectedVersion: graph.board.version,
-                geometry: archiveGestureCommit(persisted, start, g, mode),
+                geometry,
+                ...(relative ? { relative } : {}),
               });
             }}
             onConnect={(a, b) => openLink(a, b)}
@@ -1428,6 +1554,7 @@ export function ArchivePage() {
                   <label>
                     Conteúdo narrativo
                     <textarea
+                      aria-label="Conteúdo narrativo"
                       className="archive-content"
                       maxLength={100000}
                       value={draft.content}
@@ -1557,7 +1684,10 @@ export function ArchivePage() {
                 setVisual({});
                 setEditor(null);
                 setError("");
-                void refresh(boardId).catch((e) => setError(e.message));
+                setBusy(true);
+                void refresh(boardId)
+                  .catch((e) => setError(e.message))
+                  .finally(() => setBusy(false));
               }}
             >
               Descartar alterações e recarregar

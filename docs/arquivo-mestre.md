@@ -834,3 +834,224 @@ breve e somente de leitura; o aceite funcional pós-deploy depende do responsáv
 
 A publicação foi registrada em commit documental separado, sem misturar WIPs.
 **Aguardar validação manual. A 8.5.2.3 não foi iniciada.**
+
+## Refinamentos 8.5.2.2.2 e 8.5.2.2.1 — 24/11/2026
+
+### Auditoria e estado inicial
+
+HEAD inicial, branch e remoto confirmados:
+`bca6111113783d49c00bd225bdd4ea1e8dffe1a1`, `main`, igual a `origin/main`.
+A versão funcional publicada permanece `2bcfcd14e960ede5ac0d164ae84b0a14258cdd1f`:
+HTML por HTTP referencia `index-DvzluyZM.js` e `index-CX9JPIDF.css`.
+O responsável informou **aprovação manual da 8.5.2.2 em 15/15 critérios**;
+8.5.2.1 permanece aprovada em 13/13. Esses aceites não substituem o aceite próprio
+dos refinamentos abaixo. Fase 8.5.2 inteira ainda não concluída.
+
+Foram auditados schema, APIs, projeção, layout/transição, Canvas, menu radial,
+editor e operações (CAS, advisory lock, fingerprint, recibo, retry e invalidação
+privada). Os 47 arquivos/grupos WIP anteriores foram comparados por SHA-256:
+intactos, descontando somente as duas linhas próprias acrescentadas ao schema.
+As outras mudanças no mesmo schema permanecem fora do commit desta entrega.
+Nenhum motor de combate/mecânica foi alterado. Não há dependências ou assets novos.
+
+### 8.5.2.2.2 — posicionamento relativo personalizado
+
+**Causa raiz:** `layoutArchive` sempre incluía todo filho na distribuição radial;
+a confirmação do arraste alterava X/Y, mas não exprimia uma preferência diferente
+do modo automático. O cálculo seguinte voltava a escolher uma posição radial.
+Overrides permanentes em CSS ou memória não resolveriam reload/concorrência.
+
+Modelo adotado: dois campos opcionais de `NarrativePlacement`, `branchOffsetX` e
+`branchOffsetY`. Ambos nulos significam automático; ambos preenchidos indicam
+vetor **entre centros** no espaço do quadro, associado ao pai estrutural atual.
+Não são unidades de D&D, porcentagens ou pixels de tela. X/Y continuam sendo a
+geometria independente; dimensões/zIndex e identidade canônica não mudam de sentido.
+Preferências são por representação/quadro, não pelo card narrativo global.
+
+Migration aditiva **`20261124170000_narrative_relative_positions`**: acrescenta
+colunas nullable e CHECK de par completo, presença de pai e intervalo ±2.002.000
+por componente. Esse intervalo comporta a diferença entre centros de cards cujas
+origens independentes estão em ±1.000.000 e dimensões até 1600. Não há backfill,
+inferência retroativa, alteração de conteúdo ou conversão de X/Y. O layout deriva
+centros somando pai e vetor; não recorta unilateralmente uma preferência ao mover
+um ancestral. Em cadeias, a extensão visual pode ultrapassar as origens independentes;
+continua finita e o gesto mantém os limites geométricos existentes.
+
+As operações continuam em `POST /api/archive/operations`:
+
+- `placement.update` aceita `relative: { parentPlacementId, x, y }` opcional.
+  O servidor confere o pai efetivamente persistido e o mesmo quadro. Contexto
+  divergente é 409; valores inválidos/incompletos são rejeitados por Zod/CHECK.
+- Novo `placement.reset`, com `children: false` para uma representação ou `true`
+  para filhos diretos. Usa uma transação, CAS do quadro, advisory lock, fingerprint
+  e recibo; reset coletivo não é uma sequência de requisições.
+- Desvinculação/reassociação limpa o par; remoção de núcleo ou exclusão global
+  promove filhos diretos e limpa offsets sem gravar a geometria orgânica.
+- Realtime continua exclusivamente privado para Mestres, com invalidação existente;
+  não há payload narrativo público nem escrita por WebSocket.
+
+O arraste efetivo de filho captura geometria visual do pai/filho e confirma o vetor
+final. Sua origem independente permanece intacta. Clique ou Escape não personaliza.
+Resize automático continua automático; resize personalizado conserva o vínculo,
+atualizando o vetor apenas pelo deslocamento de centro resultante do canto/borda.
+O override do gesto acompanha o ponteiro e permanece até ACK/retry. Uma mudança de
+pai durante o gesto é rejeitada por contexto/CAS. Falhas/conflitos não fazem o
+cliente gravar offsets de outros cards. O fluxo de descarte agora aguarda o refresh
+antes de permitir novo gesto, evitando aplicar snapshot antigo no meio do próximo.
+
+Prioridades: gesto explícito → núcleos (com pertencimento respeitado) → posições
+personalizadas reservadas → filhos automáticos → independentes deslocáveis.
+O algoritmo existente foi estendido, não substituído. Reserva as intenções manuais
+antes da busca radial, distribui só os automáticos e afasta obstáculos usando o
+resolvedor limitado. Novos filhos não anulam preferências existentes. Uma âncora
+antiga de um núcleo que também é filho personalizado não prevalece sobre seu pai.
+
+Mover/redimensionar o núcleo acompanha os centros de descendentes personalizados
+durante o gesto por projeção simples, **sem executar o resolvedor a cada frame**.
+Após ACK o cálculo deriva as posições dos mesmos vetores. Somente a operação do
+núcleo é persistida, não um movimento permanente em massa dos descendentes.
+Recolher não apaga preferências e fechar todos restaura independentes exatamente.
+
+Sobreposições entre personalizadas, ou entre uma personalizada e seu pai, são
+registradas em `diagnostics.manualOverlaps`, preservadas e não viram alerta invasivo.
+Conflitos com outro núcleo fixo podem permanecer em `residuals`; nenhuma intenção
+manual é deslocada para escondê-los. Limites de processamento anteriores não foram
+aumentados. Regiões distantes e relações mantêm as identidades.
+
+Menu radial de Ramificações: “Restaurar posição automática” e “Restaurar distribuição
+automática”. A coletiva mostra a quantidade e pede confirmação; não percorre netos,
+não remove cards/relações, não muda dimensões nem pertencimento.
+`archiveLayoutTransition` aceita contexto opcional do snapshot e fornece origem
+no núcleo para entradas, destino no centro para saídas, fonte/modo e geometrias.
+São dados para 8.5.2.3; nenhuma animação foi implementada.
+
+### 8.5.2.2.1 — consulta narrativa
+
+Novo componente isolado `ArchiveReader.tsx`, sobreposto à direita, não modal no
+desktop, com rolagem própria e superfície responsiva no celular. Reutiliza ícones,
+moldura 9-slice e cores existentes. Abre por duplo clique, Enter no card focável
+ou “Consultar” no radial/botão de ações (alternativa para toque).
+
+O cabeçalho mantém a captura do ponteiro para arraste. Como ela suprime o dblclick
+nativo, dois pointerups sem movimento no mesmo card também reconhecem a consulta;
+o fim de drag/resize é protegido por intervalo de 350 ms. Portas, resize e botões
+internos não abrem consulta por duplo clique. Cliques simples continuam selecionando.
+
+Estado próprio do painel: ID canônico, histórico local até 100 entradas, aba e
+fixação. Não há novo editor ou cache global. Narrativa exibe resumo e conteúdo
+integrais como texto React, com `white-space: pre-wrap`, quebras de linha e estado
+vazio. HTML/script é mostrado literalmente. “Editar card” reutiliza o editor atual;
+salvar mostra snapshot confirmado e cancelar conserva a leitura. A textarea recebeu
+nome acessível explícito para que o conteúdo extenso não contamine seu rótulo.
+
+Relações distingue núcleo pai, filhos diretos e relações narrativas do **quadro
+atual**; mostra categoria/ícone, tipo, direção, rótulo, descrição e visível/recolhido.
+Clicar em relacionado troca apenas o registro de leitura, com retorno no histórico;
+não cria representação, expande núcleo ou altera a câmera.
+
+Normal: seleção de outro elemento não troca a consulta. Fixado: seleção intencional
+de outro card visível acompanha seu conteúdo; fundo/conexão e seleção automática
+causada por recolhimento não o substituem. Fixação é local, sem banco. Recolher
+uma representação consultada mantém leitura pelo ID canônico. Troca de quadro
+revalida o snapshot e fecha a consulta se o card não estiver disponível; relações
+não são reaproveitadas do contexto anterior. Remoção/exclusão externa limpa a
+consulta, e atualizações confirmadas substituem conteúdo/versão.
+
+A auditoria confirmou que `GET /api/archive/boards/:id` já inclui conteúdo completo
+inclusive dos recolhidos. Portanto o painel **não precisa de fetch próprio**:
+não há respostas adicionais fora de ordem, chamadas por hover/frame nem conteúdo
+redundante via `GET /cards/:id`. Continua usando a geração anti-resposta-obsoleta
+do carregamento de snapshots existente. Erros de snapshot seguem o banner/refresh
+atual. Não afirma relações globais ausentes da API.
+
+Abas, histórico, fixação e rolagem são estado interno do Reader. Callbacks estáveis
+preservam o memo do grafo durante câmera; a instrumentação dos testes confere que
+abas/rolagem não executam layout nem reconstroem `GraphContent`. O painel não altera
+geometria, câmera ou persistência. Privacidade depende das rotas MASTER existentes;
+nenhuma ação de revelar/compartilhar foi acrescentada.
+
+### Validação, desempenho e evidências
+
+- Typechecks e builds backend/frontend passaram em `/tmp/refinamento-validacao`.
+  Prisma Client gerado **somente nesse checkout descartável**, nunca no ativo.
+- **718 verificações puras de layout**, incluindo as 499 anteriores, 100 ciclos
+  adicionais personalizados, mistura automático/manual, movimento do núcleo,
+  resize, sobreposição permitida, núcleo personalizado aninhado com âncora antiga,
+  retorno ao raw e transição de saída. Vetores decimais usam tolerância 1e-8 por
+  aritmética de ponto flutuante; posições simples/restauração continuam exatas.
+- **173 verificações HTTP/PostgreSQL**, preservando as 121 anteriores: migração
+  sobre fixture legada, default null, personalização, replay/fingerprint, permissões,
+  limites, pai incorreto, par incompleto no banco, reset individual/coletivo e stale
+  CAS, netos preservados, desvinculação, nova associação e promoção. Schema próprio
+  `test_archive_relative_*`, cleanup exclusivo e digest `public` **ANTES = DEPOIS**.
+- **25 invariantes de projeção e 16 de câmera** anteriores passaram.
+- Chromium real com **API simulada**: regressões de radial/gestos e fluxo integrado
+  de preferências, aproximação/afastamento, resize, movimento de pai, reload, resets,
+  consulta por duplo clique/Enter/radial, conteúdo extenso e script literal, relações,
+  histórico, fixação, ocultação, edição/salvamento/cancelamento, atualização externa,
+  remoção da representação consultada, desktop e viewport mobile. Sem mutações da
+  campanha. O acesso por botões é adequado a toque; não houve teste em aparelho físico.
+- Teste de navegador geral com 50/100/200/500 cards, três ciclos por tamanho,
+  painel aberto/fixado, abas/rolagem, zoom e contadores de layout/render. O resolvedor
+  não roda nos frames dos gestos, pan/zoom ou consulta. Não se afirma teste de sessão
+  completa em produção. Nenhum smoke de combate foi necessário.
+
+Medições locais do algoritmo híbrido: oito repetições por cenário. Medianas (ms)
+para 50/100/200/500 cards com metade personalizada: **0,885 / 2,690 / 5,689 / 58,681**;
+com todos personalizados: **0,431 / 1,048 / 2,937 / 7,462**. O cenário misto grande
+paga a busca radial contra muitas posições reservadas e a varredura de pares;
+não é equivalente ao caso automático esparso anterior. Os limites continuam
+finitos e nenhuma solução ótima/global é prometida.
+
+A primeira medição do navegador identificou callbacks novos invalidando o memo
+no pan/zoom. Foram estabilizados e a rodada seguinte registrou medianas de gestos
+50/100/200/500 de **611 / 914 / 1546 / 3212 ms**, contra **677 / 1025 / 1757 / 3758**
+da rodada documentada na 8.5.2.2. São durações da automação completa, não latência
+por frame ou SLA, e diferem em cenário/instrumentação; não se proclama ganho de FPS.
+Na última rodada isolada, o maior intervalo foi 50,1 ms em 500 cards; uma rodada
+anterior chegou a 83,4 ms. O custo DOM de cards/linhas,
+regressões observadas anteriormente e conflitos residuais densos continuam como
+pontos de atenção. Não foram classificados como flakes.
+
+A validação também corrigiu uma corrida no descarte/refresh, a captura do duplo
+clique, o histórico que precisava capturar o ID anterior antes do updater React e
+o nome acessível da textarea. As falhas foram investigadas; não foram removidas
+assertivas anteriores para aprovar a entrega.
+
+Capturas, logs e WebM real (com API simulada):
+`/root/.codex/visualizations/2026/11/08/01a1b91f-bed8-7260-a9ac-7553fb7b7adb/fichario-refinamento/`.
+`consulta-narrativa.png` e `consulta-mobile.png` foram produzidas; a captura desktop
+e a captura mobile foram inspecionadas. Gravação completa e `demonstracao.webm`
+(trecho inicial de até 30s).
+
+### Arquivos, publicação e aceite
+
+Arquivos de implementação: schema e migration nova; contratos `narrative.ts` e
+`archive.schema.ts`; service existente; `archiveLayout.ts`, `ArchiveCanvas.tsx`,
+`ArchivePage.tsx`, novo `ArchiveReader.tsx` e CSS pertinente. Testes: scripts
+`check-archive.ts`, `check-archive-layout.ts`, `check-archive-browser.mjs` e
+`check-archive-radial-browser.mjs`. Apenas este relatório e os trechos pertinentes
+do roadmap foram atualizados. Entrega em um commit isolado, SHA/push conferidos
+no relatório final; não autorreferenciar o commit no próprio conteúdo.
+
+**Não publicado.** Para publicar futuramente: autorização explícita para migration
+aditiva/backend/frontend/restart; revisar migrations pendentes alheias sem aplicá-las
+por acidente; backup dos artefatos, build isolado sobre a fonte publicada preservada,
+Prisma compatível com somente a extensão autorizada, migration revisada e restart
+necessário do backend. Após existirem preferências persistidas, um rollback para
+backend antigo exige compatibilidade com a limpeza dos offsets: o CHECK impede
+desvincular deixando preferências órfãs. Não remover o CHECK nem descartar preferências
+para contornar isso automaticamente. Revalidar health/artefatos/logs e preservar WIPs. A versão
+ativa continua a mesma, PID 2341486. A aplicação da migration em produção não está
+autorizada por esta tarefa.
+
+Checklist manual espacial: personalizar dois filhos e deixar outros automáticos;
+aproximar/afastar; mover e redimensionar núcleo/filhos; recolher/expandir/reload;
+testar duas expansões, sobreposição intencional, resets individual/coletivo e netos.
+Checklist consulta: abrir nas três formas, ler texto longo/vazio, navegar relações,
+voltar, fixar/selecionar, selecionar fundo/conexão, recolher consultado, editar/cancelar,
+trocar quadro e observar atualização/exclusão externa; conferir desktop e celular.
+
+**Aguardam aceite manual próprio. Não iniciar 8.5.2.3.** A futura animação deve
+consumir as geometrias/transições prontas sem executar resolvedor em frames ou
+persistir deslocamentos automáticos. Não houve ondas/física/expansão avançada.

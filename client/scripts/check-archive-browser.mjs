@@ -20,6 +20,9 @@ await build({
     {
       name: "medicao-layout-isolada",
       setup(builder) {
+        builder.onLoad({ filter: /ArchiveCanvas\.tsx$/ }, (args) => ({
+          contents: fs.readFileSync(args.path, "utf8").replace("  const places = useMemo(", "  window.__graphRenders=(window.__graphRenders??0)+1;\n  const places = useMemo("), loader: "tsx",
+        }));
         builder.onLoad({ filter: /archiveLayout\.ts$/ }, (args) => ({
           contents:
             fs
@@ -1174,6 +1177,40 @@ try {
       count,
     );
     const rendered = Date.now() - start;
+    const readerStart = Date.now(),
+      readerOps = operations;
+    const graphRendersBeforeReader = await page.evaluate(() => window.__graphRenders ?? 0);
+    const layoutBeforeReader = await page.evaluate(
+      () => window.__archiveLayoutCalls ?? 0,
+    );
+    await page.locator(".archive-card").first().focus();
+    await page.keyboard.press("Enter");
+    const reader = page.getByRole("complementary", {
+      name: "Consulta narrativa",
+    });
+    await reader.waitFor();
+    await reader
+      .getByRole("button", { name: "Fixar consulta", exact: true })
+      .click();
+    await reader.getByRole("button", { name: "Relações", exact: true }).click();
+    await reader
+      .getByRole("button", { name: "Narrativa", exact: true })
+      .click();
+    await reader
+      .locator(".archive-reader-scroll")
+      .evaluate((el) => (el.scrollTop = 1000));
+    assert.equal(
+      await page.evaluate(() => window.__archiveLayoutCalls ?? 0),
+      layoutBeforeReader,
+      "Consulta não recalcula layout",
+    );
+    assert.equal(operations, readerOps, "Consulta não escreve");
+    assert.equal(await page.evaluate(() => window.__graphRenders ?? 0), graphRendersBeforeReader, "Abas/rolagem não reconstruem o grafo");
+    await page.mouse.move(25,400); await page.mouse.wheel(0,70);
+    await page.waitForTimeout(80);
+    assert.equal(await page.evaluate(() => window.__archiveLayoutCalls ?? 0), layoutBeforeReader, "Zoom com consulta aberta não recalcula layout");
+    await reader.getByRole("button", { name: "Fechar consulta" }).click();
+    const readerMs = Date.now() - readerStart;
     const callsBeforeCamera = await page.evaluate(
       () => window.__archiveLayoutCalls ?? 0,
     );
@@ -1309,6 +1346,7 @@ try {
       cards: count,
       lines: count - 1,
       renderMs: rendered,
+      readerMs,
       gesturesMs,
       cycles,
       maxFrameMs: Math.round(Math.max(...times) * 10) / 10,

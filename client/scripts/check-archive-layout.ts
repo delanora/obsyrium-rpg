@@ -4,6 +4,8 @@ import { performance } from "node:perf_hooks";
 import { projectArchive } from "../src/components/archive/archiveProjection";
 import {
   layoutArchive,
+  branchVector,
+  relativeGestureVisual,
   archiveIntersects,
   archiveGestureCommit,
   archiveLayoutTransition,
@@ -421,6 +423,188 @@ for (const count of [50, 100, 200, 500])
       capped: last!.diagnostics.capped,
     });
   }
+
+// Preferências manuais coexistem com radial, sem acúmulo nem gravação.
+const customized = graph([
+  card("root"),
+  card("manual", 0, 0, 280, 200, "root"),
+  card("auto", 0, 0, 280, 200, "root"),
+  card("neighbor", 700, -100),
+  card("far", 9000, 9000),
+]);
+const manual = customized.placements[1];
+manual.branchOffsetX = 700;
+manual.branchOffsetY = -100;
+const expectedVector = { x: 700, y: -100 };
+const beforeCustom = JSON.stringify(customized);
+for (let cycle = 0; cycle < 100; cycle++) {
+  const expanded = run(customized);
+  check(() =>
+    assert.deepEqual(
+      branchVector(
+        expanded.geometry.get("manual")!,
+        expanded.geometry.get("root")!,
+      ),
+      expectedVector,
+    ),
+  );
+  const closed = run(customized, []);
+  check(() =>
+    assert.deepEqual(closed.geometry.get("neighbor"), {
+      x: 700,
+      y: -100,
+      width: 280,
+      height: 200,
+      zIndex: 0,
+    }),
+  );
+}
+check(() => assert.equal(JSON.stringify(customized), beforeCustom));
+const personalized = run(customized);
+check(() =>
+  assert.notDeepEqual(
+    personalized.geometry.get("neighbor"),
+    customized.placements[3],
+  ),
+);
+check(() =>
+  assert.deepEqual(
+    branchVector(
+      personalized.geometry.get("manual")!,
+      personalized.geometry.get("root")!,
+    ),
+    expectedVector,
+  ),
+);
+const movedRoot = { ...personalized.geometry.get("root")!, x: 1200, y: -800 };
+const moving = relativeGestureVisual(personalized.graph, { root: movedRoot });
+check(() =>
+  assert.deepEqual(branchVector(moving.manual, movedRoot), expectedVector),
+);
+customized.placements[0].x = 1200;
+customized.placements[0].y = -800;
+const afterMove = run(customized);
+check(() =>
+  assert.deepEqual(
+    branchVector(
+      afterMove.geometry.get("manual")!,
+      afterMove.geometry.get("root")!,
+    ),
+    expectedVector,
+  ),
+);
+manual.width = 600;
+manual.height = 700;
+const resized = run(customized);
+check(() =>
+  assert.deepEqual(
+    branchVector(
+      resized.geometry.get("manual")!,
+      resized.geometry.get("root")!,
+    ),
+    expectedVector,
+  ),
+);
+const otherManual = card("manual2", 0, 0, 600, 700, "root");
+otherManual.branchOffsetX = 700;
+otherManual.branchOffsetY = -100;
+customized.placements.push(otherManual);
+const overlaps = run(customized);
+check(() =>
+  assert.ok(
+    overlaps.diagnostics.manualOverlaps.some(
+      (pair) => pair.includes("manual") && pair.includes("manual2"),
+    ),
+  ),
+);
+check(() =>
+  assert.deepEqual(
+    branchVector(
+      overlaps.geometry.get("manual2")!,
+      overlaps.geometry.get("root")!,
+    ),
+    expectedVector,
+  ),
+);
+const nestedCustom = card("nested", 0, 0, 280, 200, "manual");
+nestedCustom.branchOffsetX = -320;
+nestedCustom.branchOffsetY = 0;
+customized.placements.push(nestedCustom);
+const nestedLayout = run(customized, ["root", "manual"], {
+  anchors: { manual: { x: -9000, y: -9000, baseX: manual.x, baseY: manual.y } },
+});
+check(() =>
+  assert.deepEqual(
+    branchVector(
+      nestedLayout.geometry.get("manual")!,
+      nestedLayout.geometry.get("root")!,
+    ),
+    expectedVector,
+  ),
+);
+check(() =>
+  assert.deepEqual(
+    branchVector(
+      nestedLayout.geometry.get("nested")!,
+      nestedLayout.geometry.get("manual")!,
+    ),
+    { x: -320, y: 0 },
+  ),
+);
+const leaving = archiveLayoutTransition(
+  nestedLayout.geometry,
+  run(customized, []),
+  { graph: customized },
+);
+check(() => assert.ok(leaving.find((p) => p.id === "manual")?.exitTarget));
+const customMetrics = [];
+for (const count of [50, 100, 200, 500])
+  for (const portion of [0.5, 1]) {
+    const g = graph([
+      card("root"),
+      ...Array.from({ length: count - 1 }, (_, i) => {
+        const p = card("custom-" + i, 0, 0, 280, 200, "root");
+        if (i < (count - 1) * portion) {
+          p.branchOffsetX = Math.cos(i) * (500 + i * 25);
+          p.branchOffsetY = Math.sin(i) * (500 + i * 25);
+        }
+        return p;
+      }),
+    ]);
+    const times = [];
+    for (let sample = 0; sample < 8; sample++) {
+      const t = performance.now();
+      const l = run(g);
+      times.push(performance.now() - t);
+      if (sample === 7) {
+        check(() =>
+          assert.ok(
+            [...l.geometry.values()].every(
+              (p) => Number.isFinite(p.x) && Number.isFinite(p.y),
+            ),
+          ),
+        );
+        for (const p of g.placements.filter((p) => p.branchOffsetX != null)) {
+          const v = branchVector(
+            l.geometry.get(p.id)!,
+            l.geometry.get("root")!,
+          );
+          assert.ok(
+            Math.abs(v.x - p.branchOffsetX!) < 1e-8 &&
+              Math.abs(v.y - p.branchOffsetY!) < 1e-8,
+          );
+        }
+      }
+    }
+    times.sort((a, b) => a - b);
+    customMetrics.push({
+      cards: count,
+      customized: portion,
+      medianMs: +times[4].toFixed(3),
+      maxMs: +times[7].toFixed(3),
+    });
+  }
+console.log("Layout híbrido (8 repetições):", JSON.stringify(customMetrics));
 console.log(
   "Amostras locais aquecidas (12 repetições):",
   JSON.stringify(metrics),

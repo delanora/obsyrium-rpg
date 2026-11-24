@@ -1913,6 +1913,8 @@ model NarrativePlacement {
   boardId String
   cardId  String
   parentPlacementId String?
+  branchOffsetX Float?
+  branchOffsetY Float?
   x       Float
   y       Float
   width   Float @default(280)
