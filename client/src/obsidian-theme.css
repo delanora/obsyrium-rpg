@@ -137,3 +137,18 @@
 :root[data-theme='dark'] :is(.auth-page .auth-form > .btn-primary, .wizard-overlay .wizard .btn-primary, .modal-actions > .btn-primary, .detail-modal-actions > .btn-primary):not(.btn-danger):hover:not(:disabled) {
   background: none; border-color: transparent; box-shadow: none; filter: brightness(1.15);
 }
+
+/* A busca composta pinta um único fundo, inclusive nas listas das outras abas. */
+:root[data-theme='dark'] .search-field {
+  background: linear-gradient(180deg, #22252b, #15181e);
+  border-color: #a58550a6; box-shadow: inset 0 1px #d3b67b16;
+}
+:root[data-theme='dark'] .search-field:focus-within {
+  border-color: #d3ae70; box-shadow: 0 0 12px #bf985b26, inset 0 1px #d3b67b16;
+}
+:root[data-theme='dark'] .search-field input[type='search'] {
+  background: none; border: 0; box-shadow: none; color: #eadfc9;
+}
+:root[data-theme='dark'] .search-field input[type='search']:focus-visible {
+  outline: none;
+}

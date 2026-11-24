@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import './master-home.css';
 import { Icon, type IconName } from '../Icon';
 
 /** Abas do painel do mestre — a home concentra todas elas. */
@@ -137,9 +138,6 @@ export function MasterHome({
       {search}
 
       <section className="home-hero">
-        <span className="home-hero-mark">
-          <img className="master-emblem" src="/brand/salao-mestre.png" width={72} height={72} alt="" aria-hidden="true" draggable={false} />
-        </span>
         <h2 className="home-title">Salão do Mestre</h2>
         <p className="home-lede">
           Bem-vindo, {userName}. Reúna as fichas, o bestiário e o mundo da sua campanha aqui.
@@ -215,6 +213,16 @@ export function MasterHome({
               </button>
             </li>
           ))}
+          <li>
+            <button type="button" className="home-card home-card-coming-soon" disabled>
+              <span className="home-card-icon"><Icon name="book" size={22} /></span>
+              <span className="home-card-body">
+                <span className="home-card-name">Fichário do Mestre</span>
+                <span className="home-card-hint">Notas e referências da mesa.</span>
+              </span>
+              <span className="home-card-status">Em breve</span>
+            </button>
+          </li>
         </ul>
       </section>
 
