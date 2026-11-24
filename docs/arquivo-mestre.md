@@ -1443,3 +1443,26 @@ A captura desktop foi inspecionada. O aviso de bundle grande e os custos DOM em
 quadros extensos continuam existentes; a semântica do layout não mudou.
 Commit isolado com push e confirmação remota no relatório final. **Não publicado;
 aguarda autorização de publicação e aceite visual/funcional.** 8.5.2.3 não iniciada.
+
+### Publicação do editor lateral — 24/11/2026
+
+Autorizada pelo responsável. SHA funcional
+`9dfcc32630df49bbfbc16b582931713aae38b317`, `main`, push e remoto conferidos.
+O build isolado em `/tmp/editor-publicacao/client` reproduziu integralmente os
+artefatos anteriores antes de receber somente `ArchivePage.tsx`, `ArchiveReader.tsx`
+e `archive.css` desta entrega. Backup em
+`/var/backups/obsyrium/20261124-editor-lateral/client-dist/`, com script de rollback
+frontend por troca atômica de HTML, sem restart ou banco.
+
+Publicado `index-ZdSEGbQt.js` e `index-BwtHA_mH.css`. Os 340 arquivos foram conferidos
+por hash local; HTML e bundles também via HTTP. Assets anteriores preservados.
+Regressão integrada do Chromium passou na fonte do espelho com API simulada,
+incluindo prévia, sobreposição, cancelamento, Escape, retry e mobile. Em produção,
+login carregou em Chromium sem pageerror/requestfailed, em leitura. Não se usaram
+cards reais como fixtures mutáveis.
+
+Health saudável, banco disponível; PID permaneceu 2467899, sem restart. Backend,
+Prisma e os 47 WIPs intactos por hash. Rotas privadas continuam exigindo autenticação.
+Logs e manifests preservados no backup; espelho reutilizável atualizado. Publicação
+registrada em commit documental separado e enviada ao remoto. Aguardar aceite
+visual/funcional; 8.5.2.3 não iniciada.
