@@ -1304,3 +1304,59 @@ Repetição raster é periódica por definição; a escala visual/nitidez amplia
 preferência de contraste devem receber aceite visual próprio. Testes automatizados
 não garantem o mesmo resultado perceptivo em todos os monitores/navegadores.
 **Aguardar aceite desta fase; 8.5.2.3 (ondas) continua não iniciada.**
+
+### Publicação controlada da 8.5.2.2.3 — 24/11/2026
+
+Autorizada exclusivamente para o frontend. SHA funcional
+**`4698748e9170568f61cc8c3c8c3184827f7e7c9f`**, branch `main`, push e igualdade com
+`origin/main` confirmados antes da operação. O commit não contém backend, Prisma,
+schema ou migrations. O PNG do repositório e o anexo foram novamente comparados:
+mesmo SHA-256 `a20438370c99a0c218284df141069df5741affb76074e5d836b2da3635ec5d5b`.
+
+Um novo espelho `/tmp/fundo-publicacao/client` foi copiado da fonte anteriormente
+publicada. Seu build reproduziu integralmente os arquivos então publicados que
+compõem o build, incluindo HTML, JS e CSS; bundles históricos extras foram mantidos.
+Somente depois foram sobrepostos `ArchiveBackground.tsx`, `ArchiveCanvas.tsx`,
+`archive.css` e o novo PNG do commit autorizado. Builds Vite executados somente no
+espelho isolado. Nenhuma outra frente WIP foi incorporada.
+
+Backup persistente dos artefatos ativos e evidências:
+`/var/backups/obsyrium/20261124-fundo-espacial/` (diretório restrito 0700), com
+`client-dist/`, manifests e `restaurar-frontend.sh --confirmar`. O rollback restaura
+assets primeiro e HTML por rename atômico, sem excluir bundles extras, alterar
+banco/Prisma ou reiniciar serviço. Não foi acionado.
+
+Publicado:
+
+- `/assets/index-Kf46gd8h.js`;
+- `/assets/index-0lf8C0HE.css`;
+- `/archive/textura-marmore-azul-ardosia.png`;
+- novo HTML referenciando esses bundles.
+
+Os assets foram copiados antes da troca atômica do HTML. Todos os **339 arquivos**
+do build foram conferidos localmente por SHA-256. HTML, ambos os bundles e PNG
+foram baixados por HTTP e comparados com os hashes do build. O PNG servido coincide
+com o anexo validado. Chromium real em produção carregou o login e decodificou a
+textura em **1672×941**, sem `pageerror` ou `requestfailed`. Não houve login de
+fixture nem interação mutável com cards reais.
+
+Os testes do fundo e a regressão integrada do fichário foram repetidos sobre a
+fonte do espelho, com **fixtures locais/API simulada**, passando pan, zoom,
+periodicidade, gestos, expansão/recolhimento, personalização, consulta, edição,
+resets, reconciliação e mobile. Evidências dessas rodadas:
+`/tmp/arquivo-fundo-ZnP5Pn/` e `/tmp/arquivo-radial-browser-Oq0laQ/`; logs também no
+backup persistente. Isso não equivale a aceite de sessão completa em produção.
+
+Pós-deploy: health `status: ok`, `database: up`; serviço ativo com o mesmo PID
+**2467899**. Rota privada `/api/archive/boards` sem token permanece 401.
+**965 arquivos de backend compilado, schema/migrations e Prisma instalado**
+conferidos por hash, intactos; os **47 WIPs** anteriores também intactos.
+Nenhuma migration, geração de Prisma, escrita de dados ou restart foi executado.
+O journal do serviço não apresentou entradas na janela observada, portanto nenhum
+erro relevante foi observado; a verificação é breve e não substitui monitoramento.
+
+O espelho reutilizável `/tmp/arquivo-publicacao/client` foi atualizado com a fonte
+e os artefatos publicados. Registro em commit documental separado, com push e SHA
+remoto conferidos no relatório final. Permanecem os limites de DOM/layout em quadros
+grandes e o aviso de bundle grande. **Aguardar aceite visual e funcional próprio.**
+A Fase **8.5.2.3 — Propagação em Ondas e Animações não foi iniciada**.
