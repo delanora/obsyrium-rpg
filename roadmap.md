@@ -49,7 +49,7 @@
 | **6 — Motor de combate e regras** | 🟡 muito avançada | Núcleo jogável integrado; ampliar regras especiais, conteúdo e geometria. |
 | **7 — Reações e combate avançado** | 🟡 fundação | Opportunity Attacks existentes; faltam reações/fluxos especiais. |
 | **8 — Compêndio e ferramentas do Mestre** | 🟡 | Gestão de criaturas, itens, localidades e conteúdo operacional; ampliar. |
-| **8.5 — Arquivo do Mestre** | 🟡 8.5.1 e visual aprovados; 8.5.2.1 em aceite | Fundação e composição visual publicadas. Expansão/recolhimento por pertencimento explícito implementados e testados em isolamento, ainda sem migration/publicação em produção. 8.5.2.2–4 planejadas. Ver `docs/arquivo-mestre.md`. |
+| **8.5 — Arquivo do Mestre** | 🟡 8.5.1 e visual aprovados; 8.5.2.1 em aceite | Fundação e composição visual publicadas. Expansão/recolhimento por pertencimento explícito implementados, testados e publicados com migration aditiva; aceite manual da 8.5.2.1 pendente. 8.5.2.2–4 planejadas. Ver `docs/arquivo-mestre.md`. |
 | **9 — Compatibilidade / conteúdo complementar** | ⬜ | Importação, exportação, compatibilidade e ferramentas administrativas. |
 | **10 — Segurança, produção e escala** | 🟡 fundação | Backups, autorização, recuperação, observabilidade e deploy. |
 | **11 — UX, acessibilidade e acabamento** | 🟡 | Responsividade, feedback, navegação, gestos e polimento. |
@@ -173,7 +173,7 @@ A **sequência abaixo é direcional**, não autorização para antecipar fases. 
 ### Prioridade 4 — Mestre, robustez e UX
 
 - **Fase 8 (🟡):** enriquecer compêndio, buscas, cadastros, reutilização de conteúdo, encontros e controles administrativos.
-- **Fase 8.5.1:** fundação validada pelo responsável (13/13 critérios informados) e direção visual aprovada/publicada. **8.5.2.1:** fundação de expansão/recolhimento implementada, com aceite manual, migration e publicação pendentes. **8.5.2.2:** distribuição radial/colisões planejada. **8.5.2.3:** ondas/animações planejadas. **8.5.2.4:** experiência multinível avançada/hardening planejada. A Fase 8.5.2 não está concluída; detalhes em `docs/arquivo-mestre.md`.
+- **Fase 8.5.1:** fundação validada pelo responsável (13/13 critérios informados) e direção visual aprovada/publicada. **8.5.2.1:** fundação de expansão/recolhimento implementada, publicada com migration aditiva e backend reiniciado; aceite manual pendente. **8.5.2.2:** distribuição radial/colisões planejada. **8.5.2.3:** ondas/animações planejadas. **8.5.2.4:** experiência multinível avançada/hardening planejada. A Fase 8.5.2 não está concluída; detalhes em `docs/arquivo-mestre.md`.
 - **Fase 8.5 (⬜ conceito complementar):** Soundboard e áudio sincronizado por Scene/sessão, biblioteca ou upload; armadilhas com execução assistida e confirmação do Mestre, sem dano automático não autorizado.
 - **Fase 9 (⬜):** importação/exportação, compatibilidade de dados, migrações e conteúdo complementar.
 - **Fase 10 (🟡):** segurança, backups, recuperação, observabilidade, deploy e verificações operacionais.

@@ -339,9 +339,9 @@ Não foi iniciada a próxima fase.
 
 ## Fase 8.5.2.1 — fundação de expansão e recolhimento (24/11/2026)
 
-**Estado:** implementada e testada em isolamento, com aceite manual pendente.
-Não publicada. A migration desta microfase não foi aplicada em produção e não
-houve restart. A fundação 8.5.1 foi informada pelo responsável como aprovada em
+**Estado:** implementada, testada em isolamento e publicada com autorização do
+responsável em 24/11/2026. Migration aplicada e backend reiniciado; aceite manual
+da microfase permanece pendente. A fundação 8.5.1 foi informada pelo responsável como aprovada em
 13/13 critérios; a composição visual do commit `05a5916` foi aprovada e publicada
 antes deste pedido. Essa aparência foi preservada.
 
@@ -566,3 +566,38 @@ preservar os WIPs no procedimento de publicação.
 Próximas microfases, **não iniciadas**: 8.5.2.2 distribuição radial/colisões;
 8.5.2.3 ondas/animações; 8.5.2.4 experiência multinível avançada/hardening.
 A fase 8.5.2 inteira não está concluída.
+
+
+### Publicação autorizada da 8.5.2.1 — 24/11/2026
+
+O responsável autorizou a publicação do commit `ddb5e7c`. Foi conferido o histórico
+com checksums das migrations anteriores: somente
+`20261124150000_narrative_branches` estava pendente e foi aplicada por
+`prisma migrate deploy`. O status final é atualizado, com 88 migrations
+conhecidas. O Prisma ativo foi comparado semanticamente com o schema antes de
+ser gerado: apenas `NarrativePlacement` mudou; os modelos das demais frentes
+foram preservados.
+
+O backend foi reconstruído em checkout isolado e recebeu somente os módulos
+`archive.service.js` e `archive.schema.js`, com seus source maps. O frontend foi
+reconstruído no espelho de publicação que preserva as frentes visuais já ativas.
+Após a migration e a geração do Prisma, `rpg.service` foi reiniciado uma vez:
+PID `2042000` → `2341486`. Health check saudável, banco disponível e estado ativo.
+Os módulos backend servidos são idênticos ao build validado. Bundles publicados:
+`index-BO20P-2O.js` e `index-CX9JPIDF.css`, conferidos byte a byte via HTTP.
+A rota privada `/api/archive/boards` sem token continua retornando 401.
+
+A verificação operacional detectou edições concorrentes durante a publicação:
+10 novas operações narrativas, dois cards, duas representações e uma relação
+foram registrados após a leitura inicial. Por isso o digest narrativo de produção
+não permaneceu igual. Nenhum snapshot de dados foi restaurado e nenhuma edição
+foi removida. A migration é exclusivamente DDL; imediatamente após sua aplicação,
+antes de ativar os novos controles, todas as representações ainda tinham pai
+`null`. Isso não altera o resultado **ANTES = DEPOIS** dos testes isolados
+registrados acima, que foram executados antes da publicação.
+
+Não houve seed, `db push`, fixture mutável na campanha ou publicação das demais
+alterações backend WIP. Artefatos anteriores foram guardados em
+`/tmp/expansao-publicacao-backup/`. A migração é compatível com o código anterior;
+um eventual rollback de artefatos não deve remover a coluna nem apagar relações.
+As microfases 8.5.2.2–4 continuam planejadas e não iniciadas.
