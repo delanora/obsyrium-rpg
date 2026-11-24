@@ -59,7 +59,9 @@ export const ArchiveReader = forwardRef<
     const esc = (e: KeyboardEvent) => {
       if (
         e.key === "Escape" &&
-        !document.querySelector("dialog[open], .scene-editor-radial-menu")
+        !document.querySelector(
+          "dialog[open], .archive-card-editor, .scene-editor-radial-menu",
+        )
       )
         setId(null);
     };

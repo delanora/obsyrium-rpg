@@ -746,11 +746,94 @@ try {
   await reader
     .getByRole("button", { name: "Editar card", exact: true })
     .click();
+  const cardEditor = page.getByRole("dialog", {
+    name: "Card narrativo",
+    exact: true,
+  });
+  await cardEditor.waitFor();
+  assert.equal(await cardEditor.getAttribute("aria-modal"), "false");
+  assert.ok(
+    (await cardEditor.evaluate((el) => +getComputedStyle(el).zIndex)) >
+      (await reader.evaluate((el) => +getComputedStyle(el).zIndex)),
+    "Edição sobrepõe a consulta",
+  );
+  const previewOps = requests.length,
+    previewCalls = await calls(),
+    previewCamera = await world(),
+    previewState = await state();
+  const savedTitle = branchCard.title,
+    savedSummary = branchCard.summary,
+    savedCategory = branchCard.category;
+  await cardEditor
+    .getByLabel("Título", { exact: true })
+    .fill("Título em prévia");
+  await cardEditor
+    .getByLabel("Categoria", { exact: true })
+    .selectOption("faction");
+  await cardEditor
+    .getByLabel("Resumo", { exact: true })
+    .fill("Resumo em prévia");
+  const previewCard = page.locator(`[data-placement="${branch}"]`);
+  assert.equal(
+    await previewCard.locator("header strong").textContent(),
+    "Título em prévia",
+  );
+  assert.equal(await previewCard.getAttribute("data-category"), "faction");
+  assert.ok(
+    (await previewCard.locator(".archive-card-copy").textContent()).includes(
+      "Resumo em prévia",
+    ),
+  );
+  assert.equal(
+    branchCard.title,
+    savedTitle,
+    "Rascunho não altera snapshot confirmado",
+  );
+  assert.equal(requests.length, previewOps, "Digitar não grava no servidor");
+  assert.equal(await calls(), previewCalls, "Digitar não executa resolvedor");
+  assert.equal(await world(), previewCamera);
+  assert.deepEqual(await state(), previewState);
+  await shot("editor-lateral-previa");
+  await page.mouse.move(30, 250);
+  await page.mouse.down();
+  await page.mouse.move(50, 260, { steps: 4 });
+  await page.mouse.up();
+  assert.notEqual(
+    await world(),
+    previewCamera,
+    "Painel não bloqueia navegação do quadro",
+  );
+  assert.equal(requests.length, previewOps);
+  assert.equal(await calls(), previewCalls);
+  await cardEditor.getByLabel("Título", { exact: true }).fill(savedTitle);
+  await cardEditor
+    .getByLabel("Categoria", { exact: true })
+    .selectOption(savedCategory);
+  await cardEditor.getByLabel("Resumo", { exact: true }).fill(savedSummary);
   await page
     .getByLabel("Conteúdo narrativo", { exact: true })
     .fill("Texto confirmado da consulta\nLinha preservada");
+  const contentSaveStart = requests.length;
+  failNext = true;
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await cardEditor
+    .getByRole("button", { name: "Tentar salvar novamente", exact: true })
+    .waitFor();
+  assert.equal(
+    await cardEditor
+      .getByLabel("Conteúdo narrativo", { exact: true })
+      .inputValue(),
+    "Texto confirmado da consulta\nLinha preservada",
+  );
+  await cardEditor
+    .getByRole("button", { name: "Tentar salvar novamente", exact: true })
+    .click();
   await settled();
+  assert.equal(
+    requests[contentSaveStart].operationId,
+    requests[contentSaveStart + 1].operationId,
+    "Retry do editor mantém idempotência",
+  );
   assert.ok(
     (await reader.textContent()).includes("Texto confirmado da consulta"),
   );
@@ -760,10 +843,35 @@ try {
   await page
     .getByLabel("Conteúdo narrativo", { exact: true })
     .fill("Rascunho cancelado");
+  await cardEditor
+    .getByLabel("Título", { exact: true })
+    .fill("Título descartado");
+  assert.equal(
+    await previewCard.locator("header strong").textContent(),
+    "Título descartado",
+  );
   await page
     .getByRole("button", { name: "Fechar editor", exact: true })
     .click();
   assert.ok(!(await reader.textContent()).includes("Rascunho cancelado"));
+  assert.equal(
+    await previewCard.locator("header strong").textContent(),
+    savedTitle,
+    "Cancelar restaura a apresentação confirmada",
+  );
+  await reader
+    .getByRole("button", { name: "Editar card", exact: true })
+    .click();
+  await cardEditor
+    .getByLabel("Título", { exact: true })
+    .fill("Rascunho via Escape");
+  await page.keyboard.press("Escape");
+  await cardEditor.waitFor({ state: "hidden" });
+  await reader.waitFor();
+  assert.equal(
+    await previewCard.locator("header strong").textContent(),
+    savedTitle,
+  );
   await page.keyboard.press("Escape");
   await reader.waitFor({ state: "hidden" });
   await page
@@ -960,6 +1068,19 @@ try {
   const mobileBox = await mobileReader.boundingBox();
   assert.ok(mobileBox.x >= 0 && mobileBox.x + mobileBox.width <= 390);
   await shot("consulta-mobile");
+  await mobileReader
+    .getByRole("button", { name: "Editar card", exact: true })
+    .click();
+  const mobileEditor = page.getByRole("dialog", {
+    name: "Card narrativo",
+    exact: true,
+  });
+  await mobileEditor.waitFor();
+  const editorBox = await mobileEditor.boundingBox();
+  assert.ok(editorBox.x >= 0 && editorBox.x + editorBox.width <= 390);
+  await shot("editor-lateral-mobile");
+  await mobileEditor.getByRole("button", { name: "Fechar editor" }).click();
+  await mobileReader.waitFor();
   await mobileReader.getByRole("button", { name: "Fechar consulta" }).click();
   assert.deepEqual(errors, []);
   console.log(

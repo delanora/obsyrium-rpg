@@ -1001,3 +1001,19 @@ body:has(.archive-page) {
   pointer-events: none;
   user-select: none;
 }
+
+/* Editor sobreposto à consulta, mantendo o quadro navegável no desktop. */
+.archive-card-editor { z-index: 35; }
+.archive-card-editor > header { justify-content: space-between; margin-bottom: 16px; flex-shrink: 0; }
+.archive-editor-body { min-height: 0; overflow: auto; flex: 1; padding: 0 5px 4px 0; }
+.archive-card-editor form, .archive-card-editor label { display: grid; gap: 8px; }
+.archive-card-editor form { gap: 16px; }
+.archive-card-editor input, .archive-card-editor select, .archive-card-editor textarea {
+  width: 100%; padding: 9px; border: 1px solid #8e764d; border-radius: 3px;
+  background: #171d23; color: #dfd0af; font: inherit;
+}
+.archive-card-editor textarea { min-height: 5rem; resize: vertical; }
+.archive-card-editor textarea.archive-content { min-height: 13rem; }
+.archive-card-editor input[type="checkbox"] { width: auto; }
+.archive-card-editor .archive-branch-relation label { display: flex; }
+.archive-card-editor form > button[type="submit"] { justify-self: start; }

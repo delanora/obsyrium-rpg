@@ -1396,3 +1396,50 @@ anteriores. Espelho reutilizável atualizado. Health saudável; PID permanece
 2467899, sem restart. Backend, Prisma e 47 WIPs intactos por hash; nenhuma migration
 ou escrita de dados. Logs da operação preservados junto ao backup. Aceite visual
 continua com o responsável; 8.5.2.3 não iniciada.
+
+### Editor lateral de cards com prévia local — 24/11/2026
+
+HEAD inicial `9a8be2e0c2deed14372d333ddef7615ffadb7852`, `main`, igual ao remoto.
+O responsável pediu o editor na estética e posição da consulta, sobrepondo-a sem
+fechar o registro lido, com prévia do card enquanto digita.
+
+`ArchiveDialog` mantém o formulário existente e oferece uma superfície lateral
+não modal somente para cards. Usa as classes, fundo e moldura 9-slice do Reader,
+com z-index 35 acima da consulta (30), mesma posição e rolagem interna. Quadros,
+relações, biblioteca e confirmações continuam no diálogo existente. Fechar, salvar
+ou cancelar revela novamente a consulta; Escape do editor não fecha o Reader.
+No celular a superfície adapta-se à largura disponível.
+
+A prévia é um grafo de apresentação derivado do layout, substituindo somente os
+metadados do card existente em edição (título, categoria/ícone, resumo e conteúdo).
+Não altera snapshot, posições, versões ou estado espacial e não chama o resolvedor.
+Digitar não faz requisições de gravação; salvar reutiliza a operação versionada
+original, e só o snapshot confirmado atualiza a consulta. Cancelar/Escape remove
+imediatamente a prévia. Criação também usa formulário lateral; o card novo continua
+sendo materializado ao salvar, sem representação provisória persistida.
+
+O quadro pode ser navegado por pan/zoom durante edição. Gestos de alteração de
+geometria, portas e expansão ficam temporariamente bloqueados enquanto o formulário
+de card está aberto, para impedir que outro salvamento encerre e perca o rascunho.
+Falha de salvamento conserva rascunho e prévia; retry mantém operationId. Ações de
+recuperação aparecem no editor, sem duplicação no banner externo. Versões,
+conflitos, invalidação privada e descarte continuam no fluxo existente.
+
+Arquivos: `ArchivePage.tsx`, `ArchiveReader.tsx`, CSS do fichário e testes do
+Chromium, além deste registro/roadmap. Nenhum backend, Prisma, migration, dependência
+ou asset novo. Os 47 WIPs anteriores foram conferidos por hash e preservados.
+
+Build/typecheck frontend passaram somente em `/tmp/editor-lateral-validacao`.
+Chromium real com API simulada passou sobreposição, digitação com prévia de
+metadados, zero escrita e zero recálculo durante digitação, geometria/câmera estáveis,
+pan com editor aberto, salvar, falha503/retry com mesma chave, cancelar, Escape,
+retorno à consulta e mobile. Regressão geral do fichário passou, incluindo criação,
+radial, gestos, retry, estruturas e cenários 50/100/200/500. Nenhum dado real foi
+usado como fixture mutável. Não se afirma teste em produção.
+
+Capturas/logs em
+`/root/.codex/visualizations/2026/11/08/01a1b91f-bed8-7260-a9ac-7553fb7b7adb/fichario-editor-lateral/`.
+A captura desktop foi inspecionada. O aviso de bundle grande e os custos DOM em
+quadros extensos continuam existentes; a semântica do layout não mudou.
+Commit isolado com push e confirmação remota no relatório final. **Não publicado;
+aguarda autorização de publicação e aceite visual/funcional.** 8.5.2.3 não iniciada.

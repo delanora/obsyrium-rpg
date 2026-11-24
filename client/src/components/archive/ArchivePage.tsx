@@ -120,18 +120,59 @@ function ArchiveDialog({
   children,
   onClose,
   busy,
+  side = false,
 }: {
+  side?: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
   busy: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const actions = useRef({ onClose, busy });
+  actions.current = { onClose, busy };
+  useEffect(() => {
+    if (!side) return;
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !actions.current.busy
+      ) {
+        event.preventDefault();
+        actions.current.onClose();
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [side]);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     ref.current?.showModal();
     return () => previous?.focus();
   }, []);
+  if (side)
+    return (
+      <section
+        className="archive-reader archive-card-editor"
+        role="dialog"
+        aria-modal="false"
+        aria-label={title}
+      >
+        <header>
+          <h2>{title}</h2>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onClose}
+            aria-label="Fechar editor"
+          >
+            <Icon name="x" size={16} />
+          </button>
+        </header>
+        <div className="archive-editor-body">{children}</div>
+      </section>
+    );
   return createPortal(
     <dialog
       className="archive-dialog"
@@ -612,6 +653,35 @@ export function ArchivePage() {
       ? graph?.links.find((l) => l.id === selected.id)
       : undefined;
   const guarded = busy || pending !== null;
+  // Prévia de conteúdo, separada do snapshot autoritativo e do layout espacial.
+  const previewGraph = useMemo(() => {
+    if (!layout || editor?.kind !== "card" || !editor.id) return layout?.graph;
+    return {
+      ...layout.graph,
+      placements: layout.graph.placements.map((p) =>
+        p.cardId === editor.id
+          ? {
+              ...p,
+              card: {
+                ...p.card,
+                title: draft.title,
+                category: draft.category,
+                summary: draft.summary,
+                content: draft.content,
+              },
+            }
+          : p,
+      ),
+    };
+  }, [
+    layout,
+    editor?.kind,
+    editor && "id" in editor ? editor.id : undefined,
+    draft.title,
+    draft.category,
+    draft.summary,
+    draft.content,
+  ]);
   const closeRadial = useCallback(() => setRadial(null), []);
   const openContextMenu = useCallback(
     (point: { x: number; y: number }, selection: ArchiveSelection) => {
@@ -925,7 +995,7 @@ export function ArchivePage() {
       aria-label="Fichário do Mestre"
     >
       <div className="archive-notices">
-        {error ? (
+        {error && !editor ? (
           <div className="archive-alert" role="alert">
             <p>{error}</p>
             {pending && !conflict ? (
@@ -979,7 +1049,7 @@ export function ArchivePage() {
           />
           <ArchiveCanvas
             key={graph.board.id}
-            graph={layout!.graph}
+            graph={previewGraph!}
             nodes={projection!.nodes}
             onToggle={toggleBranches}
             camera={camera}
@@ -1020,7 +1090,7 @@ export function ArchivePage() {
               });
             }}
             onConnect={(a, b) => openLink(a, b)}
-            busy={guarded}
+            busy={guarded || editor?.kind === "card"}
             onInteraction={onInteraction}
           />
         </>
@@ -1244,6 +1314,8 @@ export function ArchivePage() {
       ) : null}
       {editor ? (
         <ArchiveDialog
+          key={editor.kind === "card" ? "card-side" : "modal"}
+          side={editor.kind === "card"}
           title={
             editor.kind === "board"
               ? "Quadro narrativo"
@@ -1543,6 +1615,7 @@ export function ArchivePage() {
                   <label>
                     Resumo
                     <textarea
+                      aria-label="Resumo"
                       maxLength={1000}
                       value={draft.summary}
                       disabled={guarded}
