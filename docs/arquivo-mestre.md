@@ -1055,3 +1055,108 @@ trocar quadro e observar atualização/exclusão externa; conferir desktop e cel
 **Aguardam aceite manual próprio. Não iniciar 8.5.2.3.** A futura animação deve
 consumir as geometrias/transições prontas sem executar resolvedor em frames ou
 persistir deslocamentos automáticos. Não houve ondas/física/expansão avançada.
+
+### Publicação controlada das 8.5.2.2.1–2 — 24/11/2026
+
+Autorização explícita do responsável, incluindo migration, Prisma, backend,
+frontend e restart necessário, condicionada a rollback compatível.
+SHA funcional **`61fed0ce8a2158b1be36ca41e010312a79ef9bcc`**, `main`, push e igualdade
+com `origin/main` confirmados antes da operação. A publicação anterior foi
+reproduzida byte a byte em build isolado antes de sobrepor os cinco arquivos do
+fichário desta entrega. As demais frentes frontend publicadas foram preservadas.
+Os **47 WIPs** foram comparados por SHA-256 antes e depois, sem diferenças;
+a geração do Prisma não alterou o schema de trabalho nem incorporou seus WIPs.
+
+**Backup persistente e restrito:**
+`/var/backups/obsyrium/20261124-refinamento/` (diretório 0700, dump 0600).
+Inclui `banco-antes.dump`, índice e SHA-256; backend/frontend ativos, Prisma
+anterior e cópia complementar dos uploads em `artefatos-anteriores/`.
+O `pg_dump` PostgreSQL 15.19 em formato custom usa snapshot MVCC consistente;
+o índice foi lido por `pg_restore --list` e o arquivo inteiro processado por
+`pg_restore --file=/dev/null`, sem executar SQL ou restaurar dados reais.
+Não se afirma teste de restauração em outro servidor nem snapshot atômico entre
+banco e uploads. Os artefatos ativos são cópia para recuperação, não um rollback
+compatível por si só.
+
+**Rollback preparado antes da alteração de produção:**
+`rollback/recuperar.sh --confirmar-recuperacao`, com procedimento em
+`rollback/LEIA-ME.txt`, no diretório persistente acima. Não foi acionado.
+O script instala um bridge do backend anterior com limpeza atômica de
+`branchOffsetX/Y` nas operações de perda de pai (desvinculação, remoção da
+representação e exclusão global). Mantém migration, CHECK e Prisma compatível.
+O frontend de recuperação respeita as preferências e permite expansão local,
+mas deixa o Fichário **somente para leitura**, bloqueando suas operações também
+na API cliente. Demais frentes publicadas são preservadas. Pedir recarga das abas
+nessa situação; reabilitar edição apenas após publicar a correção completa.
+
+Essa redução temporária evita encaminhar operações novas a um backend anterior
+que não as conhece. Não remover constraints, apagar preferências, instalar Prisma
+antigo ou restaurar o dump sobre edições legítimas. O dump é recuperação de desastre,
+não o procedimento normal de rollback.
+
+O bridge passou **138 verificações HTTP/PostgreSQL** em schema descartável,
+com preferências nas próprias fixtures para comprovar leitura, desvinculação,
+promoção de filhos e exclusão global, sem relaxar constraints. Digest da campanha
+**ANTES = DEPOIS**. Chromium com API simulada confirmou preferências renderizadas,
+expansão local, controles de edição bloqueados e zero POST no frontend de recuperação.
+Fontes corrigidas, builds e evidências do rollback foram preservados junto ao script.
+
+**Migration e Prisma:** revisão encontrou 88 migrations aplicadas e somente
+`20261124170000_narrative_relative_positions` pendente. Uma tentativa histórica
+revertida da migration da hotbar foi distinguida do registro posterior aplicado;
+o checksum do registro aplicado coincide com o arquivo. Nenhum ledger foi alterado
+para contornar essa verificação. O deploy executou exclusivamente a migration
+relativa autorizada, concluída em **2026-11-24 16:08:48.406 UTC**. Status posterior:
+89 migrations concluídas, nenhuma tentativa pendente; CHECK `narrative_relative_pair`
+validado. Não houve seed, `db push` ou backfill.
+
+O Prisma foi gerado em `/tmp/refinamento-publicacao/prisma-compat`, a partir do
+schema efetivamente instalado anteriormente mais os dois campos autorizados.
+A comparação semântica dos outros modelos permaneceu igual; diferenças de ordem
+entre campos/índices no arquivo de trabalho não foram tratadas como novos modelos.
+O client compatível foi instalado e conferido byte a byte contra o gerado. A consulta
+tipada dos novos campos passou em leitura. Nenhum outro modelo foi modificado.
+
+**Build e artefatos:** builds somente em `/tmp/refinamento-publicacao/`, incluindo
+backend principal, bridge e ambos os frontends. O backend ativo recebeu somente:
+
+- `dist/modules/archive/archive.service.js` e `.js.map`;
+- `dist/modules/archive/archive.schema.js` e `.js.map`.
+
+Todos os demais arquivos do backend compilado mantiveram os hashes anteriores.
+Esses quatro são idênticos ao build isolado do commit autorizado. A mudança de
+`narrative.ts` é de interfaces TypeScript, sem novo módulo runtime a publicar.
+Frontend publicado: **`/assets/index-BB2vRil0.js`** e
+**`/assets/index-BVvNo06d.css`**, referenciados pelo novo HTML. Os 338 arquivos do
+build foram conferidos localmente por hash; HTML, JS e CSS também por download HTTP.
+Assets foram copiados primeiro, bundles antigos conservados e HTML trocado por
+rename atômico após o backend responder ao health check.
+
+**Restart e verificações:** um restart de `rpg.service`, PID
+**2341486 → 2467899**, em 24/11/2026 13:09:16 −03. O primeiro acesso durante a subida
+recebeu conexão recusada e a tentativa automática seguinte retornou saudável;
+não houve segundo restart. Health `status: ok`, `database: up`, serviço ativo.
+O log mostra desligamento controlado, início em produção e reconexão do Mestre,
+sem erro relevante na janela observada.
+
+Rotas privadas GET de quadros/cards e POST de operações sem token continuam 401.
+A autorização MASTER e as invariantes de escrita foram verificadas nos testes
+isolados; não houve login de teste ou fixture mutável na campanha. Chromium real
+carregou o login publicado sem `pageerror`/`requestfailed`.
+O teste integrado do fichário foi repetido sobre a fonte do espelho de publicação
+com **API simulada**, cobrindo preferências, gestos, leitura, edição, resets,
+reconciliação e viewport mobile. Evidências em `/tmp/arquivo-radial-browser-e3KozX/`;
+logs/manifests/builds principais também no backup persistente. A preservação de
+outras funcionalidades é sustentada pela reprodução do build anterior e pelos
+hashes dos módulos não alterados; não se afirma sessão completa de campanha testada.
+
+O espelho reutilizável `/tmp/arquivo-publicacao/client` foi atualizado para a nova
+fonte publicada. Nenhuma modificação de combate, outras migrations ou WIPs foi
+publicada. Os scripts operacionais e artefatos de recuperação não alteram o código
+versionado; esta publicação é registrada em commit documental separado.
+
+**Pendências:** aceite manual próprio das duas microfases; colisões residuais em
+regiões densas, custo do layout misto com muitas posições reservadas e renderização
+DOM em quadros extensos. Os avisos de bundle grande permanecem. Monitoramento foi
+breve; continuar observação durante o uso real sem usar a campanha como fixture.
+**8.5.2.3 não iniciada. Fundo Espacial Contínuo permanece separado.**
