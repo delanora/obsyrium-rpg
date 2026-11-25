@@ -295,3 +295,32 @@ Validação desta ampliação: 1961 verificações puras (reserva, layout, anima
 projeção e câmera), typecheck, build e Chromium com API simulada passaram; 186 pinturas sem descontinuidades. A reserva maior mantém as
 exceções manuais e o fallback em cenários densos; as dívidas anteriores continuam.
 Sem publicação, backend, banco ou reinício. Aguardar autorização e aceite manual.
+
+
+### Publicação autorizada — 25/11/2026
+
+Publicado o frontend funcional `46eadd3e912a5e47e0360ad0a3dffa339196ff58`,
+main sincronizada com origin/main. O responsável autorizou publicação, commit e
+push após a ampliação para 1120. As notas anteriores de espera ficam como histórico.
+
+O espelho isolado reproduziu por hash os 340 arquivos do build ativo antes da
+sobreposição exclusiva de archiveLayout. Typecheck, build e Chromium com API
+simulada passaram (186 pinturas sem descontinuidades). Mantidas as 1961 verificações
+puras da implementação. Nenhum teste escreveu na campanha.
+
+Backup integral de 356 arquivos, conferido por SHA256:
+`/opt/rpg/backups/frontend-folga1120-20261125-000707`. Rollback: restaurar os
+artefatos desse backup, mantendo bundles adicionais e substituindo index.html por
+rename atômico por último. Não envolve banco ou backend.
+
+Bundle anterior `index-CkUT7t6F.js`; novo `index-P9xB2BF_.js`; CSS preservado
+`index-BwtHA_mH.css`. Assets publicados antes do HTML atômico; bundles anteriores
+preservados. Os 340 arquivos novos e respostas HTTP foram conferidos por hash,
+inclusive textura de linho. Health ok/database up; rota privada do Arquivo retorna
+401 sem autenticação. Sem entradas novas no journal do serviço durante a operação.
+
+47 WIPs preservados por caminho e hash; backend/Prisma íntegros; PID 2467899
+inalterado. Sem migration, escrita no banco ou restart. Evidências operacionais
+em `/tmp/folga1120-publicacao`. Aguardar aceite visual/funcional; veto conservador,
+conflitos densos, custos do resolvedor/renderização, long tasks e limites de
+animação seguem pendentes. Não iniciada a 8.5.2.4.

@@ -1718,3 +1718,7 @@ ramificações próximas, inicialmente com margem externa 560 e ampliada a pedid
 para 1120, sem desenhar círculo nem alterar
 a distribuição interna. Detalhes e limitações em `docs/fichario-reserva-estabilidade.md`.
 Build e testes isolados; sem publicação, aguardando autorização para o novo commit.
+
+Ampliação para 1120 publicada em 25/11/2026 após autorização explícita, no SHA
+`46eadd3e912a5e47e0360ad0a3dffa339196ff58`. Backend e 47 WIPs preservados;
+aguardando aceite manual. Relatório em `docs/fichario-reserva-estabilidade.md`.
