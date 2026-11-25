@@ -243,6 +243,10 @@ const GraphContent = memo(function GraphContent({
           <article
             key={p.id}
             data-placement={p.id}
+            data-base-x={p.x}
+            data-base-y={p.y}
+            data-base-width={p.width}
+            data-base-height={p.height}
             data-card={p.cardId}
             data-category={p.card.category}
             data-compact={compact || undefined}

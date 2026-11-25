@@ -22,7 +22,7 @@ import{layoutArchive}from'${source}/client/src/components/archive/archiveLayout'
 import'${source}/client/src/components/archive/archive.css';
 function App(){const[count,setCount]=useState(50),[open,setOpen]=useState(false),[dense,setDense]=useState(false),[camera,onCamera]=useState({x:500,y:350,zoom:.6});
 const graph=useMemo(()=>({board:{id:'test',name:'Teste',description:'',version:0,createdAt:'',updatedAt:''},placements:Array.from({length:count},(_,i)=>({id:'p'+i,cardId:'c'+i,boardId:'test',parentPlacementId:i>0&&i<7?'p0':null,x:i<7?0:dense?(i%20)*45:(i%20)*400,y:i<7?0:dense?Math.floor(i/20)*45:Math.floor(i/20)*300,width:280,height:200,zIndex:0,card:{id:'c'+i,title:'Card '+i,category:'note',summary:'Resumo sintético para medição',content:'',version:0,createdAt:'',updatedAt:''}})),links:Array.from({length:count-1},(_,i)=>({id:'l'+i,sourceId:'c0',targetId:'c'+(i+1),relation:'related',label:'Relacionado',description:'',directed:true,version:0}))}),[count,dense]);
-const projection=useMemo(()=>projectArchive(graph,new Set(open?['p0']:[])),[graph,open]);const layout=useMemo(()=>{const t=performance.now(),l=layoutArchive(projection);(window.__layouts??=[]).push(performance.now()-t);window.__affected=l.affected.length;return l;},[projection]);
+const projection=useMemo(()=>projectArchive(graph,new Set(open?['p0']:[])),[graph,open]);const layout=useMemo(()=>{const t=performance.now(),l=layoutArchive(projection);(window.__layouts??=[]).push(performance.now()-t);window.__affected=l.affected.length;const a=l.affected.map(p=>p.to);window.__spatial={moves:l.diagnostics.moves,checks:l.diagnostics.checks,residuals:l.diagnostics.residuals.length,reserveResiduals:l.diagnostics.reserveResiduals?.length??0,reserveFallback:l.diagnostics.reserveFallback??null,validationChecks:l.diagnostics.reserveValidationChecks??0,area:a.length?(Math.max(...a.map(p=>p.x+p.width))-Math.min(...a.map(p=>p.x)))*(Math.max(...a.map(p=>p.y+p.height))-Math.min(...a.map(p=>p.y))):0};return l;},[projection]);
 window.__configure=(n,d)=>{setOpen(false);setCount(n);setDense(d)};window.__toggle=()=>setOpen(v=>!v);
 return <Profiler id="canvas" onRender={(_id,_phase,actual)=>{(window.__reactTimes??=[]).push(actual)}}><ArchiveCanvas graph={layout.graph} layout={layout} snapshot={graph} nodes={projection.nodes} onToggle={()=>setOpen(v=>!v)} camera={camera} onCamera={onCamera} selected={null} onSelect={()=>{}} onMenu={()=>{}} visual={{}} onVisual={()=>{}} onMove={()=>{}} onConnect={()=>{}} busy={false} onInteraction={()=>{}}/></Profiler>;}
 createRoot(document.getElementById('root')).render(<App/>);`,
@@ -40,12 +40,16 @@ createRoot(document.getElementById('root')).render(<App/>);`,
           contents: fs
             .readFileSync(a.path, "utf8")
             .replace(
+              "r.start = performance.now();",
+              "window.__duration=r.plan.duration;window.__degraded=r.plan.degraded;r.start = performance.now();",
+            )
+            .replace(
               "paintRef.current = () => {",
               "paintRef.current = () => { const paintStart=performance.now(); try {",
             )
             .replace(
-              "\n    };\n    r.retained = rendering;",
-              "\n    } finally { (window.__paintTimes??=[]).push(performance.now()-paintStart); } };\n    r.retained = rendering;",
+              /\n    };\n    (?=const mounted|r.retained)/,
+              "\n    } finally { (window.__paintTimes??=[]).push(performance.now()-paintStart); } };\n    ",
             ),
         }));
         b.onLoad({ filter: /ArchiveCanvas\.tsx$/ }, (a) => ({
@@ -126,6 +130,9 @@ for (const dense of [false, true])
             affected = window.__affected;
           frames = frames.filter((n) => n > 0).sort((a, b) => a - b);
           return {
+            spatial: window.__spatial,
+            duration: window.__duration ?? 0,
+            degraded: window.__degraded ?? false,
             layoutMs,
             reactMs,
             paintMs: (window.__paintTimes ?? []).slice(paintBefore),

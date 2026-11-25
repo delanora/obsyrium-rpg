@@ -10,6 +10,7 @@ import type { ArchiveGeometry, ArchiveLayout } from "./archiveLayout";
 import {
   ARCHIVE_MOTION,
   archivePose,
+  completeArchiveMotion,
   planArchiveMotion,
   sampleArchiveMotion,
   type ArchivePose,
@@ -85,16 +86,20 @@ export function useArchiveMotion(
   const tick = (now: number) => {
     if (!r.plan || r.paused || r.disposed) return;
     const done = now - r.start >= r.plan.duration;
-    r.poses = sampleArchiveMotion(r.plan, now - r.start);
+    r.poses = done
+      ? completeArchiveMotion(r.plan, r.poses)
+      : sampleArchiveMotion(r.plan, now - r.start);
     if (done) r.plan = null;
     paintRef.current();
     if (done) {
-      const outgoing = r.retained.placements.some((p) => !r.poses.has(p.id));
+      const outgoing = r.retained.placements.some(
+        (p) => r.poses.get(p.id)?.exiting || !r.poses.has(p.id),
+      );
       r.retained = latest.current.graph;
       if (outgoing) update((n) => n + 1);
     } else r.raf = requestAnimationFrame(tick);
   };
-  const begin = () => {
+  const begin = (paint = true) => {
     const c = latest.current;
     if (!c.layout || !c.snapshot || r.disposed) return;
     stop();
@@ -106,15 +111,19 @@ export function useArchiveMotion(
       r.reduced,
     );
     r.start = performance.now();
-    r.poses = sampleArchiveMotion(r.plan, 0);
+    r.poses = r.plan.duration
+      ? sampleArchiveMotion(r.plan, 0)
+      : completeArchiveMotion(r.plan, r.poses);
     if (r.plan.duration) {
-      paintRef.current();
+      if (paint) paintRef.current();
       r.raf = requestAnimationFrame(tick);
     } else {
       r.plan = null;
-      const outgoing = r.retained.placements.some((p) => !r.poses.has(p.id));
+      const outgoing = r.retained.placements.some(
+        (p) => r.poses.get(p.id)?.exiting || !r.poses.has(p.id),
+      );
       r.retained = c.graph;
-      paintRef.current();
+      if (paint) paintRef.current();
       if (outgoing) update((n) => n + 1);
     }
   };
@@ -128,10 +137,10 @@ export function useArchiveMotion(
         [...layout.geometry].map(([id, g]) => [id, archivePose(g)]),
       );
       r.retained = graph;
-    } else if (r.layout !== layout) begin();
+    } else if (r.layout !== layout) begin(false);
     r.layout = layout;
     r.snapshot = snapshot;
-    paintRef.current();
+    // A pintura ocorre abaixo, depois de coletar as referências deste commit.
   }, [layout, snapshot]);
   useLayoutEffect(() => {
     const root = container.current;
@@ -176,9 +185,15 @@ export function useArchiveMotion(
           ? archivePose(latest.current.visual[p.id])
           : (r.poses.get(p.id) ?? archivePose(p));
         const el = elements.get(p.id);
-        if (!el) continue;
-        const base = latest.current.visual[p.id] ?? p;
-        const signature = `${pose.x},${pose.y},${pose.scale},${pose.opacity},${pose.exiting},${Boolean(r.plan?.tracks.has(p.id))}`;
+        if (!el || !el.isConnected) continue;
+        // O DOM já recebeu a base React atual, mesmo se outro layout effect mudou a pose.
+        const base = {
+          x: Number(el.dataset.baseX),
+          y: Number(el.dataset.baseY),
+          width: Number(el.dataset.baseWidth),
+          height: Number(el.dataset.baseHeight),
+        };
+        const signature = `${base.x},${base.y},${base.width},${base.height},${pose.width},${pose.height},${pose.x},${pose.y},${pose.scale},${pose.opacity},${pose.exiting},${Boolean(r.plan?.tracks.has(p.id))}`;
         if (lastCards.get(p.id) !== signature) {
           lastCards.set(p.id, signature);
           el.style.transform = `translate3d(${pose.x - base.x}px,${pose.y - base.y}px,0) scale(${pose.scale})`;
@@ -216,9 +231,11 @@ export function useArchiveMotion(
           same.indexOf(link.id),
           same.length,
         );
+        const originKey = `:${label?.dataset.originX}:${label?.dataset.originY}`;
         if (
           lastPaths.get(link.id) ===
           geometry.path +
+            originKey +
             ":" +
             a.opacity +
             ":" +
@@ -232,6 +249,7 @@ export function useArchiveMotion(
         lastPaths.set(
           link.id,
           geometry.path +
+            originKey +
             ":" +
             a.opacity +
             ":" +
@@ -264,6 +282,8 @@ export function useArchiveMotion(
         else el.removeAttribute("aria-hidden");
       }
     };
+    const mounted = new Set(rendering.placements.map((p) => p.id));
+    for (const id of r.poses.keys()) if (!mounted.has(id)) r.poses.delete(id);
     r.retained = rendering;
     paintRef.current();
   }, [rendering, visual]);
@@ -274,7 +294,7 @@ export function useArchiveMotion(
       r.reduced = media.matches;
       if (r.reduced && r.plan) {
         stop();
-        r.poses = new Map(r.plan.final);
+        r.poses = completeArchiveMotion(r.plan, r.poses);
         r.plan = null;
         r.retained = latest.current.graph;
         paintRef.current();

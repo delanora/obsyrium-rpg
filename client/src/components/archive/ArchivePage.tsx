@@ -52,6 +52,9 @@ import {
   layoutArchive,
   archiveGestureCommit,
   type ArchiveAnchor,
+  type ArchiveReserveExceptions,
+  archiveReserveIntent,
+  archiveSameGeometry,
   isCustomBranch,
   branchVector,
   relativeGestureVisual,
@@ -60,6 +63,7 @@ import { ArchiveReader, type ArchiveReaderHandle } from "./ArchiveReader";
 import { projectArchive } from "./archiveProjection";
 import "./archive.css";
 const EMPTY_EXPANSION = new Set<string>();
+const EMPTY_RESERVE_EXCEPTIONS: ArchiveReserveExceptions = {};
 const EMPTY_ANCHORS: Record<string, ArchiveAnchor> = {};
 type Command = ArchiveOperation extends infer T
   ? T extends { operationId: string }
@@ -219,12 +223,20 @@ export function ArchivePage() {
     Record<string, Record<string, ArchiveAnchor>>
   >({});
   const anchors = layoutAnchors[boardId] ?? EMPTY_ANCHORS;
+  const [reserveExceptions, setReserveExceptions] = useState<
+    Record<string, ArchiveReserveExceptions>
+  >({});
+  const manual = reserveExceptions[boardId] ?? EMPTY_RESERVE_EXCEPTIONS;
   // Nenhuma dependência de câmera/ponteiro: o layout permanece congelado durante os gestos.
   const layout = useMemo(
-    () => (projection ? layoutArchive(projection, { anchors }) : null),
-    [projection, anchors],
+    () => (projection ? layoutArchive(projection, { anchors, manual }) : null),
+    [projection, anchors, manual],
   );
-  const gestureCommit = useRef<{ id: string; visual: Geometry } | null>(null);
+  const gestureCommit = useRef<{
+    id: string;
+    visual: Geometry;
+    mode: "move" | "resize";
+  } | null>(null);
   const [branchRelationEnabled, setBranchRelationEnabled] = useState(false);
   const [branchRelation, setBranchRelation] =
     useState<NarrativeRelation>("contains");
@@ -336,6 +348,17 @@ export function ArchivePage() {
         }
         return { ...previous, [chosen]: valid };
       });
+      setReserveExceptions((previous) => {
+        const byId = new Map(next.placements.map((p) => [p.id, p]));
+        const valid: Record<string, Record<string, Geometry>> = {};
+        for (const [source, entries] of Object.entries(previous[chosen] ?? {}))
+          if (byId.has(source)) {
+            for (const [id, g] of Object.entries(entries))
+              if (byId.has(id) && archiveSameGeometry(byId.get(id)!, g))
+                (valid[source] ??= {})[id] = g;
+          }
+        return { ...previous, [chosen]: valid };
+      });
       setExpansion((previous) => {
         if (!previous[chosen]) return previous;
         const ids = new Set(next.placements.map((p) => p.id));
@@ -405,6 +428,11 @@ export function ArchivePage() {
     const c = current.current;
     if (c.busy || c.pending || interacting.current) return;
     const opening = !c.expanded.has(id);
+    setReserveExceptions((previous) => {
+      const next = { ...(previous[c.boardId] ?? {}) };
+      delete next[id];
+      return { ...previous, [c.boardId]: next };
+    });
     const base = c.graph?.placements.find((p) => p.id === id),
       shown = presentation.current?.geometry(id) ?? c.layout?.geometry.get(id);
     setLayoutAnchors((previous) => {
@@ -477,6 +505,32 @@ export function ArchivePage() {
             setSelected({ kind: "card", id: receipt.id });
           }
           const c = current.current;
+          if (
+            c.layout &&
+            ((input.action === "placement.update" &&
+              (gestureCommit.current?.mode !== "resize" ||
+                Object.values(manual).some(
+                  (entries) => entries[input.placementId],
+                ))) ||
+              ((input.action === "card.create" ||
+                input.action === "placement.add") &&
+                !input.parentPlacementId))
+          ) {
+            const id =
+              input.action === "placement.update"
+                ? input.placementId
+                : receipt.id;
+            const acceptedLayout = c.layout;
+            setReserveExceptions((previous) => ({
+              ...previous,
+              [c.boardId]: archiveReserveIntent(
+                acceptedLayout,
+                previous[c.boardId] ?? {},
+                id,
+                input.geometry,
+              ),
+            }));
+          }
           if (
             input.action === "placement.reset" ||
             input.action === "placement.parent"
@@ -1074,7 +1128,7 @@ export function ArchivePage() {
             onMove={(id, g, mode, start) => {
               const persisted = graph.placements.find((p) => p.id === id);
               if (!persisted) return;
-              gestureCommit.current = { id, visual: g };
+              gestureCommit.current = { id, visual: g, mode };
               const parent = persisted.parentPlacementId
                 ? (presentation.current?.geometry(
                     persisted.parentPlacementId,

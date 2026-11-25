@@ -146,3 +146,20 @@ export function sampleArchiveMotion(
   }
   return poses;
 }
+
+/** A pose terminal vive até o commit de remoção; nunca usar o fallback normal de um card em saída. */
+export function completeArchiveMotion(
+  plan: ArchiveMotionPlan,
+  presented: ReadonlyMap<string, ArchivePose>,
+): Map<string, ArchivePose> {
+  const poses = new Map(plan.final);
+  for (const [id, old] of presented)
+    if (!plan.final.has(id))
+      poses.set(id, {
+        ...(plan.tracks.get(id)?.to ?? old),
+        scale: 0.3,
+        opacity: 0,
+        exiting: true,
+      });
+  return poses;
+}

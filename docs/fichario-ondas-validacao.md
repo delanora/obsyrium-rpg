@@ -1,7 +1,7 @@
 # Relatório técnico — Fase 8.5.2.3
 
 Relatório da implementação anterior à publicação, exclusivamente frontend.
-**Atualização: publicação controlada concluída no frontend para o SHA `69276aef46301044acddeaa509988cf847e845f2`; aceite manual da experiência animada pendente.**
+**Atualização: publicação controlada concluída no frontend para o SHA `69276aef46301044acddeaa509988cf847e845f2`; aceite inicial posterior informado pelo responsável: 20/20; fase reaberta para hardening pontual na 8.5.2.3.1 após uso adicional.**
 Base: `5f61d60027b151f9555914d1fb9ee4ab77c4b49a`, branch `main`.
 O SHA final é o commit que adiciona este relatório; a confirmação completa é entregue na conversa.
 
@@ -75,3 +75,12 @@ não elimina o custo de montagem do grafo nem os limites do resolvedor existente
 - Fundo: aceite anterior parcial 12/13 preservado como histórico; agora aceito
   por ora pelo responsável na autorização de publicação. Radial 15/15, relativo 13/13 e consulta 12/12 são
   aceites anteriores informados pelo responsável.
+
+## Atualização posterior ao aceite inicial
+
+O responsável informou aceite inicial de 20/20 da experiência publicada. Após
+uso adicional, relatou piscadas no movimento/recolhimento e solicitou uma reserva
+externa mais generosa. A Fase 8.5.2.3 está reaberta para hardening pontual; a
+8.5.2.3.1 não equivale a aceite definitivo nem autoriza publicação automática.
+Os benchmarks anteriores e suas dívidas permanecem válidos. Detalhes em
+`docs/fichario-reserva-estabilidade.md`. A 8.5.2.4 não foi iniciada.

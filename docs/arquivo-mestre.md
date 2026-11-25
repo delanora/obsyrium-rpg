@@ -1655,3 +1655,12 @@ restart. Espelho reutilizável atualizado para esta composição publicada.
 **Publicação concluída; aguardar aceite manual da experiência animada.** Colisões
 residuais em densidade extrema e custo de cards/conexões extensos permanecem como
 pontos de atenção. A Fase 8.5.2.4 não foi iniciada.
+
+## Fase 8.5.2.3.1 — Reserva externa e estabilidade visual
+
+Após o aceite inicial informado de 20/20 da 8.5.2.3 publicada, o responsável
+reabriu a fase para hardening pontual: reserva de trabalho ao redor da estrutura
+e correção das piscadas. A organização interna radial não foi ampliada.
+Implementação, reprodução, política manual, testes, métricas e limites em
+`docs/fichario-reserva-estabilidade.md`. Sem publicação/restart; aguardar análise
+e novo aceite. A Fase 8.5.2.4 não foi iniciada.

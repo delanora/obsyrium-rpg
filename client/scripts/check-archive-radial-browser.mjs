@@ -23,6 +23,15 @@ await build({
     {
       name: "medicao-isolada",
       setup(b) {
+        b.onLoad({ filter: /useArchiveMotion\.ts$/ }, (a) => ({
+          loader: "ts",
+          contents: fs
+            .readFileSync(a.path, "utf8")
+            .replace(
+              /\n    };\n    (?=const mounted|r.retained)/,
+              "\n      window.__probeArchivePaint?.({poses:r.poses,visual:latest.current.visual,layout:latest.current.layout});\n    };\n    ",
+            ),
+        }));
         b.onLoad({ filter: /archiveLayout\.ts$/ }, (a) => ({
           loader: "ts",
           contents:
@@ -189,6 +198,61 @@ const context = await browser.newContext({
 const page = await context.newPage(),
   errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
+let archivedPaints = 0;
+const archivedDiscontinuities = [];
+const originalReload = page.reload.bind(page);
+page.reload = async (options) => {
+  if (process.env.ARCHIVE_STABILITY_EVIDENCE) {
+    const p = await page.evaluate(() => ({
+      paints: window.__archivePaints ?? 0,
+      failures: window.__archiveDiscontinuities ?? [],
+    }));
+    archivedPaints += p.paints;
+    archivedDiscontinuities.push(...p.failures);
+    assert.deepEqual(p.failures, [], "Continuidade antes do reload");
+  }
+  return originalReload(options);
+};
+
+if (process.env.ARCHIVE_STABILITY_EVIDENCE)
+  await page.addInitScript(() => {
+    window.__archivePaints = 0;
+    window.__archiveDiscontinuities = [];
+    window.__probeArchivePaint = ({ poses, visual, layout }) => {
+      window.__archivePaints++;
+      for (const el of document.querySelectorAll("[data-placement]")) {
+        const id = el.dataset.placement,
+          p = visual[id] ?? poses.get(id);
+        if (!p) {
+          if (
+            layout &&
+            !layout.geometry.has(id) &&
+            Number(el.style.opacity) > 0.001
+          )
+            window.__archiveDiscontinuities.push({
+              id,
+              kind: "exit-reappeared",
+            });
+          continue;
+        }
+        const m = new DOMMatrix(el.style.transform),
+          x = parseFloat(el.style.left) + m.e,
+          y = parseFloat(el.style.top) + m.f;
+        if (
+          Math.abs(x - p.x) > 0.02 ||
+          Math.abs(y - p.y) > 0.02 ||
+          Math.abs(Number(el.style.opacity) - (p.opacity ?? 1)) > 0.001
+        )
+          window.__archiveDiscontinuities.push({
+            id,
+            kind: "geometry",
+            x,
+            y,
+            expected: p,
+          });
+      }
+    };
+  });
 await page.route("http://radial.test/**", async (route) => {
   const url = new URL(route.request().url()),
     p = url.pathname;
@@ -398,10 +462,26 @@ const assertEndpoints = async () =>
 const saveGesture = async (id, mode, dx, dy, expected = "ok") => {
   const raw = structuredClone(placements.find((p) => p.id === id)),
     others = JSON.stringify(placements.filter((p) => p.id !== id));
-  const el = page.locator(`[data-placement="${id}"]`),
-    before = await el.boundingBox();
+  const el = page.locator(`[data-placement="${id}"]`);
   const target =
-      mode === "move" ? el.locator("header") : el.locator(".edge-se"),
+    mode === "move" ? el.locator("header") : el.locator(".edge-se");
+  // A reserva afasta vizinhos: aproximação anterior pode deixar a alça sob o dock.
+  // Ajusta a câmera antes do gesto, sem enfraquecer suas verificações geométricas.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const b = await target.boundingBox(),
+      dock = await page.locator(".archive-dock").boundingBox();
+    if (
+      b.x > 15 &&
+      b.x + b.width < 2190 &&
+      b.y > 130 &&
+      b.y + b.height < (dock?.y ?? 1380) - 12
+    )
+      break;
+    await page.mouse.move(30, 350);
+    await page.mouse.wheel(0, 220);
+    await page.waitForTimeout(100);
+  }
+  const before = await el.boundingBox(),
     box = await target.boundingBox();
   const start =
     mode === "move"
@@ -483,6 +563,12 @@ const saveGesture = async (id, mode, dx, dy, expected = "ok") => {
   } else if (mode === "move") {
     assert.ok(Math.abs(saved.x - final.x) < 0.01);
     assert.ok(Math.abs(saved.y - final.y) < 0.01);
+    const shown = (await state())[id];
+    assert.ok(
+      Math.abs(shown.x - final.x) < 0.01 && Math.abs(shown.y - final.y) < 0.01,
+      "Reserva respeita a intenção manual confirmada: " +
+        JSON.stringify({ id, shown, final }),
+    );
   } else {
     assert.equal(saved.x, raw.x);
     assert.equal(saved.y, raw.y);
@@ -501,15 +587,35 @@ try {
   await page.goto("http://radial.test/");
   await page.getByRole("article", { name: names[0], exact: true }).waitFor();
   await settled();
-  if(process.env.ARCHIVE_MOTION_EVIDENCE){
-    const { exerciseArchiveMotion }=await import('./archive-motion-browser-scenarios.mjs');
-    await exerciseArchiveMotion({page,temp,names,uuid,toggle,calls,shot,world,requests,placements,links});
-    await page.emulateMedia({reducedMotion:'reduce'});
+  if (process.env.ARCHIVE_MOTION_EVIDENCE) {
+    const { exerciseArchiveMotion } = await import(
+      "./archive-motion-browser-scenarios.mjs"
+    );
+    await exerciseArchiveMotion({
+      page,
+      temp,
+      names,
+      uuid,
+      toggle,
+      calls,
+      shot,
+      world,
+      requests,
+      placements,
+      links,
+    });
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.reload();
-    await page.getByRole('article',{name:names[0],exact:true}).waitFor();
+    await page.getByRole("article", { name: names[0], exact: true }).waitFor();
     await settled();
   }
-  assert.equal(await page.locator(".archive-page").evaluate(el => getComputedStyle(el,"::after").content), "none", "Sem moldura externa no Fichário");
+  assert.equal(
+    await page
+      .locator(".archive-page")
+      .evaluate((el) => getComputedStyle(el, "::after").content),
+    "none",
+    "Sem moldura externa no Fichário",
+  );
   await shot("radial-organizacao-original-global");
   const rootBox = await page
     .getByRole("article", { name: names[0], exact: true })
@@ -962,6 +1068,24 @@ try {
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await settled();
   assert.equal(placements.at(-1).parentPlacementId, uuid(200));
+  await shot("reserva-primeira-ramificacao");
+  await page
+    .getByRole("button", { name: `Ações de ${names[0]}`, exact: true })
+    .click();
+  await chooseRadial("Ramificações");
+  await chooseRadial("Criar ramificação");
+  await chooseRadial("Criar anotação");
+  await page
+    .getByLabel("Título", { exact: true })
+    .fill("Segunda ramificação na área livre");
+  await page.getByRole("button", { name: "Salvar", exact: true }).click();
+  await settled();
+  assert.equal(placements.at(-1).parentPlacementId, uuid(200));
+  await shot("reserva-segunda-ramificacao");
+  await toggle(0, true);
+  await shot("reserva-restauracao");
+  await toggle(0, false);
+  await assertEndpoints();
   await page.getByRole("button", { name: "Enquadrar", exact: true }).click();
   const sourcePort = await page
     .getByRole("button", { name: `Conectar ${names[0]}`, exact: true })
@@ -1092,6 +1216,19 @@ try {
   await mobileEditor.getByRole("button", { name: "Fechar editor" }).click();
   await mobileReader.waitFor();
   await mobileReader.getByRole("button", { name: "Fechar consulta" }).click();
+  if (process.env.ARCHIVE_STABILITY_EVIDENCE) {
+    const probe = await page.evaluate(() => ({
+      paints: window.__archivePaints,
+      failures: window.__archiveDiscontinuities,
+    }));
+    assert.ok(archivedPaints + probe.paints > 20);
+    assert.deepEqual([...archivedDiscontinuities, ...probe.failures], []);
+    console.log(
+      "Continuidade na API simulada: " +
+        (archivedPaints + probe.paints) +
+        " pinturas sem descontinuidades.",
+    );
+  }
   assert.deepEqual(errors, []);
   console.log(
     "Radial no Chromium: âncoras, vizinhos, restauração, gestos, Escape, retry, conflito, estruturas, externo, quadros e celular passaram.",

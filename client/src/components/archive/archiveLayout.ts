@@ -14,13 +14,29 @@ export interface ArchiveAnchor {
 }
 export const ARCHIVE_LAYOUT_CONFIG = {
   gap: 32,
+  reserveMargin: 280,
   limit: 1_000_000,
   maxChecks: 750_000,
   maxMovesPerCard: 16,
   maxMoves: 4000,
   radialAttempts: 12,
 };
+export interface ArchiveReserve {
+  sourceId: string;
+  members: ReadonlySet<string>;
+  regions: ArchiveGeometry[];
+}
+export type ArchiveReserveExceptions = Readonly<
+  Record<string, Readonly<Record<string, ArchiveGeometry>>>
+>;
+/** Exceção local aceita somente enquanto a geometria persistida continua igual. */
+export function archiveSameGeometry(a: ArchiveGeometry, b: ArchiveGeometry) {
+  return (
+    a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height
+  );
+}
 export interface ArchiveLayout {
+  reserves: ArchiveReserve[];
   graph: ArchiveProjection["graph"];
   geometry: Map<string, ArchiveGeometry>;
   offsets: Map<string, { x: number; y: number }>;
@@ -39,6 +55,14 @@ export interface ArchiveLayout {
     residuals: [string, string][];
     preservedOverlaps: number;
     manualOverlaps: [string, string][];
+    reserveFallback: "budget" | "collisions" | null;
+    reserveValidationChecks: number;
+    reserveResiduals: {
+      sourceId: string;
+      cardId: string;
+      manual: boolean;
+      protected: boolean;
+    }[];
   };
 }
 const EPS = 1e-7,
@@ -156,6 +180,25 @@ export function archiveGestureCommit(
   };
 }
 
+/** Uma intenção explícita é uma exceção apenas às reservas ativas deste ciclo. */
+export function archiveReserveIntent(
+  layout: ArchiveLayout,
+  previous: ArchiveReserveExceptions,
+  id: string,
+  geometry: ArchiveGeometry,
+): ArchiveReserveExceptions {
+  const next: Record<string, Record<string, ArchiveGeometry>> = {};
+  for (const reserve of layout.reserves) {
+    const entries = { ...(previous[reserve.sourceId] ?? {}) };
+    delete entries[id];
+    // Também protege o fim de um arraste que saiu da reserva e alcançou a cadeia
+    // de vizinhos afastados: não disputar a posição recém-confirmada pelo Mestre.
+    if (!reserve.members.has(id)) entries[id] = { ...geometry };
+    if (Object.keys(entries).length) next[reserve.sourceId] = entries;
+  }
+  return next;
+}
+
 /** Cálculo finito no espaço do quadro. Não conhece DOM, câmera, HTTP ou relógio.
  * A ordem é profundidade/ID para núcleos e ângulo/ID para filhos. */
 export function layoutArchive(
@@ -163,6 +206,7 @@ export function layoutArchive(
   options: {
     anchors?: Readonly<Record<string, ArchiveAnchor>>;
     config?: Partial<typeof ARCHIVE_LAYOUT_CONFIG>;
+    manual?: ArchiveReserveExceptions;
   } = {},
 ): ArchiveLayout {
   const config = { ...ARCHIVE_LAYOUT_CONFIG, ...options.config };
@@ -178,6 +222,9 @@ export function layoutArchive(
     residuals: [],
     preservedOverlaps: 0,
     manualOverlaps: [],
+    reserveFallback: null,
+    reserveValidationChecks: 0,
+    reserveResiduals: [],
   };
   const causes = new Map<string, { sourceId: string; depth: number }>();
   const depth = (id: string) => {
@@ -209,6 +256,7 @@ export function layoutArchive(
       offsets: new Map(),
       affected: [],
       diagnostics,
+      reserves: [],
     };
   const pinned = new Set<string>();
   const anchors = new Set(groups.map((p) => p.id));
@@ -402,6 +450,54 @@ export function layoutArchive(
       ring++;
     }
   }
+  // União localizada: não cria uma envoltória gigante entre um ramo remoto e o núcleo.
+  const reserves: ArchiveReserve[] = [];
+  const expandedIds = new Set(groups.map((g) => g.id));
+  const manual = new Set<string>();
+  for (const group of groups) {
+    let ancestor = raw.get(group.parentPlacementId ?? ""),
+      nested = false;
+    const seen = new Set<string>();
+    while (ancestor && !seen.has(ancestor.id)) {
+      seen.add(ancestor.id);
+      if (expandedIds.has(ancestor.id)) {
+        nested = true;
+        break;
+      }
+      ancestor = raw.get(ancestor.parentPlacementId ?? "");
+    }
+    if (nested) continue;
+    const members = new Set<string>([group.id]);
+    for (const id of members)
+      for (const child of projection.nodes.get(id)?.children ?? [])
+        if (raw.has(child.id)) members.add(child.id);
+    const margin = Number.isFinite(config.reserveMargin)
+      ? Math.max(0, Math.min(config.limit, config.reserveMargin))
+      : 0;
+    if (!margin) continue;
+    const regions = [...members].sort(order).map((id) => {
+      const g = result.get(id)!;
+      return {
+        ...g,
+        x: g.x - margin,
+        y: g.y - margin,
+        width: g.width + margin * 2,
+        height: g.height + margin * 2,
+      };
+    });
+    reserves.push({ sourceId: group.id, members, regions });
+    for (const [id, geometry] of Object.entries(
+      options.manual?.[group.id] ?? {},
+    ))
+      if (
+        raw.has(id) &&
+        archiveSameGeometry(raw.get(id)!, geometry) &&
+        !members.has(id)
+      )
+        manual.add(id);
+  }
+  // Uma intenção manual não participa da escolha radial nem é expulsa pelo afastamento.
+  for (const id of manual) reserved.add(id);
   const fixed = [...reserved].sort(order),
     movable = cards.filter((p) => !reserved.has(p.id));
   const originalArea = (a: string, b: string) =>
@@ -411,20 +507,60 @@ export function layoutArchive(
   const introduced = (a: string, b: string) =>
     archiveOverlapArea(result.get(a)!, result.get(b)!, config.gap) >
     originalArea(a, b) + EPS;
-  const queue = fixed.map((id) => ({
+  type Obstacle = {
+    id: string;
+    sourceId: string;
+    depth: number;
+    region?: ArchiveGeometry;
+    members?: ReadonlySet<string>;
+  };
+  const reserveObstacles: Obstacle[] = reserves.flatMap((r) =>
+    r.regions.map((region, i) => ({
+      id: `reserve:${r.sourceId}:${i}`,
+      sourceId: r.sourceId,
+      depth: 0,
+      region,
+      members: r.members,
+    })),
+  );
+  const fixedObstacles: Obstacle[] = fixed.map((id) => ({
     id,
     sourceId: causes.get(id)?.sourceId ?? id,
     depth: 0,
   }));
+  const queue: Obstacle[] = [...fixedObstacles];
+  const geometry = (b: Obstacle) => b.region ?? result.get(b.id)!;
+  const applicable = (b: Obstacle, id: string) =>
+    b.region ? !b.members!.has(id) && !manual.has(id) : introduced(b.id, id);
   const moves = new Map<string, number>();
-  for (let q = 0; q < queue.length && !exhausted(); q++) {
+  let reservePhase = false;
+  let physical: Map<string, ArchiveGeometry> | undefined;
+  let physicalCauses:
+    | Map<string, { sourceId: string; depth: number }>
+    | undefined;
+  for (let q = 0; !exhausted(); q++) {
+    if (q >= queue.length) {
+      if (reservePhase || !reserveObstacles.length) break;
+      physical = new Map(result);
+      physicalCauses = new Map(causes);
+      reservePhase = true;
+      queue.push(...reserveObstacles);
+    }
     const event = queue[q],
-      blocker = result.get(event.id)!;
+      blocker = geometry(event);
+    // A lista depende do evento, não do card: evita realocá-la em toda colisão.
+    const obstacles = [
+      event,
+      ...fixedObstacles.filter((b) => b.id !== event.id),
+      ...(reservePhase
+        ? reserveObstacles.filter((b) => b.id !== event.id)
+        : []),
+    ];
     for (const card of movable) {
       if (card.id === event.id || exhausted()) continue;
       if (
         !overlap(blocker, result.get(card.id)!) ||
-        !introduced(event.id, card.id)
+        !applicable(event, card.id)
       )
         continue;
       const cause = causes.get(card.id) ?? {
@@ -434,7 +570,6 @@ export function layoutArchive(
       const origin = center(
         result.get(cause.sourceId) ?? raw.get(cause.sourceId) ?? blocker,
       );
-      const obstacles = [event.id, ...fixed.filter((id) => id !== event.id)];
       let moved = false;
       for (
         let attempt = 0;
@@ -442,14 +577,14 @@ export function layoutArchive(
         attempt++
       ) {
         const current = result.get(card.id)!;
-        let hit: string | undefined;
-        for (const id of obstacles)
+        let hit: Obstacle | undefined;
+        for (const obstacle of obstacles)
           if (
-            id !== card.id &&
-            overlap(current, result.get(id)!) &&
-            introduced(id, card.id)
+            obstacle.id !== card.id &&
+            overlap(current, geometry(obstacle)) &&
+            applicable(obstacle, card.id)
           ) {
-            hit = id;
+            hit = obstacle;
             break;
           }
         if (!hit) break;
@@ -457,7 +592,7 @@ export function layoutArchive(
           diagnostics.capped = true;
           break;
         }
-        const b = result.get(hit)!,
+        const b = geometry(hit),
           cc = center(current),
           dx = cc.x - origin.x,
           dy = cc.y - origin.y;
@@ -498,6 +633,59 @@ export function layoutArchive(
       if (moved) queue.push({ id: card.id, ...cause });
     }
   }
+  if (reserveObstacles.length && !reservePhase && exhausted())
+    diagnostics.reserveFallback = "budget";
+  if (physical) {
+    const changed = new Set(
+      cards
+        .filter(
+          (p) => !archiveSameGeometry(result.get(p.id)!, physical!.get(p.id)!),
+        )
+        .map((p) => p.id),
+    );
+    // A reserva é uma preferência: veta a piora física sem recalcular o layout.
+    outer: for (let i = 0; i < cards.length; i++)
+      for (let j = i + 1; j < cards.length; j++) {
+        const a = cards[i].id,
+          b = cards[j].id;
+        if (!changed.has(a) && !changed.has(b)) continue;
+        diagnostics.reserveValidationChecks++;
+        const area = archiveOverlapArea(
+          result.get(a)!,
+          result.get(b)!,
+          config.gap,
+        );
+        if (
+          area > originalArea(a, b) + EPS &&
+          area >
+            archiveOverlapArea(physical.get(a)!, physical.get(b)!, config.gap) +
+              EPS
+        ) {
+          diagnostics.reserveFallback = "collisions";
+          break outer;
+        }
+      }
+    if (diagnostics.reserveFallback) {
+      for (const [id, g] of physical) result.set(id, g);
+      causes.clear();
+      for (const [id, cause] of physicalCauses!) causes.set(id, cause);
+    }
+  }
+  for (const reserve of reserves)
+    for (const card of cards) {
+      if (reserve.members.has(card.id)) continue;
+      if (
+        reserve.regions.some((r) =>
+          archiveIntersects(r, result.get(card.id)!, config.gap),
+        )
+      )
+        diagnostics.reserveResiduals.push({
+          sourceId: reserve.sourceId,
+          cardId: card.id,
+          manual: manual.has(card.id),
+          protected: reserved.has(card.id),
+        });
+    }
   const offsets = new Map<string, { x: number; y: number }>(),
     affected: ArchiveLayout["affected"] = [];
   for (const p of cards) {
@@ -524,6 +712,8 @@ export function layoutArchive(
         b = cards[j].id;
       if (archiveIntersects(result.get(a)!, result.get(b)!, config.gap)) {
         if (
+          manual.has(a) ||
+          manual.has(b) ||
           (custom.has(a) &&
             (custom.has(b) || raw.get(a)?.parentPlacementId === b)) ||
           (custom.has(b) && raw.get(b)?.parentPlacementId === a)
@@ -543,6 +733,7 @@ export function layoutArchive(
       }
     }
   return {
+    reserves,
     geometry: result,
     offsets,
     affected,
