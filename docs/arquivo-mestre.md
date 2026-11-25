@@ -1784,3 +1784,19 @@ Restart somente de rpg.service, PID 3297180, health saudável, sem erros relevan
 Rollback disponível e não utilizado. **Aceite manual pendente; fase não concluída.**
 Dívidas de escala, permissões e divergência global Prisma permanecem. Sem 8.5.4.
 Ver [relatório da publicação](fichario-preparacao-publicacao-853.md).
+
+## Refinamento da barra do Fichário — implementação pendente de publicação
+
+Barra inferior reorganizada em uma linha, com obsidiana/latão discretos, rótulos
+compactos e estado de gravação preservado. Cerca de 50 px em desktop e 46 px no
+celular; telas estreitas usam rolagem horizontal sem cobrir os atalhos laterais.
+Instruções removidas da barra e reunidas no botão “?”: hover/foco para consultar,
+clique para manter aberto, Escape/clique fora para fechar. Ajuda e filtros usam
+portais ancorados para não serem cortados pelo scroll. Funções e nomes acessíveis
+dos controles preservados; nenhum ajuste de layout espacial, câmera ou backend.
+
+Build/typecheck frontend em espelho da composição publicada e Chromium com API
+simulada aprovados: seis larguras de 390 a 1600 px, ajuda por mouse/teclado e
+38 verificações de agrupamentos, incluindo 100 ciclos de filtros. Sem testes ou
+alterações nos dados reais. Artefatos ativos e 47 WIPs preservados. Este refinamento
+ainda não foi publicado e exige autorização do SHA; não inicia a 8.5.4.

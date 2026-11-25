@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { ArchiveDockHelp } from "./ArchiveDockHelp";
 import type { ArchivePresentation } from "./useArchiveMotion";
 import { createPortal } from "react-dom";
 import { newId } from "../../utils";
@@ -1374,192 +1375,206 @@ export function ArchivePage() {
         </div>
       ) : null}
       <footer className="archive-dock" aria-label="Controles do Fichário">
-        <header className="archive-toolbar">
-          <div>
-            <h2>
-              <Icon name="book" /> Fichário do Mestre
-            </h2>
-            <small>Arquivo privado · malha narrativa</small>
-          </div>
-          <ArchiveFilterControls
-            groups={groups}
-            state={filterState}
-            result={filterPresentation}
-            disabled={guarded}
-            onManage={() => setGroupsOpen(true)}
-            onChange={(state) =>
-              setFilters((previous) => ({ ...previous, [boardId]: state }))
-            }
-          />
-          <button
-            className="btn btn-small"
-            type="button"
-            onClick={() => setGroupsOpen(true)}
-          >
-            Agrupamentos
-          </button>
-          <label>
-            Quadro
-            <select
-              aria-label="Quadro narrativo"
-              value={boardId}
-              disabled={guarded || !!editor}
-              onChange={(e) => {
-                const id = e.target.value;
-                setSelected(null);
-                void refresh(id).catch((e) => setError(e.message));
-              }}
-            >
-              <option value="" disabled>
-                Selecione
-              </option>
-              {boards.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="btn"
-            type="button"
-            disabled={guarded}
-            onClick={() => openBoard()}
-          >
-            Novo quadro
-          </button>
-          {graph ? (
-            <>
-              <button
-                className="btn"
-                type="button"
-                disabled={guarded}
-                onClick={() => openBoard(true)}
-              >
-                Editar quadro
-              </button>
-              <button
-                className="btn btn-primary"
-                type="button"
-                disabled={guarded}
-                onClick={(event) => {
-                  const rect = event.currentTarget.getBoundingClientRect();
-                  draftPosition.current = null;
-                  setRadial({
-                    kind: "create",
-                    point: { x: rect.left + rect.width / 2, y: rect.top - 112 },
-                  });
-                }}
-              >
-                <Icon name="plus" size={14} /> Novo card
-              </button>
-              <button
-                className="btn"
-                type="button"
-                disabled={guarded}
-                onClick={() => {
-                  draftPosition.current = null;
-                  setEditor({ kind: "library" });
-                  void listCards()
-                    .then((r) => setLibrary(r.cards))
-                    .catch((e) => setError(e.message));
-                }}
-              >
-                Adicionar existente
-              </button>
-            </>
-          ) : null}
-          {layout?.diagnostics.residuals.length ? (
-            <small
-              role="status"
-              className="archive-layout-status"
-              title="Os limites locais de organização foram atingidos. Você pode ajustar os cards manualmente."
-            >
-              {layout.diagnostics.residuals.length} conflitos de layout
-            </small>
-          ) : null}
-          <span className="archive-save" role="status">
-            {busy
-              ? "Salvando…"
-              : pending
-                ? "Alterações não salvas"
-                : loading
-                  ? "Carregando…"
-                  : "Salvo"}
-          </span>
-        </header>
-        {graph ? (
-          <div className="archive-dock-secondary">
-            <div className="archive-tools">
-              <button
-                className="btn btn-small"
-                onClick={() => {
-                  const r = root
-                    .current!.querySelector(".archive-viewport")!
-                    .getBoundingClientRect();
-                  onCamera(
-                    zoomArchive(
-                      camera,
-                      { x: r.width / 2, y: r.height / 2 },
-                      1 / 1.2,
-                    ),
-                  );
-                }}
-                aria-label="Afastar"
-              >
-                −
-              </button>
-              <span>{Math.round(camera.zoom * 100)}%</span>
-              <button
-                className="btn btn-small"
-                onClick={() => {
-                  const r = root
-                    .current!.querySelector(".archive-viewport")!
-                    .getBoundingClientRect();
-                  onCamera(
-                    zoomArchive(
-                      camera,
-                      { x: r.width / 2, y: r.height / 2 },
-                      1.2,
-                    ),
-                  );
-                }}
-                aria-label="Aproximar"
-              >
-                +
-              </button>
-              <button className="btn btn-small" onClick={fit}>
-                Enquadrar
-              </button>
-              <span className="archive-help">
-                Botão direito para criar e editar · roda para zoom
-              </span>
+        <div className="archive-dock-row">
+          <header className="archive-toolbar">
+            <div className="archive-dock-brand">
+              <h2 aria-label="Fichário do Mestre" title="Fichário do Mestre">
+                <Icon name="book" />{" "}
+                <span>
+                  Fichário
+                  <span className="archive-dock-brand-extra"> do Mestre</span>
+                </span>
+              </h2>
             </div>
-
-            {selectedPlace || selectedLink ? (
-              <div className="archive-selection">
-                <strong>
-                  {selectedPlace?.card.title ??
-                    (selectedLink?.label ||
-                      NARRATIVE_RELATION_LABELS[selectedLink!.relation])}
-                </strong>
+            <ArchiveFilterControls
+              groups={groups}
+              state={filterState}
+              result={filterPresentation}
+              disabled={guarded}
+              onManage={() => setGroupsOpen(true)}
+              onChange={(state) =>
+                setFilters((previous) => ({ ...previous, [boardId]: state }))
+              }
+            />
+            <button
+              className="btn btn-small"
+              type="button"
+              aria-label="Agrupamentos"
+              title="Agrupamentos narrativos"
+              onClick={() => setGroupsOpen(true)}
+            >
+              <Icon name="flag" size={14} /> Grupos
+            </button>
+            <label className="archive-board-select">
+              <span>Quadro</span>
+              <select
+                aria-label="Quadro narrativo"
+                value={boardId}
+                disabled={guarded || !!editor}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelected(null);
+                  void refresh(id).catch((e) => setError(e.message));
+                }}
+              >
+                <option value="" disabled>
+                  Selecione
+                </option>
+                {boards.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="btn"
+              type="button"
+              disabled={guarded}
+              aria-label="Novo quadro"
+              title="Novo quadro"
+              onClick={() => openBoard()}
+            >
+              <Icon name="plus" size={14} /> Quadro
+            </button>
+            {graph ? (
+              <>
                 <button
-                  className="btn btn-small"
+                  className="btn"
+                  type="button"
+                  disabled={guarded}
+                  aria-label="Editar quadro"
+                  title="Editar quadro"
+                  onClick={() => openBoard(true)}
+                >
+                  <Icon name="quill" size={14} /> Editar
+                </button>
+                <button
+                  className="btn btn-primary"
+                  type="button"
                   disabled={guarded}
                   onClick={(event) => {
                     const rect = event.currentTarget.getBoundingClientRect();
-                    openContextMenu(
-                      { x: rect.left + rect.width / 2, y: rect.top - 112 },
-                      selected,
-                    );
+                    draftPosition.current = null;
+                    setRadial({
+                      kind: "create",
+                      point: {
+                        x: rect.left + rect.width / 2,
+                        y: rect.top - 112,
+                      },
+                    });
                   }}
                 >
-                  Ações
+                  <Icon name="plus" size={14} /> Novo card
+                </button>
+                <button
+                  className="btn"
+                  type="button"
+                  aria-label="Adicionar existente"
+                  title="Adicionar card existente"
+                  disabled={guarded}
+                  onClick={() => {
+                    draftPosition.current = null;
+                    setEditor({ kind: "library" });
+                    void listCards()
+                      .then((r) => setLibrary(r.cards))
+                      .catch((e) => setError(e.message));
+                  }}
+                >
+                  <Icon name="book" size={14} /> Existente
+                </button>
+              </>
+            ) : null}
+            {layout?.diagnostics.residuals.length ? (
+              <small
+                role="status"
+                className="archive-layout-status"
+                title="Os limites locais de organização foram atingidos. Você pode ajustar os cards manualmente."
+              >
+                {layout.diagnostics.residuals.length} conflitos de layout
+              </small>
+            ) : null}
+            <span className="archive-save" role="status">
+              {busy
+                ? "Salvando…"
+                : pending
+                  ? "Alterações não salvas"
+                  : loading
+                    ? "Carregando…"
+                    : "Salvo"}
+            </span>
+          </header>
+          {graph ? (
+            <div className="archive-dock-secondary">
+              <div className="archive-tools">
+                <button
+                  className="btn btn-small"
+                  onClick={() => {
+                    const r = root
+                      .current!.querySelector(".archive-viewport")!
+                      .getBoundingClientRect();
+                    onCamera(
+                      zoomArchive(
+                        camera,
+                        { x: r.width / 2, y: r.height / 2 },
+                        1 / 1.2,
+                      ),
+                    );
+                  }}
+                  aria-label="Afastar"
+                >
+                  −
+                </button>
+                <span>{Math.round(camera.zoom * 100)}%</span>
+                <button
+                  className="btn btn-small"
+                  onClick={() => {
+                    const r = root
+                      .current!.querySelector(".archive-viewport")!
+                      .getBoundingClientRect();
+                    onCamera(
+                      zoomArchive(
+                        camera,
+                        { x: r.width / 2, y: r.height / 2 },
+                        1.2,
+                      ),
+                    );
+                  }}
+                  aria-label="Aproximar"
+                >
+                  +
+                </button>
+                <button className="btn btn-small" onClick={fit}>
+                  Enquadrar
                 </button>
               </div>
-            ) : null}
-          </div>
-        ) : null}
+
+              {selectedPlace || selectedLink ? (
+                <div className="archive-selection">
+                  <strong>
+                    {selectedPlace?.card.title ??
+                      (selectedLink?.label ||
+                        NARRATIVE_RELATION_LABELS[selectedLink!.relation])}
+                  </strong>
+                  <button
+                    className="btn btn-small"
+                    disabled={guarded}
+                    onClick={(event) => {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      openContextMenu(
+                        { x: rect.left + rect.width / 2, y: rect.top - 112 },
+                        selected,
+                      );
+                    }}
+                  >
+                    Ações
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        <ArchiveDockHelp />
       </footer>
       {groupsOpen ? (
         <ArchiveGroupManager

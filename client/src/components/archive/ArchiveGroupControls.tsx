@@ -1,3 +1,4 @@
+import { ArchiveDockPopover } from "./ArchiveDockPopover";
 import { useEffect, useRef, useState } from "react";
 import type {
   NarrativeGroupDto,
@@ -53,10 +54,11 @@ export function ArchiveFilterControls({
   onManage: () => void;
   disabled: boolean;
 }) {
+  const ancora = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState("");
   return (
-    <div className="archive-filter-controls">
+    <div className="archive-filter-controls" ref={ancora}>
       <button
         className="btn btn-small"
         type="button"
@@ -66,7 +68,8 @@ export function ArchiveFilterControls({
         Filtros{result?.active ? ` (${result.total})` : ""}
       </button>
       {open ? (
-        <section
+        <ArchiveDockPopover
+          anchor={ancora}
           className="archive-filter-popover"
           aria-label="Filtros de agrupamentos"
         >
@@ -156,7 +159,7 @@ export function ArchiveFilterControls({
           <button className="btn btn-small" type="button" onClick={onManage}>
             Gerenciar agrupamentos
           </button>
-        </section>
+        </ArchiveDockPopover>
       ) : null}
     </div>
   );
