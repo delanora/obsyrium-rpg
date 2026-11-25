@@ -22,6 +22,7 @@ import type {
 import {
   NARRATIVE_CATEGORY_LABELS,
   NARRATIVE_RELATION_LABELS,
+  NARRATIVE_RELATIONS,
 } from "../../../../src/modules/shared/narrative";
 import type { ArchiveNodeProjection } from "./archiveProjection";
 import { ArchiveBackground } from "./ArchiveBackground";
@@ -34,6 +35,13 @@ import {
 } from "./archiveFilters";
 import type { ArchiveLayout } from "./archiveLayout";
 import { archiveLinkGeometry } from "./archiveLinkGeometry";
+import {
+  ARCHIVE_RELATION_MARKERS,
+  ARCHIVE_RELATION_VISUALS,
+  archiveRelationMarkerId,
+  archiveRelationStyle,
+  archiveRelationVisual,
+} from "./archiveRelationStyle";
 export const CATEGORY_ICONS: Record<NarrativeCategory, IconName> = {
   region: "earth",
   locality: "home",
@@ -165,17 +173,32 @@ const GraphContent = memo(function GraphContent({
     <>
       <svg className="archive-lines" aria-label="Conexões narrativas">
         <defs>
-          <marker
-            id="archive-arrow"
-            viewBox="0 0 10 10"
-            refX="10"
-            refY="5"
-            markerWidth="8"
-            markerHeight="8"
-            orient="auto-start-reverse"
-          >
-            <path d="M0 0 10 5 0 10Z" />
-          </marker>
+          {/* Uma ponta por tipo: a direção continua vindo de `link.directed`. */}
+          {NARRATIVE_RELATIONS.map((relation) => {
+            const visual = ARCHIVE_RELATION_VISUALS[relation];
+            const shape = ARCHIVE_RELATION_MARKERS[visual.marker];
+            return (
+              <marker
+                key={relation}
+                id={archiveRelationMarkerId(relation)}
+                viewBox={shape.viewBox}
+                refX={shape.refX}
+                refY={shape.refY}
+                markerWidth={shape.width}
+                markerHeight={shape.height}
+                orient="auto-start-reverse"
+              >
+                <path
+                  d={shape.d}
+                  fill={shape.filled ? visual.tone : "none"}
+                  stroke={shape.filled ? "none" : visual.tone}
+                  strokeWidth={shape.filled ? undefined : 1.4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </marker>
+            );
+          })}
         </defs>
         {graph.links.map((link) => {
           const a = byCard.get(link.sourceId),
@@ -184,17 +207,25 @@ const GraphContent = memo(function GraphContent({
           const same = pairs.get(
             [link.sourceId, link.targetId].sort().join(":"),
           )!;
-          const { path, labelPoint } = archiveLinkGeometry(
+          const { path, labelPoint, from, to } = archiveLinkGeometry(
             a,
             b,
             same.indexOf(link.id),
             same.length,
           );
           const label = link.label || NARRATIVE_RELATION_LABELS[link.relation];
+          const sheath = archiveRelationVisual(link.relation).sheath;
+          // Filtro em destaque: vínculo que toca card atenuado também recua.
+          const dim =
+            filter?.active &&
+            filter.mode === "highlight" &&
+            (archiveFilterKind(filter, a.id, a.cardId) === "dim" ||
+              archiveFilterKind(filter, b.id, b.cardId) === "dim");
           return (
             <g
               key={link.id}
               data-link={link.id}
+              data-relation={link.relation}
               data-filter-hidden={
                 (filter?.active &&
                   filter.mode === "isolate" &&
@@ -202,13 +233,55 @@ const GraphContent = memo(function GraphContent({
                     !filter.visibleIds.has(b.id))) ||
                 undefined
               }
+              data-filter-dim={dim || undefined}
+              style={archiveRelationStyle(link.relation)}
               className={selected?.id === link.id ? "is-selected" : ""}
             >
+              {sheath ? (
+                <path className="archive-link-sheath" d={path} />
+              ) : null}
               <path
                 className="archive-link"
                 d={path}
-                markerEnd={link.directed ? "url(#archive-arrow)" : undefined}
+                markerEnd={
+                  link.directed
+                    ? `url(#${archiveRelationMarkerId(link.relation)})`
+                    : undefined
+                }
               />
+              {/* Encaixe na moldura: sai do card, sem parecer linha solta. */}
+              <circle
+                className="archive-link-socket"
+                data-link-end="start"
+                cx={from.x}
+                cy={from.y}
+                r={4.2}
+              />
+              <circle
+                className="archive-link-core"
+                data-link-end="start"
+                cx={from.x}
+                cy={from.y}
+                r={1.15}
+              />
+              {link.directed ? null : (
+                <>
+                  <circle
+                    className="archive-link-socket"
+                    data-link-end="end"
+                    cx={to.x}
+                    cy={to.y}
+                    r={4.2}
+                  />
+                  <circle
+                    className="archive-link-core"
+                    data-link-end="end"
+                    cx={to.x}
+                    cy={to.y}
+                    r={1.15}
+                  />
+                </>
+              )}
               <path
                 className="archive-link-hit"
                 d={path}
@@ -228,6 +301,7 @@ const GraphContent = memo(function GraphContent({
               />
               <ArchiveRelationLabel
                 label={label}
+                relation={link.relation}
                 point={labelPoint}
                 onSelect={() => onSelect({ kind: "link", id: link.id })}
               />

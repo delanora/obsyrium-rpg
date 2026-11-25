@@ -169,7 +169,17 @@ export function useArchiveMotion(
           link,
           same,
           label,
-          paths: [...el.querySelectorAll<SVGPathElement>("path")],
+          paths: [
+            ...el.querySelectorAll<SVGPathElement>(
+              "path.archive-link, path.archive-link-sheath, path.archive-link-hit",
+            ),
+          ],
+          sockets: [
+            ...el.querySelectorAll<SVGCircleElement>("[data-link-end]"),
+          ].map((circle) => ({
+            circle,
+            at: circle.dataset.linkEnd === "end" ? ("end" as const) : ("start" as const),
+          })),
           hits: [
             ...el.querySelectorAll<SVGElement>("path,rect,text,foreignObject"),
           ],
@@ -221,7 +231,7 @@ export function useArchiveMotion(
           height: pose.height * pose.scale,
         });
       }
-      for (const { el, link, same, label, paths, hits } of links) {
+      for (const { el, link, same, label, paths, sockets, hits } of links) {
         const a = rects.get(link.sourceId),
           b = rects.get(link.targetId);
         if (!a || !b) continue;
@@ -260,6 +270,12 @@ export function useArchiveMotion(
             b.exiting,
         );
         for (const path of paths) path.setAttribute("d", geometry.path);
+        // Encaixes acompanham as pontas sem tocar na geometria da curva.
+        for (const socket of sockets) {
+          const point = socket.at === "end" ? geometry.to : geometry.from;
+          socket.circle.setAttribute("cx", String(point.x));
+          socket.circle.setAttribute("cy", String(point.y));
+        }
         // O rótulo inteiro, incluindo a área clicável, compartilha o deslocamento.
         if (label) {
           const x = Number(label.dataset.originX),

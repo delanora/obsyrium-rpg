@@ -17,6 +17,8 @@ export function archiveLinkGeometry(
     y: (from.y + to.y) / 2 + (dx / len) * bend,
   };
   return {
+    from,
+    to,
     path: `M${from.x},${from.y} Q${mid.x},${mid.y} ${to.x},${to.y}`,
     labelPoint: {
       x: (from.x + 2 * mid.x + to.x) / 4,

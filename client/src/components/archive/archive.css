@@ -76,13 +76,31 @@
   overflow: visible;
   pointer-events: none;
 }
+/* Traço: cor, espessura e tracejado vêm do tipo via custom props. */
 .archive-link {
   fill: none;
-  stroke: #b89a67;
-  stroke-width: 2;
+  stroke: var(--relation-tone, #b89a67);
+  stroke-width: var(--relation-width, 2);
+  stroke-dasharray: var(--relation-dash, none);
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.archive-lines marker path {
-  fill: #c9a767;
+/* Segunda camada sob o traço: profundidade sem brilho nem filtro de SVG. */
+.archive-link-sheath {
+  fill: none;
+  stroke: var(--relation-shade, #b89a6718);
+  stroke-width: calc(var(--relation-width, 2) + 3.6px);
+  stroke-dasharray: var(--relation-dash, none);
+  stroke-linecap: round;
+}
+.archive-link-socket {
+  fill: #0b0e12;
+  stroke: var(--relation-tone, #b89a67);
+  stroke-width: 1.3;
+}
+.archive-link-core {
+  fill: var(--relation-tone, #b89a67);
+  opacity: 0.75;
 }
 .archive-link-hit {
   fill: none;
@@ -92,19 +110,37 @@
   cursor: pointer;
 }
 .archive-lines text {
-  fill: #e5cfab;
   font-size: 13px;
-  paint-order: stroke;
-  stroke: #14161b;
-  stroke-width: 5px;
-  stroke-linejoin: round;
   text-anchor: middle;
-  pointer-events: all;
-  cursor: pointer;
 }
-.archive-lines .is-selected .archive-link {
-  stroke: #ffe0a0;
-  stroke-width: 3;
+.archive-link,
+.archive-link-sheath,
+.archive-link-socket,
+.archive-link-core,
+.archive-relation-plate,
+.archive-relation-plate-inner,
+.archive-relation-gem,
+.archive-relation-text {
+  transition: opacity 0.12s ease, stroke-width 0.12s ease, fill 0.12s ease, stroke 0.12s ease;
+}
+/* Hover e seleção: realce contido, na própria cor do tipo. */
+.archive-lines g[data-link]:hover .archive-link,
+.archive-lines g[data-link].is-selected .archive-link {
+  stroke: color-mix(in srgb, var(--relation-tone, #b89a67) 66%, #fff1cf);
+}
+.archive-lines g[data-link]:hover .archive-link {
+  stroke-width: calc(var(--relation-width, 2) + 0.6px);
+}
+.archive-lines g[data-link].is-selected .archive-link {
+  stroke-width: calc(var(--relation-width, 2) + 1.2px);
+}
+.archive-lines g[data-link]:hover .archive-link-socket,
+.archive-lines g[data-link].is-selected .archive-link-socket {
+  stroke-width: 1.9;
+}
+.archive-lines g[data-link]:hover .archive-link-core,
+.archive-lines g[data-link].is-selected .archive-link-core {
+  opacity: 1;
 }
 .archive-link.is-temporary {
   stroke-dasharray: 6 5;
@@ -671,17 +707,6 @@ body:has(.archive-page) {
   border-top: 1px solid color-mix(in srgb, var(--category-tone) 24%, transparent);
   font-size: 0.8rem;
 }
-.archive-link { stroke: #d9ad68; stroke-width: 2; }
-.archive-lines marker path { fill: #eac17e; }
-.archive-link-label {
-  fill: #111b20;
-  stroke: #bf9659;
-  stroke-width: 1;
-  pointer-events: all;
-  cursor: pointer;
-}
-.archive-lines text { fill: #efdbb3; stroke: none; font-size: 14px; }
-.archive-lines .is-selected .archive-link-label { stroke: #ffe0a0; }
 
 /* Os PNGs compartilham a escala do card e preservam textura e transparência. */
 .archive-card header { padding: 0.55rem 0.8rem; gap: 0.65rem; }
@@ -832,19 +857,55 @@ body:has(.archive-page) {
 }
 .archive-card[data-compact] .archive-card-copy { padding-top: 7px; }
 .archive-card[data-compact] footer { min-height: 26px; padding-top: 3px; }
-.archive-relation-hit { fill: transparent; pointer-events: all; cursor: pointer; }
-.archive-relation-decoration { overflow: visible; pointer-events: none; }
-.archive-relation-art {
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  border-style: solid;
-  border-color: transparent;
-  border-width: 0 16px;
-  border-image: url("/archive/card-parts/comuns/rotulo-relacao.png") 0 46 fill / 0 16px / 0 stretch;
+/* Rótulo: cápsula de couro com filete do tipo; sem plaquinha pesada. */
+.archive-relation-label { cursor: pointer; }
+.archive-relation-hit { fill: transparent; pointer-events: all; }
+.archive-relation-plate,
+.archive-relation-plate-inner,
+.archive-relation-gem { pointer-events: none; }
+.archive-relation-plate {
+  fill: #101419e6;
+  stroke: var(--relation-tone, #b89a67);
+  stroke-width: 1;
+  stroke-opacity: 0.8;
+}
+.archive-relation-plate-inner {
+  fill: none;
+  stroke: color-mix(in srgb, var(--relation-tone, #b89a67) 42%, #f4e6c6);
+  stroke-width: 0.8;
+  stroke-opacity: 0.18;
+}
+.archive-relation-gem {
+  fill: var(--relation-tone, #b89a67);
+  opacity: 0.7;
+}
+.archive-lines .archive-relation-text {
+  fill: color-mix(in srgb, var(--relation-tone, #b89a67) 22%, #f2e5c8);
+  font-size: 13px;
+  letter-spacing: 0.2px;
   pointer-events: none;
 }
-.archive-lines .archive-relation-text { pointer-events: none; fill: #efdbb3; }
+.archive-relation-label:hover .archive-relation-plate {
+  fill: #191e25f2;
+  stroke-width: 1.5;
+  stroke-opacity: 1;
+}
+.archive-relation-label:hover .archive-relation-plate-inner { stroke-opacity: 0.34; }
+.archive-relation-label:hover .archive-relation-gem { opacity: 1; }
+.archive-relation-label:hover .archive-relation-text { fill: #fbf0d8; }
+.archive-lines g[data-link].is-selected .archive-relation-plate {
+  fill: #191e25f2;
+  stroke-width: 1.5;
+  stroke-opacity: 1;
+}
+.archive-lines g[data-link].is-selected .archive-relation-text { fill: #fbf0d8; }
+/* Filtro em destaque: relação que toca card atenuado também recua. */
+.archive-lines g[data-filter-dim="true"] :is(.archive-link, .archive-link-sheath, .archive-link-socket, .archive-link-core, .archive-relation-plate, .archive-relation-plate-inner, .archive-relation-gem, .archive-relation-text) {
+  opacity: 0.3;
+}
+.archive-lines g[data-filter-dim="true"]:hover :is(.archive-link, .archive-link-sheath, .archive-link-socket, .archive-link-core, .archive-relation-plate, .archive-relation-plate-inner, .archive-relation-gem, .archive-relation-text) {
+  opacity: 0.68;
+}
 
 .archive-card[data-tiny] .archive-card-copy { padding: 0 16px; font-size: 0.8rem; line-height: 16px; }
 .archive-card[data-tiny] .archive-card-copy p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
