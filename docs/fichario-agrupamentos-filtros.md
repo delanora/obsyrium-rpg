@@ -1,8 +1,10 @@
 # Fichário — 8.5.3: filtros e agrupamentos reutilizáveis
 
-Implementação em validação técnica em 25/11/2026. Não publicada. A fase depende de
-publicação separadamente autorizada e aceite manual; não recebe conclusão funcional
-antecipada. A 8.5.4 não foi iniciada.
+Implementação publicada controladamente em 25/11/2026 após autorização expressa.
+**Aceite manual funcional/visual pendente; a fase não foi declarada concluída.**
+A auditoria de implementação abaixo é histórica; a publicação efetiva está em
+[fichario-preparacao-publicacao-853.md](fichario-preparacao-publicacao-853.md).
+A 8.5.4 não foi iniciada.
 
 ## Base e isolamento
 
@@ -27,7 +29,7 @@ A guarda oficial foi auditada, inclusive na instalação ativa em modo somente
 leitura. Isso não constitui isolamento imposto pelo SO: a dívida operacional
 registrada em `build-seguro.md` permanece.
 
-## Diagnóstico Prisma: publicação futura condicionada
+## Histórico do diagnóstico Prisma anterior à publicação
 
 A auditoria inicial informou 90 migrations aplicadas. A preparação posterior
 apurou **90 registros: 89 concluídos e uma tentativa revertida de hotbar**, sem
@@ -55,8 +57,9 @@ com a composição efetivamente publicada, preservando os modelos operacionais W
 Regenerar simplesmente a partir de main pode remover APIs que o backend ativo
 utiliza. Exigir revisão do diff de schema/Client e do histórico aplicado, backup
 consistente e publicação seletiva. Não executar `db push`, `migrate dev` ou
-`migrate deploy` indiscriminadamente na instalação ativa. A nova migration permanece
-pendente em produção. Compatibilidade operacional não declarada resolvida.
+`migrate deploy` indiscriminadamente na instalação ativa. Na entrega funcional original, a nova migration permanecia
+pendente em produção; foi aplicada posteriormente na publicação controlada.
+A divergência global não foi declarada resolvida.
 
 ## Persistência, contratos e autoridade
 
@@ -207,7 +210,9 @@ Prisma operacional. Benchmarks não demonstram resolução dessas dívidas.
 
 ## Rollback e publicação futura
 
-Esta entrega não autoriza publicar. Preparar em operação futura: backups íntegros
+A entrega funcional original não autorizava publicar. A publicação posterior
+foi expressamente autorizada e está registrada no relatório de preparação.
+O plano anterior, preservado como histórico, previa: backups íntegros
 do banco e dos artefatos ativos, espelho da composição real, Client compatível,
 aplicação seletiva **somente** da nova migration autorizada e módulos necessários,
 restart controlado apenas se autorizado, bundles antes de HTML atômico, preservação
@@ -235,4 +240,15 @@ snapshot novo. Remoção destrutiva das tabelas não integra o rollback autoriza
 - Avaliar quadros extensos e aceitar ou registrar limites de desempenho.
 
 Relatório técnico e hashes de auditoria: `/tmp/grupos-853/`. Arquivos temporários
-não substituem backup de publicação; não houve novos artefatos publicados.
+não substituem backup de publicação; na entrega funcional original não houve
+novos artefatos publicados. A publicação posterior está registrada abaixo.
+
+## Publicação controlada posterior
+
+Publicada a composição seletiva da 8.5.3 em 25/11/2026: migration
+20261125120000_narrative_groups, Client compatível 6.19.3, dez arquivos backend
+e novos bundles. Histórico 91/90, hashes dos dados anteriores e 47 WIPs preservados;
+backup restaurável validado. PID 2467899 → 3297180, health saudável, sem erros
+relevantes no novo processo. Nenhum teste mutável na campanha. Rollback não necessário;
+aceite manual e dívidas anteriores pendentes. Relatório completo na
+[preparação/publicação](fichario-preparacao-publicacao-853.md).

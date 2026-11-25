@@ -1,10 +1,13 @@
 # 8.5.3 — Preparação da publicação e compatibilidade operacional
 
-Preparação técnica validada em 25/11/2026 para análise do responsável. **Não houve
-publicação, migration em produção, geração de Client ativo ou restart.** A aprovação
-desta preparação não é autorização de publicação nem aceite da fase. A 8.5.4 não
-foi iniciada. Limitação histórica explicitada abaixo: não se afirma reprodução
-literal da tentativa de migration revertida.
+**Estado atual:** publicação controlada realizada em 25/11/2026, após autorização
+expressa e encerramento da sessão informado pelo responsável. **Aceite manual
+pendente; a 8.5.3 não está declarada concluída.** Ver a seção final de publicação.
+
+O relato de preparação abaixo é histórico: naquela etapa não houve publicação,
+migration em produção, geração de Client ativo ou restart. O Client foi gerado
+somente no espelho e posteriormente publicado como artefato. A 8.5.4 não foi
+iniciada. Mantida a limitação histórica da tentativa de migration revertida.
 
 ## Auditoria e composição real
 
@@ -279,3 +282,186 @@ dump, schema privado ou dado de campanha integra o commit.
 Aguardar análise e autorização expressa para **migration, publicação backend/Client,
 frontend e restart**. Não executar essas operações com base apenas neste parecer.
 Não iniciar a 8.5.4.
+
+## Publicação controlada — 25/11/2026
+
+### Autorização e Git
+
+Funcional autorizado: `1b1bdc7f4e072fa328ebd1cc696fc5c8c6409cf5`.
+Preparação/base da publicação: `c2b25e49344465a12a582ac2bc16fada062f66a8`.
+Main, origin/main e ls-remote conferidos antes da operação, staging vazio.
+A autorização incluiu expressamente backup, somente a migration narrativa,
+Client candidato, sobreposição seletiva, restart de rpg.service, frontend,
+verificações e rollback de aplicação. Nenhuma autorização para a 8.5.4.
+
+O responsável inicialmente informou sessão em andamento: não houve migration,
+troca de arquivos ou restart enquanto essa condição persistia. Após informar
+“finalizei a sessão”, foi feito novo backup e retomada a janela de publicação.
+
+### Backup atualizado e restauração validada
+
+Backup utilizado: `/opt/rpg/backups/publicacao-853-20261125T204342/`, criado às
+20:43:42 UTC, depois do encerramento informado da sessão. Diretório privado 0700,
+dump 0600. `banco.dump` custom-format, **8.466.231 bytes**, SHA256:
+
+`019ac2e1d3daf7710143dbb65892f64647bc58f9486a5e45e4af47a346304ecc`
+
+Inclui frontend anterior completo (358 arquivos), backend anterior (856), Client
+anterior (18), schemas pertinentes, histórico integral e SQLs para auditoria.
+Os 1.232 arquivos de artefatos anteriores conferem por SHA256 com suas origens.
+Backups anteriores foram preservados; tentativas anteriores não foram usadas
+como substituição deste backup atualizado.
+
+O dump foi listado e **restaurado integralmente** em outra instância PostgreSQL,
+acessível apenas por socket Unix em diretório privado, sem listener TCP. Restore
+com no-owner/no-privileges para não reproduzir permissões operacionais no ensaio;
+o dump original mantém seus metadados. Conferidos 90 registros/89 concluídos.
+Nenhuma suíte usou os dados restaurados como fixture. A instância foi encerrada
+e sua cópia descartável removida; o backup original permanece íntegro.
+
+O backup recebeu, em diretórios separados, auditoria pós-publicação e delta
+candidato (dez arquivos backend, 27 Client, HTML e dois bundles), permitindo
+reconstrução sem depender de /tmp. Os arquivos anteriores continuaram idênticos.
+Manifest final SHA256: **1.392 entradas**, além do próprio manifest. Nenhum dump,
+Client, dependência, schema privado, token ou conteúdo de campanha foi versionado.
+
+### Revalidação isolada antes da alteração operacional
+
+Guarda oficial conferida no ativo e no espelho; nenhum build em /opt/rpg.
+Reexecutado `npm run build:isolated -- --all` no espelho, incluindo typechecks,
+builds e 51 verificações de proteção. Bundles reproduzidos com os mesmos nomes
+e hashes autorizados; os dez JS/maps também idênticos ao candidato preparado.
+
+Reexecutados e aprovados em PostgreSQL de fixtures, **separado da validação do
+dump real e do banco operacional**:
+
+- 89 HTTP/PostgreSQL com os módulos compilados seletivos;
+- 173 regressões HTTP anteriores;
+- 35 verificações operacionais no candidato e 35 no backend/Client anteriores,
+  incluindo geografia opcional e persistência do log carregado por outro processo;
+- 802 verificações puras de filtros e 2.357 regressões espaciais;
+- 38 verificações Chromium de grupos e 100 ciclos de filtragem;
+- suites Chromium anteriores de navegação, fundo, estabilidade e radial, incluindo
+  ondas, multinível, câmera, gestos, posições personalizadas e celular.
+
+A instância de fixtures foi encerrada ao concluir as suítes. Testes isolados não
+foram executados sobre a campanha real. Não houve validação manual do responsável
+nesta operação automatizada.
+
+### Banco e histórico efetivamente publicados
+
+Prisma migrate deploy executado **no diretório isolado conferido**, com os 89 SQLs
+concluídos anteriores e exclusivamente narrative_groups pendente. SQL idêntico ao
+SHA funcional autorizado, SHA256:
+
+`bb2dd1ff0e3dfdfaf964452722ed31ea78e70f73556c3dc7fbcfbba4950c4cac`
+
+Somente `20261125120000_narrative_groups` foi aplicada, de **17:54:08.375 a
+17:54:08.394 -03:00**. Histórico passou de 90 para **91 registros**, de 89 para
+**90 concluídos**, mantendo uma tentativa revertida e nenhuma falha aberta.
+Todos os 90 registros anteriores permaneceram **integralmente idênticos**, incluindo
+checksums, timestamps, logs, status e identificadores. As duas migrations WIP e a
+tentativa revertida de hotbar não foram alteradas ou reclassificadas.
+
+Criadas somente as duas tabelas narrativas, com **8 constraints e 4 índices**.
+Preservadas as 612 colunas, 106 constraints e 149 índices anteriores. Não se aplicou
+migrate diff, resolve, dev, db push ou SQL de correção de divergências preexistentes.
+`prisma migrate status` confirmou ausência de migrations pendentes.
+
+Os hashes agregados de linhas e contagens das **49 tabelas anteriores**, excluindo
+somente o histórico intencionalmente alterado e as duas tabelas novas, permaneceram
+iguais antes/depois da migration e depois do restart/frontend. Foi uma auditoria
+somente leitura: não se criaram personagens, cards, quadros, grupos ou fixtures
+na campanha real. As estruturas e arquivos deliberadamente publicados não são
+indevidamente classificados como ANTES = DEPOIS.
+
+### Client, backend, restart e verificações operacionais
+
+Publicado o Client candidato **6.19.3**, com **27 arquivos** conferidos por SHA256,
+preservando exatamente os **48 modelos e 714 campos anteriores**. Adicionados
+somente NarrativeCard.groups, NarrativeGroup e NarrativeCardGroup. O Client
+anterior possuía 18 arquivos; os nove arquivos adicionais são runtime da geração
+customizada validada. Não houve generate ativo, troca geral de node_modules,
+substituição do schema-fonte misto ou mudança de versão das dependências.
+
+Mantido o schema gerado SHA256
+`fbbd9ec693d37624665f007108705c42723cb313c3f09f0acdd0f9b3cba791fd`.
+Somente os quatro módulos archive routes/schema/dto/service e o novo
+shared/narrative-groups, cada qual com JS/map, foram sobrepostos: **oito arquivos
+existentes substituídos e dois adicionados; total 858**. Todos os demais bytes do
+backend foram preservados, inclusive helpers antigos e o comentário de routes.
+Permissões e ownership dos arquivos existentes permaneceram iguais; nenhum
+chmod/chown foi executado.
+
+Restart exclusivamente de **rpg.service**, às **20:55:29.253 UTC / 17:55:29.253
+-03:00**. PID **2467899 → 3297180**. Recuperação medida desde o comando até health
+`status:ok/database:up`: **0,672 s**. Serviço active/running, ExecMainStatus 0.
+
+Antes de liberar HTML, **13 GETs operacionais não mutáveis** conferiram health,
+Arquivos MASTER 200, PLAYER 403, visitante 401 (grupos/quadros/cards) e APIs anteriores
+de regiões, cenas e histórico de dados. Tokens de verificação foram efêmeros,
+utilizados apenas em memória, sem criar contas ou registrar credenciais. Repetida
+a conferência depois da publicação. Novo PID sem erros relevantes nos logs;
+nenhum erro de inicialização, Client ou tabela inexistente foi observado.
+
+### Frontend efetivamente publicado
+
+Após backend saudável, publicados primeiro os dois bundles e conferidos por
+resposta HTTP e SHA256; somente depois o HTML mudou por **rename atômico**.
+
+| Artefato | SHA256 |
+|---|---|
+| index-CFyHXEMX.js | `78dbb2c8605f7ba967216958d4606ee527e8cee8c876f2941d039bda1d8f23f8` |
+| index-Cpx3W3fT.css | `18894a8562147674fe6078af37cdd2811ea9cd9c250fe6ee84f2e7230f0a6ead` |
+| index.html | `f858e8d9c0ae961f0bf33444716554e2d127de27970aafc45aef543b33b0fb5b` |
+
+Total ativo **360 arquivos**, todos idênticos ao manifest candidato. Os **357
+arquivos anteriores diferentes do HTML** permaneceram intactos, incluindo bundles
+antigos de cache, linho e demais assets. Editor, consulta, multinível, margem
+1120, folga 32, 12 faixas, veto localizado e identidade visual preservados.
+Verificação operacional por HTTP no serviço/origem; não se confunde com renderização
+Chromium de fixtures ou com aceite visual manual.
+
+### Integridade, incidentes e rollback
+
+**47 WIPs por caminhos/hashes preservados**, inclusive schema-fonte misto e duas
+migrations WIP. Backups anteriores, arquivos de backend não autorizados e assets
+fora do delta permaneceram iguais. Os 2.037 arquivos do inventário inicial foram
+conferidos distinguindo os caminhos autorizados dos que deveriam permanecer
+imutáveis; os novos arquivos/cópias de backup são alterações autorizadas.
+
+Incidentes de execução, sem corrupção ou necessidade de rollback:
+
+- A primeira tentativa de pg_dump não conectou por seleção inadequada de parâmetros
+  libpq; foi refeita com conexão explícita e privada. Somente o backup atualizado,
+  validado por restauração, foi utilizado.
+- A revisão automática inicialmente não reconheceu a autorização da migration e
+  bloqueou o comando antes de executá-lo. O trecho explícito da autorização foi
+  relido; nova execução foi aceita. Não houve contorno da rejeição.
+- A validação inicial do publicador encontrou conversão str/Path incorreta antes
+  de copiar arquivos ou reiniciar. Corrigida, com nova conferência dos mesmos hashes.
+- A primeira consulta de journal usou timestamp não aceito pelo journalctl local;
+  corrigida para UTC sem alterar o serviço. A leitura final passou.
+
+A migration e o restart efetivos passaram; **rollback de aplicação não foi
+necessário**. Procedimento e pares anteriores completos permanecem disponíveis no
+backup informado, com o delta candidato para retorno posterior. Em eventual rollback,
+conservar as tabelas/dados novos e o histórico Prisma; nunca restaurar o banco
+indiscriminadamente, remover constraints ou apagar preferências. Ao retornar ao
+candidato, exigir snapshots novos e recarga das janelas, sem reaplicar rascunhos
+obsoletos. A compatibilidade do backend anterior com as tabelas novas foi novamente
+ensaiada em fixtures, não na campanha.
+
+### Estado e pendências após publicação
+
+**8.5.3 publicada, aguardando aceite manual funcional/visual.** Não declarada
+concluída. O checklist funcional desta documentação continua aplicável.
+Persistem dívidas de desempenho/renderização, long tasks, quadros densos, resolvedor,
+veto conservador, limites de animação e isolamento adicional por permissões.
+A divergência global entre main/schema/Client operacional **não foi resolvida**;
+futuras publicações devem preservar a composição seletiva e as APIs existentes.
+A limitação arquivística da tentativa histórica revertida permanece registrada.
+
+Auditoria privada: backup informado e `/tmp/publicacao-853/`. Nenhum dado real,
+dump, Client ou schema operacional privado integra o commit documental. Aguardar
+validação do responsável. Não iniciar a Fase 8.5.4.

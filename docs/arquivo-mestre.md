@@ -1774,3 +1774,13 @@ histórico: 90 registros, 89 concluídos e um revertido; não se reproduziu lite
 o SQL revertido desconhecido. Aplicação seletiva e rollback ensaiados sem tocar
 na campanha. Sem publicação/restart/aceite. Ver
 [fichario-preparacao-publicacao-853.md](fichario-preparacao-publicacao-853.md).
+
+Publicação controlada da **8.5.3** realizada em 25/11/2026, funcional
+`1b1bdc7f4e072fa328ebd1cc696fc5c8c6409cf5`, após autorização e encerramento informado
+da sessão. Migration narrativa aplicada isoladamente (91 registros/90 concluídos),
+Client compatível, dez JS/maps seletivos e frontend CFyHXEMX/Cpx3W3fT. Backup
+atualizado validado por restauração isolada; 47 WIPs e dados anteriores preservados.
+Restart somente de rpg.service, PID 3297180, health saudável, sem erros relevantes.
+Rollback disponível e não utilizado. **Aceite manual pendente; fase não concluída.**
+Dívidas de escala, permissões e divergência global Prisma permanecem. Sem 8.5.4.
+Ver [relatório da publicação](fichario-preparacao-publicacao-853.md).
