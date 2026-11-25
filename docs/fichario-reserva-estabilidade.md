@@ -250,3 +250,35 @@ Um único commit isolado; 47 WIPs preservados. Publicação realizada por autori
 - Limites remanescentes: veto conservador para toda a composição, reservas parciais
   sob conflitos/budget, colisões físicas prévias em densidade extrema e long tasks.
 - 8.5.2.4: avaliar refinamento por componente e escala sem ampliar escopo agora.
+
+## Ajuste posterior solicitado — área envolvente mais ampla
+
+Após a publicação da 8.5.2.3.1, o responsável pediu bastante espaço livre entre a
+estrutura e os cards avulsos, em todas as direções a partir do núcleo. “Círculo”
+foi esclarecido como descrição do afastamento, **não** um elemento visual.
+
+A margem externa passa de 280 para **560** unidades. A região contínua envolve o
+núcleo e ultrapassa os cantos das ramificações do componente próximo, acrescida
+dessa margem. Doze faixas retangulares conservadoras aproximam internamente essa
+região no resolvedor existente; nada é desenhado. A separação usa a borda útil da
+região inteira, evitando que um avulso atravesse várias faixas em pequenos passos.
+Não mudou raio/ângulo/espaçamento interno, câmera, animação, textura ou moldura.
+
+A conectividade das regiões locais distingue ramificações personalizadas remotas:
+elas continuam com reserva local e não ampliam todo o corredor intermediário.
+Decisões manuais, veto conservador, limites e diagnósticos foram preservados.
+Densidade alta pode continuar adiando a reserva; mais espaço não autoriza piorar
+colisões nem mover âncoras protegidas. Custo adicional permanece como dívida.
+
+Validação isolada: perfil legado preservado nas verificações anteriores e novos
+casos do padrão envolvente, cobertura em 24 direções, maior folga, geometria
+interna idêntica, ramo remoto e intenção manual. Build/typecheck, layout e animação
+passaram; Chromium com 100 ciclos e API simulada validou continuidade e operações.
+A fixture ajusta o zoom antes de escolher vizinhos que agora ficam mais distantes.
+Benchmark local esparso/denso 50/100/200/500 executado; limites não aumentados.
+Em esparsos a reserva foi aplicada sem invasões residuais; cenários densos podem
+recusar a ampliação pelo veto/budget. Não houve escrita na campanha.
+
+**Este ajuste ainda não foi publicado.** A autorização anterior era restrita ao
+SHA `4c7e866832804800675c1b01f09f4962a2bd1aae`. Aguardar autorização específica,
+com os 47 WIPs e os artefatos ativos preservados. A 8.5.2.4 não foi iniciada.

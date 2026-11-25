@@ -15,10 +15,10 @@ await build({
     loader: "tsx",
     resolveDir: path.join(root, "client"),
     contents: `
-import React,{useMemo,useRef,useState}from'react';import{createRoot}from'react-dom/client';import{ArchiveCanvas}from'${source}/client/src/components/archive/ArchiveCanvas';import{layoutArchive}from'${source}/client/src/components/archive/archiveLayout';import{projectArchive}from'${source}/client/src/components/archive/archiveProjection';import'${source}/client/src/components/archive/archive.css';
+import React,{useMemo,useRef,useState}from'react';import{createRoot}from'react-dom/client';import{ArchiveCanvas}from'${source}/client/src/components/archive/ArchiveCanvas';import{layoutArchive,ARCHIVE_LAYOUT_CONFIG}from'${source}/client/src/components/archive/archiveLayout';import{projectArchive}from'${source}/client/src/components/archive/archiveProjection';import'${source}/client/src/components/archive/archive.css';
 const place=(id,parent,x,y,w=280,h=200)=>({id,cardId:id,boardId:'test',parentPlacementId:parent,x,y,width:w,height:h,zIndex:0,card:{id,title:id,category:'note',summary:'Fixture isolada de continuidade',content:'',version:0,createdAt:'',updatedAt:''}});
 const initial={board:{id:'test',name:'Reserva isolada',description:'',version:0,createdAt:'',updatedAt:''},placements:[place('root',null,0,0),...Array.from({length:4},(_,i)=>place('child'+i,'root',0,0)),place('neighbor',null,760,0),place('chain',null,1080,0),place('far',null,8000,8000),place('other',null,-1200,600),place('other-child','other',-1200,600)],links:Array.from({length:4},(_,i)=>({id:'link'+i,sourceId:'root',targetId:'child'+i,relation:'related',label:'Vínculo',description:'',directed:true,version:0}))};
-function App(){const[graph,setGraph]=useState(initial),[expanded,setExpanded]=useState(new Set()),[visual,setVisual]=useState({}),[camera,onCamera]=useState({x:800,y:450,zoom:.65}),[margin,setMargin]=useState(280),[busy,setBusy]=useState(false);const projection=useMemo(()=>projectArchive(graph,expanded),[graph,expanded]);const layout=useMemo(()=>{window.__calls=(window.__calls??0)+1;return layoutArchive(projection,{config:{reserveMargin:margin}})},[projection,margin]);window.__layout=layout;window.__raw=graph;window.__visual=visual;window.__toggle=id=>setExpanded(v=>{const n=new Set(v);n.has(id)?n.delete(id):n.add(id);return n});window.__margin=setMargin;window.__reset=()=>{setExpanded(new Set());setGraph(structuredClone(initial));setVisual({})};window.__add=()=>setGraph(v=>({...v,placements:[...v.placements,place('new'+v.placements.length,'root',0,0)]}));window.__external=g=>setGraph(g);
+function App(){const[graph,setGraph]=useState(initial),[expanded,setExpanded]=useState(new Set()),[visual,setVisual]=useState({}),[camera,onCamera]=useState({x:800,y:450,zoom:.65}),[margin,setMargin]=useState(ARCHIVE_LAYOUT_CONFIG.reserveMargin),[busy,setBusy]=useState(false);const projection=useMemo(()=>projectArchive(graph,expanded),[graph,expanded]);const layout=useMemo(()=>{window.__calls=(window.__calls??0)+1;return layoutArchive(projection,{config:{reserveMargin:margin}})},[projection,margin]);window.__defaultMargin=ARCHIVE_LAYOUT_CONFIG.reserveMargin;window.__layout=layout;window.__raw=graph;window.__visual=visual;window.__toggle=id=>setExpanded(v=>{const n=new Set(v);n.has(id)?n.delete(id):n.add(id);return n});window.__margin=setMargin;window.__reset=()=>{setExpanded(new Set());setGraph(structuredClone(initial));setVisual({})};window.__add=()=>setGraph(v=>({...v,placements:[...v.placements,place('new'+v.placements.length,'root',0,0)]}));window.__external=g=>setGraph(g);
 return <ArchiveCanvas graph={layout.graph} layout={layout} snapshot={graph} nodes={projection.nodes} onToggle={window.__toggle} camera={camera} onCamera={onCamera} selected={null} onSelect={()=>{}} onMenu={()=>{}} visual={visual} onVisual={setVisual} onMove={(id,g)=>{window.__writes=(window.__writes??0)+1;setBusy(true);setTimeout(()=>{setGraph(v=>({...v,placements:v.placements.map(p=>p.id===id?{...p,...g}:p)}));setVisual({});setBusy(false)},120)}} onConnect={()=>{}} busy={busy} onInteraction={()=>{}}/>;}
 window.__probeCalls=0;window.__frames=[];window.__maxPoses=0;window.__lastPoseCount=0;window.__paintProbe=({poses,visual,layout})=>{window.__probeCalls++;window.__maxPoses=Math.max(window.__maxPoses,poses.size);window.__lastPoseCount=poses.size;for(const el of document.querySelectorAll('[data-placement]')){const id=el.dataset.placement,p=visual[id]??poses.get(id);if(!p){if(layout&&!layout.geometry.has(id)&&Number(el.style.opacity)>.001)window.__frames.push({kind:'exit-reappeared',id,opacity:el.style.opacity,transform:el.style.transform});continue;}const m=new DOMMatrix(el.style.transform),x=parseFloat(el.style.left)+m.e,y=parseFloat(el.style.top)+m.f;if(Math.abs(x-p.x)>.02||Math.abs(y-p.y)>.02)window.__frames.push({kind:'geometry-discontinuity',stage:window.__stage,id,x,y,expectedX:p.x,expectedY:p.y});}};
 createRoot(document.getElementById('root')).render(<App/>);`,
@@ -85,7 +85,7 @@ try {
   const initialGeometry = await page.evaluate(() =>
     Object.fromEntries(window.__layout.geometry),
   );
-  for (const margin of [160, 280, 360]) {
+  for (const margin of [160, 280, 360, 560]) {
     await page.evaluate((m) => {
       window.__stage = "margin-" + m;
       window.__margin(m);
@@ -93,7 +93,7 @@ try {
     await page.waitForTimeout(700);
     await shot("margem-" + margin);
   }
-  await page.evaluate(() => window.__margin(280));
+  await page.evaluate(() => window.__margin(window.__defaultMargin));
   await page.waitForTimeout(700);
   await page.evaluate(() => {
     window.__stage = "growth-one";

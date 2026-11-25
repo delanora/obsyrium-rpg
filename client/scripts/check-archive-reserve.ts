@@ -74,7 +74,8 @@ const run = (
   manual: ArchiveReserveExceptions = {},
 ) =>
   layoutArchive(projectArchive(g, new Set(ids)), {
-    config: { reserveMargin: margin },
+    // Perfil legado conserva suas invariantes; o novo padrão é verificado abaixo.
+    config: { reserveMargin: margin, reserveBands: 0 },
     manual,
   });
 const isolated = graph(inside),
@@ -85,7 +86,7 @@ check(() => {
   assert.equal(reserved.reserves.length, 1);
   assert.equal(reserved.reserves[0].regions.length, 5);
   assert.equal(ARCHIVE_LAYOUT_CONFIG.gap, 32);
-  assert.equal(ARCHIVE_LAYOUT_CONFIG.reserveMargin, 280);
+  assert.equal(ARCHIVE_LAYOUT_CONFIG.reserveMargin, 560);
 });
 const g = graph([
     ...inside,
@@ -333,6 +334,67 @@ for (const count of [100, 200, 500]) {
     ),
   );
 }
+const expanded = layoutArchive(projectArchive(g, new Set(["root"])));
+check(() => assert.equal(expanded.reserves[0].regions.length, 12));
+for (const p of inside)
+  check(() =>
+    assert.deepEqual(expanded.geometry.get(p.id), old.geometry.get(p.id)),
+  );
+check(() =>
+  assert.ok(
+    expanded.geometry.get("neighbor")!.x > space.geometry.get("neighbor")!.x,
+  ),
+);
+check(() =>
+  assert.deepEqual(expanded.geometry.get("far"), space.geometry.get("far")),
+);
+check(() => assert.equal(expanded.diagnostics.reserveResiduals.length, 0));
+check(() => assert.equal(expanded.diagnostics.reserveFallback, null));
+const c = { x: 140, y: 100 };
+for (let i = 0; i < 24; i++) {
+  const angle = (i * Math.PI) / 12,
+    p = {
+      x: c.x + 900 * Math.cos(angle) - 1,
+      y: c.y + 900 * Math.sin(angle) - 1,
+      width: 2,
+      height: 2,
+    };
+  check(() =>
+    assert.ok(
+      expanded.reserves[0].regions.some((r) => archiveIntersects(r, p, 0)),
+      "Área contínua em todas as direções",
+    ),
+  );
+}
+check(() =>
+  assert.deepEqual(
+    layoutArchive(projectArchive(g, new Set())).geometry,
+    run(g, []).geometry,
+  ),
+);
+check(() =>
+  assert.deepEqual(
+    layoutArchive(projectArchive(distant, new Set(["root"]))).geometry.get(
+      "middle",
+    ),
+    run(distant, ["root"], 0).geometry.get("middle"),
+    "Ramo remoto não amplia toda a área intermediária",
+  ),
+);
+const radialManual = archiveReserveIntent(
+  expanded,
+  {},
+  "neighbor",
+  manualGeometry,
+);
+check(() =>
+  assert.deepEqual(
+    layoutArchive(projectArchive(manualGraph, new Set(["root"])), {
+      manual: radialManual,
+    }).geometry.get("neighbor"),
+    manualGeometry,
+  ),
+);
 console.log(
   `Reserva e finalização: ${checks} verificações; 110 ciclos sem offsets.`,
 );

@@ -719,20 +719,29 @@ try {
     await toggle(0, false);
   assert.equal(requests.length, 0);
   assert.equal(JSON.stringify({ placements, links }), original);
-  const visibleCandidate = await page.locator(".archive-card").evaluateAll(
-    (els, ids) =>
-      els.find((el) => {
-        const b = el.querySelector("header").getBoundingClientRect();
-        return (
-          ids.includes(el.dataset.placement) &&
-          b.x > 20 &&
-          b.right < innerWidth - 20 &&
-          b.y > 130 &&
-          b.bottom < innerHeight - 170
-        );
-      })?.dataset.placement,
-    [7, 8, 9, 10, 17].map((i) => uuid(200 + i)),
-  );
+  let visibleCandidate;
+  // A área maior pode afastar todos os avulsos para além do zoom inicial da fixture.
+  for (let attempt = 0; attempt < 4 && !visibleCandidate; attempt++) {
+    visibleCandidate = await page.locator(".archive-card").evaluateAll(
+      (els, ids) =>
+        els.find((el) => {
+          const b = el.querySelector("header").getBoundingClientRect();
+          return (
+            ids.includes(el.dataset.placement) &&
+            b.x > 20 &&
+            b.right < innerWidth - 20 &&
+            b.y > 130 &&
+            b.bottom < innerHeight - 170
+          );
+        })?.dataset.placement,
+      [7, 8, 9, 10, 17].map((i) => uuid(200 + i)),
+    );
+    if (!visibleCandidate) {
+      await page.mouse.move(30, 350);
+      await page.mouse.wheel(0, 220);
+      await page.waitForTimeout(100);
+    }
+  }
   assert.ok(visibleCandidate, "Há um vizinho deslocado acessível para o gesto");
   await saveGesture(visibleCandidate, "move", 23, 17, "cancel");
   failNext = true;

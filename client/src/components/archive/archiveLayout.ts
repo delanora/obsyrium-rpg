@@ -14,7 +14,8 @@ export interface ArchiveAnchor {
 }
 export const ARCHIVE_LAYOUT_CONFIG = {
   gap: 32,
-  reserveMargin: 280,
+  reserveMargin: 560,
+  reserveBands: 12,
   limit: 1_000_000,
   maxChecks: 750_000,
   maxMovesPerCard: 16,
@@ -25,6 +26,7 @@ export interface ArchiveReserve {
   sourceId: string;
   members: ReadonlySet<string>;
   regions: ArchiveGeometry[];
+  coreRegions: number;
 }
 export type ArchiveReserveExceptions = Readonly<
   Record<string, Readonly<Record<string, ArchiveGeometry>>>
@@ -475,7 +477,8 @@ export function layoutArchive(
       ? Math.max(0, Math.min(config.limit, config.reserveMargin))
       : 0;
     if (!margin) continue;
-    const regions = [...members].sort(order).map((id) => {
+    const memberIds = [...members].sort(order);
+    const localRegions = memberIds.map((id) => {
       const g = result.get(id)!;
       return {
         ...g,
@@ -485,7 +488,51 @@ export function layoutArchive(
         height: g.height + margin * 2,
       };
     });
-    reserves.push({ sourceId: group.id, members, regions });
+    let regions = localRegions;
+    let coreRegions = 0;
+    if (config.reserveBands > 0) {
+      // Área contínua em torno do núcleo, sem desenhar círculo ou alterar os anéis.
+      // Um ramo remoto desconectado continua local, sem inflar todo o quadro.
+      const core = result.get(group.id)!,
+        c = center(core),
+        connected = new Set<number>([memberIds.indexOf(group.id)]);
+      for (const i of connected)
+        for (let j = 0; j < localRegions.length; j++)
+          if (
+            !connected.has(j) &&
+            archiveIntersects(localRegions[i], localRegions[j], 0)
+          )
+            connected.add(j);
+      const radius =
+        Math.max(
+          ...[...connected].map((i) => {
+            const g = result.get(memberIds[i])!,
+              p = center(g);
+            return (
+              Math.hypot(p.x - c.x, p.y - c.y) +
+              Math.hypot(g.width, g.height) / 2
+            );
+          }),
+        ) + margin;
+      const bands = Math.max(4, Math.min(24, Math.floor(config.reserveBands)));
+      coreRegions = bands;
+      regions = Array.from({ length: bands }, (_, i) => {
+        const y0 = -radius + (i * 2 * radius) / bands,
+          y1 = -radius + ((i + 1) * 2 * radius) / bands;
+        const near =
+          y0 <= 0 && y1 >= 0 ? 0 : Math.min(Math.abs(y0), Math.abs(y1));
+        const half = Math.sqrt(Math.max(0, radius * radius - near * near));
+        return {
+          ...core,
+          x: c.x - half,
+          y: c.y + y0,
+          width: half * 2,
+          height: y1 - y0,
+        };
+      });
+      regions.push(...localRegions.filter((_, i) => !connected.has(i)));
+    }
+    reserves.push({ sourceId: group.id, members, regions, coreRegions });
     for (const [id, geometry] of Object.entries(
       options.manual?.[group.id] ?? {},
     ))
@@ -513,6 +560,7 @@ export function layoutArchive(
     depth: number;
     region?: ArchiveGeometry;
     members?: ReadonlySet<string>;
+    cluster?: number;
   };
   const reserveObstacles: Obstacle[] = reserves.flatMap((r) =>
     r.regions.map((region, i) => ({
@@ -520,6 +568,7 @@ export function layoutArchive(
       sourceId: r.sourceId,
       depth: 0,
       region,
+      cluster: i < r.coreRegions ? 0 : i + 1,
       members: r.members,
     })),
   );
@@ -596,11 +645,36 @@ export function layoutArchive(
           cc = center(current),
           dx = cc.x - origin.x,
           dy = cc.y - origin.y;
+        // Uma faixa não deve empurrar o card em pequenos degraus por dentro da
+        // área contínua. Separa pela borda útil de todo o núcleo, sem envolver ramos remotos.
+        let right = b.x + b.width,
+          left = b.x,
+          bottom = b.y + b.height,
+          top = b.y;
+        if (hit.region && hit.cluster === 0) {
+          const zones = reserveObstacles
+            .filter((o) => o.sourceId === hit!.sourceId && o.cluster === 0)
+            .map(geometry);
+          const horizontal = zones.filter(
+            (r) =>
+              r.y < current.y + current.height + config.gap &&
+              r.y + r.height + config.gap > current.y,
+          );
+          const vertical = zones.filter(
+            (r) =>
+              r.x < current.x + current.width + config.gap &&
+              r.x + r.width + config.gap > current.x,
+          );
+          right = Math.max(...horizontal.map((r) => r.x + r.width));
+          left = Math.min(...horizontal.map((r) => r.x));
+          bottom = Math.max(...vertical.map((r) => r.y + r.height));
+          top = Math.min(...vertical.map((r) => r.y));
+        }
         const candidates = [
-          { x: b.x + b.width + config.gap - current.x, y: 0 },
-          { x: b.x - config.gap - current.x - current.width, y: 0 },
-          { x: 0, y: b.y + b.height + config.gap - current.y },
-          { x: 0, y: b.y - config.gap - current.y - current.height },
+          { x: right + config.gap - current.x, y: 0 },
+          { x: left - config.gap - current.x - current.width, y: 0 },
+          { x: 0, y: bottom + config.gap - current.y },
+          { x: 0, y: top - config.gap - current.y - current.height },
         ]
           .filter((v) => v.x * dx + v.y * dy >= -EPS)
           .map((v, i) => ({
