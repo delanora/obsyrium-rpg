@@ -1766,3 +1766,11 @@ permanece condicionante para publicação futura; nenhum Client ativo foi gerado
 Sem deploy/restart ou aceite antecipado; aguardar autorização e validação manual.
 A 8.5.4 não foi iniciada. Relatório, medições, rollback e checklist em
 [fichario-agrupamentos-filtros.md](fichario-agrupamentos-filtros.md).
+
+Preparação operacional posterior da 8.5.3 validada em espelho: Client 6.19.3 com
+48 modelos/714 campos anteriores preservados, histórico efetivo conferido, apenas
+10 arquivos backend sobrepostos e frontend reproduzido por hash. Correção do
+histórico: 90 registros, 89 concluídos e um revertido; não se reproduziu literalmente
+o SQL revertido desconhecido. Aplicação seletiva e rollback ensaiados sem tocar
+na campanha. Sem publicação/restart/aceite. Ver
+[fichario-preparacao-publicacao-853.md](fichario-preparacao-publicacao-853.md).

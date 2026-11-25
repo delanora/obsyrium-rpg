@@ -29,11 +29,17 @@ registrada em `build-seguro.md` permanece.
 
 ## Diagnóstico Prisma: publicação futura condicionada
 
-O banco operacional registra 90 migrations aplicadas. As 88 migrations versionadas
-na base estão aplicadas; existem também duas migrations aplicadas, ainda WIP local:
+A auditoria inicial informou 90 migrations aplicadas. A preparação posterior
+apurou **90 registros: 89 concluídos e uma tentativa revertida de hotbar**, sem
+falha aberta. São 87 SQLs concluídos da base e duas migrations WIP concluídas:
 
 - `20261110100000_optional_geography_links`;
 - `20261110120000_add_dice_roll_log`.
+
+Os checksums dos 89 arquivos concluídos conferem. O arquivo da tentativa revertida
+não foi recuperado; ela não deve ser contada como outra migration concluída.
+Ver [preparação operacional](fichario-preparacao-publicacao-853.md) para a distinção
+entre reprodução efetiva, ledger sintético e histórico real.
 
 `Locality.regionId` e `Scene.localityId` são anuláveis no banco operacional.
 O schema e o Client operacionais contêm essas frentes, enquanto main não contém
@@ -132,7 +138,7 @@ molduras, dimensões, curvas, durações e limites atuais da animação.
 ## Validação reproduzível
 
 PostgreSQL 15 em instância própria descartável, porta 44011, diretório
-`/tmp/obsyrium-grupos-pg-5cYTZh/data`, banco `arquivo_grupos_853`. Aplicados os 88
+`/tmp/obsyrium-grupos-pg-5cYTZh/data`, banco `arquivo_grupos_853`. Aplicados os
 scripts versionados da base e a migration nova no schema `test_archive_grupos`.
 O diff Prisma entre o schema de HEAD e o candidato confirmou somente as duas
 tabelas/índices/FKs novas; as checks SQL adicionais são explícitas na migration.
