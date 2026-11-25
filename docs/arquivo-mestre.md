@@ -1734,3 +1734,11 @@ reconciliada e veto localizado conservador reutilizam o motor vigente.
 Parâmetros e identidade visual preservados. Relatório, testes, medições e
 limitações em `docs/fichario-multinivel-hardening.md`. Aguardar autorização de
 publicação e aceite; não iniciada a 8.5.3. As notas anteriores são históricas.
+
+Publicação controlada da 8.5.2.4 concluída em 25/11/2026 para o funcional
+`0299321b2ce2c2d4bd5df8641c2ade22fd75a3fb`, somente frontend, sem restart.
+Relatório operacional, backup/rollback, regressões, desvio inicial de build no
+diretório ativo e recuperação documentados em `docs/fichario-multinivel-hardening.md`.
+Mantida em validação, com margem 1120, aceite multinível e desempenho pendentes.
+A regressão React 500 esparsos (43,3→170,4 ms), long tasks e demais dívidas
+permanecem abertas; não iniciada a 8.5.3.

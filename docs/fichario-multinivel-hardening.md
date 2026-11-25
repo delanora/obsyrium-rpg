@@ -1,9 +1,9 @@
 # Fichário — 8.5.2.4: multinível e hardening espacial
 
-Implementação frontend preparada; **não publicada**. O aceite definitivo depende
-de autorização de publicação e validação manual. Não inicia a 8.5.3.
+Implementação frontend publicada controladamente em 25/11/2026. Permanece em
+validação funcional/visual e de desempenho até aceite manual. Não inicia a 8.5.3.
 
-## Auditoria e composição
+## Auditoria da implementação (antes da publicação)
 
 Base: `da03b801131e8f33213ecf444fc215eb52eff3fb`, main/origin/main iguais no início.
 Sem alterações posteriores no HEAD inicial; staging vazio. Preservados os 47 WIPs
@@ -146,7 +146,7 @@ Não há declaração de ganho de FPS; RAF headless não mede FPS de um monitor.
 
 As tabelas comparativas e evidências finais complementam esta seção abaixo.
 
-## Pendências
+## Pendências registradas antes da publicação
 
 Aguardar publicação autorizada, aceite multinível e aceite específico da reserva
 1120. Permanecem: veto conservador quando não se comprova independência, colisões
@@ -193,7 +193,7 @@ radial, reservas, obstáculos/propagação, segurança/componentes e diagnóstic
 Ordenação e profundidade integram hierarquia; não há precisão de microbenchmark
 para cada operação interna. Não foram introduzidos relógios de produção.
 
-## Evidências finais e preservação
+## Evidências da implementação e preservação (antes da publicação)
 
 2357 verificações puras, typecheck e build isolados passaram. Vite mantém o aviso
 de bundle maior que 500 kB; não foi mascarado nem tratado como resolvido.
@@ -216,3 +216,80 @@ A aprovação funcional desta implementação e os ganhos parciais de renderiza�
 não encerram as pendências de desempenho, cobertura concorrente exaustiva ou
 aceite humano. Publicação depende de nova autorização, expressamente separada
 do commit/push nesta entrega.
+
+## Publicação controlada — 25/11/2026
+
+Funcional autorizado/publicado: `0299321b2ce2c2d4bd5df8641c2ade22fd75a3fb`.
+HEAD, main, origin/main e git ls-remote coincidiram antes da publicação. Nenhuma
+alteração adicional da implementação foi feita durante esta operação.
+
+Composição anterior: funcional `46eadd3e912a5e47e0360ad0a3dffa339196ff58`,
+JS `index-P9xB2BF_.js`, CSS `index-BwtHA_mH.css`. Reprodução isolada por hash dos
+340 arquivos do build anterior antes da sobreposição exclusiva de:
+
+- `ArchiveCanvas.tsx`;
+- `ArchivePage.tsx`;
+- `archiveLayout.ts`;
+- `archiveHierarchy.ts` (novo).
+
+Novo JS `index-RYNVlaDv.js`; CSS inalterado. Somente esse asset e `index.html`
+foram efetivamente sobrepostos na publicação final. Os assets foram conferidos
+antes do rename atômico do HTML. Todos os 356 arquivos anteriores não HTML foram
+preservados para clientes com cache; os 340 arquivos do novo build foram
+conferidos por SHA256. Linho e demais assets permaneceram idênticos.
+
+### Desvio operacional inicial e recuperação
+
+Houve um erro do agente: o primeiro comando de reprodução foi iniciado em
+`/opt/rpg`, contrariando a exigência de não construir no diretório ativo. O Vite
+substituiu os artefatos. A composição anterior foi imediatamente restaurada a
+partir das cópias existentes e dos hashes registrados **antes de prosseguir**;
+os 357 arquivos anteriores voltaram a coincidir integralmente. Apenas o bundle
+novo gerado pelo comando incorreto foi removido nessa recuperação. Backend,
+banco e serviço não foram reiniciados/alterados. A disponibilidade durante essa
+janela transitória não foi monitorada continuamente; não se afirma impacto zero.
+
+Após a restauração, reprodução, typecheck, build e regressões de validação foram
+executados exclusivamente em `/tmp/fichario-8524-publicacao`. O novo build
+validado isoladamente é a fonte da publicação final. O incidente está registrado
+nessa pasta em `incidente-restauracao.txt` e `incidente-build-ativo.log`; não foi
+tratado como cumprimento do procedimento de build isolado inicial.
+
+### Backup, rollback e conferências
+
+Backup integral após restauração, conferido por SHA256 (357 arquivos):
+`/opt/rpg/backups/frontend-8524-20261125-073600`. Os 356 arquivos dos backups
+preexistentes também foram preservados por hash. Rollback exclusivamente frontend:
+`python3 /tmp/fichario-8524-publicacao/rollback.py`. O script valida o backup,
+restaura assets primeiro e index.html atomicamente por último, preservando
+bundles adicionais. Não envolve banco, backend ou restart. Não foi necessário
+executá-lo após a publicação final.
+
+Reexecutadas 2357 verificações puras, typecheck e build isolados, além de Chromium
+geral, radial/consulta/editor, fundo, estabilidade e ondas/multinível. Cinco
+níveis, movimentos, 100 ciclos/reversões, personalização, retry/conflito, atualização
+externa, troca/reload e reduced-motion passaram com API simulada. Sonda final:
+7637 pinturas sem descontinuidades; estabilidade independente: zero falhas em
+221 chamadas. Teste Chromium adicional de veto localizado: 1 componente aceito,
+1 rejeitado, 75 dependências agregadas; região livre preservada e composição
+interdependente fisicamente segura. Margem 1120, faixas 12 e folga 32 conferidas.
+Nenhum dado real da campanha foi usado como fixture mutável.
+
+HTML, JS, CSS e linho respondem HTTP 200 e coincidem com os hashes do build.
+Health `status:ok/database:up`; quatro GETs privados do Arquivo sem autenticação
+retornaram 401. Journal do serviço desde o início da operação: zero linhas de
+erro/exception/fatal/failed. PID **2467899** permaneceu inalterado. Preservados
+os 47 WIPs por caminhos/hashes e 965 arquivos de backend compilado, schema,
+migrations e Prisma Client. Não houve geração Prisma, migration ou escrita
+operacional no banco. Espelho `/tmp/arquivo-publicacao` atualizado e conferido
+somente após confirmação da publicação. Evidências em `/tmp/fichario-8524-publicacao`.
+
+### Estado após publicação
+
+8.5.2.4 permanece em validação. Preservados os aceites históricos 20/20 e 14/14.
+Pendentes o aceite específico da margem 1120, aceite multinível e avaliação de
+desempenho. Mantidas sem correção nesta publicação: React ao recolher 500 cards
+esparsos **43,3 → 170,4 ms**, aumento de CPU em cenários esparsos, long tasks,
+colisões extremas, fallback global quando a independência não é comprovada,
+cobertura concorrente não exaustiva, limites 160/200 e aviso de bundle >500 kB.
+Não se declara encerrado o hardening. Nenhuma frente da 8.5.3 foi iniciada.
