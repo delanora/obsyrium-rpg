@@ -5,6 +5,7 @@ import {
   layoutArchive,
   archiveReserveIntent,
   archiveIntersects,
+  archiveOverlapArea,
   ARCHIVE_LAYOUT_CONFIG,
   type ArchiveReserveExceptions,
 } from "../src/components/archive/archiveLayout";
@@ -321,7 +322,29 @@ for (const count of [100, 200, 500]) {
   const previous = run(dense, ["root"], 0),
     next = run(dense);
   if (next.diagnostics.reserveFallback)
-    check(() => assert.deepEqual(next.geometry, previous.geometry));
+    check(() => {
+      // Veto localizado pode preservar componentes válidos; a garantia continua física.
+      const ids = [...next.geometry.keys()];
+      for (let i = 0; i < ids.length; i++)
+        for (let j = i + 1; j < ids.length; j++) {
+          const a = ids[i],
+            b = ids[j];
+          assert.ok(
+            archiveOverlapArea(next.geometry.get(a)!, next.geometry.get(b)!) <=
+              Math.max(
+                archiveOverlapArea(
+                  previous.geometry.get(a)!,
+                  previous.geometry.get(b)!,
+                ),
+                archiveOverlapArea(
+                  dense.placements.find((p) => p.id === a)!,
+                  dense.placements.find((p) => p.id === b)!,
+                ),
+              ) +
+                1e-7,
+          );
+        }
+    });
   check(() =>
     assert.ok(
       next.diagnostics.residuals.length <=

@@ -324,3 +324,15 @@ inalterado. Sem migration, escrita no banco ou restart. Evidências operacionais
 em `/tmp/folga1120-publicacao`. Aguardar aceite visual/funcional; veto conservador,
 conflitos densos, custos do resolvedor/renderização, long tasks e limites de
 animação seguem pendentes. Não iniciada a 8.5.2.4.
+
+
+## Consolidação posterior — 8.5.2.4
+
+O novo escopo informa os aceites históricos de 20/20 da 8.5.2.3 e 14/14 da
+8.5.2.3.1; o aceite específico da margem posterior de 1120 segue pendente.
+Implementação multinível e hardening preparada exclusivamente no frontend,
+sem publicação. Âncoras internas relativas entre centros, memória lógica
+reconciliada e veto localizado conservador reutilizam o motor vigente.
+Parâmetros e identidade visual preservados. Relatório, testes, medições e
+limitações em `docs/fichario-multinivel-hardening.md`. Aguardar autorização de
+publicação e aceite; não iniciada a 8.5.3. As notas anteriores são históricas.

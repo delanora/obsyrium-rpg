@@ -1,0 +1,1688 @@
+{
+  "baseline": "da03b801131e8f33213ecf444fc215eb52eff3fb",
+  "margin": 1120,
+  "viewport": [
+    1600,
+    1000
+  ],
+  "cpuSamples": 7,
+  "renderCycles": 3,
+  "rows": [
+    {
+      "count": 50,
+      "scenario": "esparso",
+      "before": {
+        "cpu": {
+          "count": 50,
+          "kind": "esparso",
+          "projectionMs": 0.07344600000001833,
+          "layoutMs": 1.9552590000000123,
+          "checks": 5065,
+          "validation": 994,
+          "index": null,
+          "diagnostic": null,
+          "moves": 68,
+          "affected": 33,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 40.0,
+          "reactCollapseMs": 58.8,
+          "paintMedianMs": 0.9,
+          "rafP95MedianMs": 16.8,
+          "longTasks": 2,
+          "longMaxMs": 64,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.032842999999999734,
+          "distribuicao_radial": 0.13056000000000267,
+          "construcao_reservas": 0.021919000000011124,
+          "obstaculos_propagacao": 1.0313680000000005,
+          "seguranca_componentes": 0.2603319999999911,
+          "diagnostico_saida": 0.20583999999999492
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 50,
+          "kind": "esparso",
+          "projectionMs": 0.10618500000001063,
+          "layoutMs": 3.2514240000000143,
+          "checks": 5065,
+          "validation": 994,
+          "index": 5,
+          "diagnostic": 1753,
+          "moves": 68,
+          "affected": 33,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 35.1,
+          "reactCollapseMs": 35.3,
+          "paintMedianMs": 0.8,
+          "rafP95MedianMs": 16.8,
+          "longTasks": 2,
+          "longMaxMs": 58,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.08690099999999745,
+          "distribuicao_radial": 0.11706499999999664,
+          "construcao_reservas": 0.02805999999999642,
+          "obstaculos_propagacao": 1.1958630000000028,
+          "seguranca_componentes": 0.2732650000000092,
+          "diagnostico_saida": 0.27185699999999713
+        }
+      }
+    },
+    {
+      "count": 50,
+      "scenario": "denso",
+      "before": {
+        "cpu": {
+          "count": 50,
+          "kind": "denso",
+          "projectionMs": 0.06095200000001455,
+          "layoutMs": 4.813205000000011,
+          "checks": 21509,
+          "validation": 437,
+          "index": null,
+          "diagnostic": null,
+          "moves": 391,
+          "affected": 49,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 23,
+          "fallback": "collisions"
+        },
+        "render": {
+          "reactExpandMs": 31.3,
+          "reactCollapseMs": 54.8,
+          "paintMedianMs": 1.3,
+          "rafP95MedianMs": 16.8,
+          "longTasks": 1,
+          "longMaxMs": 61,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 505
+        },
+        "stages": {
+          "hierarquia_indice": 0.031337999999990984,
+          "distribuicao_radial": 0.10933500000000151,
+          "construcao_reservas": 0.026989000000000374,
+          "obstaculos_propagacao": 4.407640999999998,
+          "seguranca_componentes": 0.13771099999999592,
+          "diagnostico_saida": 0.2251629999999949
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 50,
+          "kind": "denso",
+          "projectionMs": 0.05984499999999571,
+          "layoutMs": 4.775905999999992,
+          "checks": 21509,
+          "validation": 437,
+          "index": 5,
+          "diagnostic": 1648,
+          "moves": 391,
+          "affected": 49,
+          "reserves": 1,
+          "components": {
+            "accepted": 0,
+            "rejected": 1,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 23,
+          "fallback": "collisions"
+        },
+        "render": {
+          "reactExpandMs": 27.4,
+          "reactCollapseMs": 32.6,
+          "paintMedianMs": 1.35,
+          "rafP95MedianMs": 16.75,
+          "longTasks": 0,
+          "longMaxMs": 0,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 505
+        },
+        "stages": {
+          "hierarquia_indice": 0.08656899999999723,
+          "distribuicao_radial": 0.10656199999999671,
+          "construcao_reservas": 0.03280500000002462,
+          "obstaculos_propagacao": 4.957285999999996,
+          "seguranca_componentes": 0.15790100000000962,
+          "diagnostico_saida": 0.27226000000000283
+        }
+      }
+    },
+    {
+      "count": 50,
+      "scenario": "multinivel",
+      "before": {
+        "cpu": {
+          "count": 50,
+          "kind": "multinivel",
+          "projectionMs": 0.06303499999998508,
+          "layoutMs": 2.210946000000007,
+          "checks": 8355,
+          "validation": 1035,
+          "index": null,
+          "diagnostic": null,
+          "moves": 98,
+          "affected": 49,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 37.9,
+          "reactCollapseMs": 48.0,
+          "paintMedianMs": 1.1,
+          "rafP95MedianMs": 16.8,
+          "longTasks": 3,
+          "longMaxMs": 62,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.02554399999999646,
+          "distribuicao_radial": 0.4309920000000034,
+          "construcao_reservas": 0.047924999999992224,
+          "obstaculos_propagacao": 1.3752409999999884,
+          "seguranca_componentes": 0.24556499999999915,
+          "diagnostico_saida": 0.1852480000000014
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 50,
+          "kind": "multinivel",
+          "projectionMs": 0.05921100000000479,
+          "layoutMs": 2.222566000000029,
+          "checks": 8355,
+          "validation": 1035,
+          "index": 19,
+          "diagnostic": 1585,
+          "moves": 98,
+          "affected": 49,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 34.0,
+          "reactCollapseMs": 30.3,
+          "paintMedianMs": 1.1,
+          "rafP95MedianMs": 16.75,
+          "longTasks": 3,
+          "longMaxMs": 56,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.0711989999999787,
+          "distribuicao_radial": 0.3973609999999894,
+          "construcao_reservas": 0.05036699999999428,
+          "obstaculos_propagacao": 1.2828020000000038,
+          "seguranca_componentes": 0.2675140000000056,
+          "diagnostico_saida": 0.21975399999999468
+        }
+      }
+    },
+    {
+      "count": 50,
+      "scenario": "independente",
+      "before": {
+        "cpu": {
+          "count": 50,
+          "kind": "independente",
+          "projectionMs": 0.0615359999999896,
+          "layoutMs": 2.6493440000000135,
+          "checks": 10666,
+          "validation": 1159,
+          "index": null,
+          "diagnostic": null,
+          "moves": 124,
+          "affected": 48,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 31.6,
+          "reactCollapseMs": 52.4,
+          "paintMedianMs": 1,
+          "rafP95MedianMs": 16.8,
+          "longTasks": 0,
+          "longMaxMs": 0,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.022763000000026068,
+          "distribuicao_radial": 0.08520999999998935,
+          "construcao_reservas": 0.03226399999999785,
+          "obstaculos_propagacao": 1.7908580000000143,
+          "seguranca_componentes": 0.27051499999998896,
+          "diagnostico_saida": 0.21995200000000636
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 50,
+          "kind": "independente",
+          "projectionMs": 0.059320000000013806,
+          "layoutMs": 2.82145399999996,
+          "checks": 10666,
+          "validation": 1159,
+          "index": 10,
+          "diagnostic": 2281,
+          "moves": 124,
+          "affected": 48,
+          "reserves": 2,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 28.6,
+          "reactCollapseMs": 33.5,
+          "paintMedianMs": 1.1,
+          "rafP95MedianMs": 16.717,
+          "longTasks": 0,
+          "longMaxMs": 0,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.06645500000001903,
+          "distribuicao_radial": 0.15170700000001602,
+          "construcao_reservas": 0.03942499999999427,
+          "obstaculos_propagacao": 1.9208739999999977,
+          "seguranca_componentes": 0.29961399999999117,
+          "diagnostico_saida": 0.2600170000000048
+        }
+      }
+    },
+    {
+      "count": 50,
+      "scenario": "interdependente",
+      "before": {
+        "cpu": {
+          "count": 50,
+          "kind": "interdependente",
+          "projectionMs": 0.06054799999998295,
+          "layoutMs": 3.7435949999999707,
+          "checks": 17004,
+          "validation": 1159,
+          "index": null,
+          "diagnostic": null,
+          "moves": 218,
+          "affected": 48,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 31.8,
+          "reactCollapseMs": 51.6,
+          "paintMedianMs": 1.0,
+          "rafP95MedianMs": 16.8,
+          "longTasks": 1,
+          "longMaxMs": 53,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.023606000000000904,
+          "distribuicao_radial": 0.09062099999999873,
+          "construcao_reservas": 0.03609899999997879,
+          "obstaculos_propagacao": 3.0738500000000215,
+          "seguranca_componentes": 0.27661599999999,
+          "diagnostico_saida": 0.2320020000000227
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 50,
+          "kind": "interdependente",
+          "projectionMs": 0.05842300000000478,
+          "layoutMs": 3.9120130000000017,
+          "checks": 17004,
+          "validation": 1159,
+          "index": 10,
+          "diagnostic": 2281,
+          "moves": 218,
+          "affected": 48,
+          "reserves": 2,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 28.5,
+          "reactCollapseMs": 32.4,
+          "paintMedianMs": 1,
+          "rafP95MedianMs": 16.767,
+          "longTasks": 0,
+          "longMaxMs": 0,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.0686939999999936,
+          "distribuicao_radial": 0.0827600000000075,
+          "construcao_reservas": 0.04372499999999491,
+          "obstaculos_propagacao": 3.394369999999981,
+          "seguranca_componentes": 0.32085999999998194,
+          "diagnostico_saida": 0.27951299999998014
+        }
+      }
+    },
+    {
+      "count": 100,
+      "scenario": "esparso",
+      "before": {
+        "cpu": {
+          "count": 100,
+          "kind": "esparso",
+          "projectionMs": 0.11040200000002187,
+          "layoutMs": 3.7682810000000018,
+          "checks": 13010,
+          "validation": 3572,
+          "index": null,
+          "diagnostic": null,
+          "moves": 101,
+          "affected": 52,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 63.0,
+          "reactCollapseMs": 122.7,
+          "paintMedianMs": 1.4,
+          "rafP95MedianMs": 31.949,
+          "longTasks": 9,
+          "longMaxMs": 96,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.03782200000000557,
+          "distribuicao_radial": 0.07496000000000436,
+          "construcao_reservas": 0.02511599999999703,
+          "obstaculos_propagacao": 1.917225000000002,
+          "seguranca_componentes": 0.943696000000017,
+          "diagnostico_saida": 0.5858900000000062
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 100,
+          "kind": "esparso",
+          "projectionMs": 0.10760499999997819,
+          "layoutMs": 4.096058000000028,
+          "checks": 13010,
+          "validation": 3572,
+          "index": 5,
+          "diagnostic": 6078,
+          "moves": 101,
+          "affected": 52,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 57.7,
+          "reactCollapseMs": 69.5,
+          "paintMedianMs": 1.4,
+          "rafP95MedianMs": 16.8,
+          "longTasks": 6,
+          "longMaxMs": 97,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.12239700000003495,
+          "distribuicao_radial": 0.06286799999998038,
+          "construcao_reservas": 0.029559000000006108,
+          "obstaculos_propagacao": 2.5317529999999806,
+          "seguranca_componentes": 1.021205000000009,
+          "diagnostico_saida": 0.7530699999999797
+        }
+      }
+    },
+    {
+      "count": 100,
+      "scenario": "denso",
+      "before": {
+        "cpu": {
+          "count": 100,
+          "kind": "denso",
+          "projectionMs": 0.10530199999999468,
+          "layoutMs": 18.994339999999966,
+          "checks": 106038,
+          "validation": 722,
+          "index": null,
+          "diagnostic": null,
+          "moves": 1031,
+          "affected": 99,
+          "reserves": 1,
+          "components": null,
+          "residuals": 40,
+          "reserveResiduals": 44,
+          "fallback": "collisions"
+        },
+        "render": {
+          "reactExpandMs": 63.6,
+          "reactCollapseMs": 114.0,
+          "paintMedianMs": 2.25,
+          "rafP95MedianMs": 47.848,
+          "longTasks": 9,
+          "longMaxMs": 111,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 505
+        },
+        "stages": {
+          "hierarquia_indice": 0.035425000000032014,
+          "distribuicao_radial": 0.10420899999996891,
+          "construcao_reservas": 0.035152999999979784,
+          "obstaculos_propagacao": 18.058294000000046,
+          "seguranca_componentes": 0.24469800000002806,
+          "diagnostico_saida": 0.7231110000000172
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 100,
+          "kind": "denso",
+          "projectionMs": 0.10629200000005312,
+          "layoutMs": 18.613076999999976,
+          "checks": 106038,
+          "validation": 722,
+          "index": 5,
+          "diagnostic": 5903,
+          "moves": 1031,
+          "affected": 99,
+          "reserves": 1,
+          "components": {
+            "accepted": 0,
+            "rejected": 1,
+            "interdependent": 0
+          },
+          "residuals": 40,
+          "reserveResiduals": 44,
+          "fallback": "collisions"
+        },
+        "render": {
+          "reactExpandMs": 53.5,
+          "reactCollapseMs": 63.6,
+          "paintMedianMs": 2.2,
+          "rafP95MedianMs": 33.4,
+          "longTasks": 6,
+          "longMaxMs": 95,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 505
+        },
+        "stages": {
+          "hierarquia_indice": 0.09435300000001234,
+          "distribuicao_radial": 0.07091400000001613,
+          "construcao_reservas": 0.040691999999978634,
+          "obstaculos_propagacao": 19.862116000000015,
+          "seguranca_componentes": 0.26581099999998514,
+          "diagnostico_saida": 0.8937760000000026
+        }
+      }
+    },
+    {
+      "count": 100,
+      "scenario": "multinivel",
+      "before": {
+        "cpu": {
+          "count": 100,
+          "kind": "multinivel",
+          "projectionMs": 0.1133389999999963,
+          "layoutMs": 6.921559000000002,
+          "checks": 29250,
+          "validation": 4740,
+          "index": null,
+          "diagnostic": null,
+          "moves": 232,
+          "affected": 98,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 64.6,
+          "reactCollapseMs": 104.4,
+          "paintMedianMs": 2.1,
+          "rafP95MedianMs": 40.299,
+          "longTasks": 9,
+          "longMaxMs": 102,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.03619300000002568,
+          "distribuicao_radial": 0.4920689999999581,
+          "construcao_reservas": 0.05719400000003816,
+          "obstaculos_propagacao": 4.549499999999966,
+          "seguranca_componentes": 1.07219699999996,
+          "diagnostico_saida": 0.5329240000000368
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 100,
+          "kind": "multinivel",
+          "projectionMs": 0.13007900000002337,
+          "layoutMs": 7.393822,
+          "checks": 29250,
+          "validation": 4740,
+          "index": 19,
+          "diagnostic": 5910,
+          "moves": 232,
+          "affected": 98,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 58.4,
+          "reactCollapseMs": 63.3,
+          "paintMedianMs": 2.2,
+          "rafP95MedianMs": 33.4,
+          "longTasks": 6,
+          "longMaxMs": 97,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.07871299999999337,
+          "distribuicao_radial": 0.19791799999995874,
+          "construcao_reservas": 0.06409499999995205,
+          "obstaculos_propagacao": 4.956797000000051,
+          "seguranca_componentes": 1.1730239999999412,
+          "diagnostico_saida": 0.8041849999999613
+        }
+      }
+    },
+    {
+      "count": 100,
+      "scenario": "independente",
+      "before": {
+        "cpu": {
+          "count": 100,
+          "kind": "independente",
+          "projectionMs": 0.11312099999997827,
+          "layoutMs": 7.963651000000027,
+          "checks": 36565,
+          "validation": 4884,
+          "index": null,
+          "diagnostic": null,
+          "moves": 272,
+          "affected": 98,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 61.4,
+          "reactCollapseMs": 112.1,
+          "paintMedianMs": 2.0,
+          "rafP95MedianMs": 40.199,
+          "longTasks": 9,
+          "longMaxMs": 97,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.03167200000007142,
+          "distribuicao_radial": 0.11200700000006236,
+          "construcao_reservas": 0.03533299999992323,
+          "obstaculos_propagacao": 5.488485999999966,
+          "seguranca_componentes": 1.0885670000000118,
+          "diagnostico_saida": 0.3914950000000772
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 100,
+          "kind": "independente",
+          "projectionMs": 0.11452700000006644,
+          "layoutMs": 7.8135919999999714,
+          "checks": 36565,
+          "validation": 4884,
+          "index": 10,
+          "diagnostic": 7206,
+          "moves": 272,
+          "affected": 98,
+          "reserves": 2,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 57.6,
+          "reactCollapseMs": 68.4,
+          "paintMedianMs": 2.1,
+          "rafP95MedianMs": 33.4,
+          "longTasks": 6,
+          "longMaxMs": 93,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.07049799999992956,
+          "distribuicao_radial": 0.1038340000000062,
+          "construcao_reservas": 0.0469190000000026,
+          "obstaculos_propagacao": 6.403402000000028,
+          "seguranca_componentes": 1.213942999999972,
+          "diagnostico_saida": 0.4287809999999581
+        }
+      }
+    },
+    {
+      "count": 100,
+      "scenario": "interdependente",
+      "before": {
+        "cpu": {
+          "count": 100,
+          "kind": "interdependente",
+          "projectionMs": 0.10867799999994077,
+          "layoutMs": 10.686295000000086,
+          "checks": 56310,
+          "validation": 4884,
+          "index": null,
+          "diagnostic": null,
+          "moves": 453,
+          "affected": 98,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 59.6,
+          "reactCollapseMs": 109.0,
+          "paintMedianMs": 2.1,
+          "rafP95MedianMs": 40.449,
+          "longTasks": 9,
+          "longMaxMs": 95,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.03314299999999548,
+          "distribuicao_radial": 0.11806300000000647,
+          "construcao_reservas": 0.04069600000002538,
+          "obstaculos_propagacao": 8.115078999999923,
+          "seguranca_componentes": 1.0990639999999985,
+          "diagnostico_saida": 0.4016669999999749
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 100,
+          "kind": "interdependente",
+          "projectionMs": 0.10973200000000816,
+          "layoutMs": 11.129125999999928,
+          "checks": 56310,
+          "validation": 4884,
+          "index": 10,
+          "diagnostic": 7206,
+          "moves": 453,
+          "affected": 98,
+          "reserves": 2,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 51.8,
+          "reactCollapseMs": 65.3,
+          "paintMedianMs": 2.0,
+          "rafP95MedianMs": 33.4,
+          "longTasks": 6,
+          "longMaxMs": 88,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.0698650000000498,
+          "distribuicao_radial": 0.17283799999995608,
+          "construcao_reservas": 0.0498969999999872,
+          "obstaculos_propagacao": 9.56889799999999,
+          "seguranca_componentes": 1.2264579999999796,
+          "diagnostico_saida": 0.4487169999999878
+        }
+      }
+    },
+    {
+      "count": 200,
+      "scenario": "esparso",
+      "before": {
+        "cpu": {
+          "count": 200,
+          "kind": "esparso",
+          "projectionMs": 0.20672899999999572,
+          "layoutMs": 8.445058000000017,
+          "checks": 39488,
+          "validation": 10989,
+          "index": null,
+          "diagnostic": null,
+          "moves": 170,
+          "affected": 71,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 71.8,
+          "reactCollapseMs": 130.9,
+          "paintMedianMs": 2.3,
+          "rafP95MedianMs": 41.717,
+          "longTasks": 7,
+          "longMaxMs": 158,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.055104000000028464,
+          "distribuicao_radial": 0.11272699999994984,
+          "construcao_reservas": 0.03340200000002369,
+          "obstaculos_propagacao": 5.027441999999951,
+          "seguranca_componentes": 3.1283449999999675,
+          "diagnostico_saida": 0.9215149999999994
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 200,
+          "kind": "esparso",
+          "projectionMs": 0.20721600000001672,
+          "layoutMs": 12.10021400000005,
+          "checks": 39488,
+          "validation": 10989,
+          "index": 5,
+          "diagnostic": 22228,
+          "moves": 170,
+          "affected": 71,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 104.2,
+          "reactCollapseMs": 65.1,
+          "paintMedianMs": 2.2,
+          "rafP95MedianMs": 33.4,
+          "longTasks": 6,
+          "longMaxMs": 149,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.12208099999998012,
+          "distribuicao_radial": 0.11114499999996497,
+          "construcao_reservas": 0.031607000000008156,
+          "obstaculos_propagacao": 5.671147000000019,
+          "seguranca_componentes": 3.3736999999999853,
+          "diagnostico_saida": 1.0068559999999707
+        }
+      }
+    },
+    {
+      "count": 200,
+      "scenario": "denso",
+      "before": {
+        "cpu": {
+          "count": 200,
+          "kind": "denso",
+          "projectionMs": 0.19498000000010052,
+          "layoutMs": 43.375405999999884,
+          "checks": 543152,
+          "validation": 2690,
+          "index": null,
+          "diagnostic": null,
+          "moves": 2654,
+          "affected": 199,
+          "reserves": 1,
+          "components": null,
+          "residuals": 556,
+          "reserveResiduals": 46,
+          "fallback": "collisions"
+        },
+        "render": {
+          "reactExpandMs": 18.0,
+          "reactCollapseMs": 236.8,
+          "paintMedianMs": 2,
+          "rafP95MedianMs": 89.513,
+          "longTasks": 8,
+          "longMaxMs": 287,
+          "renderMax": 2,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.05514099999993505,
+          "distribuicao_radial": 0.11447600000008151,
+          "construcao_reservas": 0.035890999999992346,
+          "obstaculos_propagacao": 41.462843999999905,
+          "seguranca_componentes": 0.4267820000000029,
+          "diagnostico_saida": 1.180578999999966
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 200,
+          "kind": "denso",
+          "projectionMs": 0.2035049999999501,
+          "layoutMs": 42.986192000000074,
+          "checks": 543152,
+          "validation": 2690,
+          "index": 5,
+          "diagnostic": 22076,
+          "moves": 2654,
+          "affected": 199,
+          "reserves": 1,
+          "components": {
+            "accepted": 0,
+            "rejected": 1,
+            "interdependent": 0
+          },
+          "residuals": 556,
+          "reserveResiduals": 46,
+          "fallback": "collisions"
+        },
+        "render": {
+          "reactExpandMs": 97.2,
+          "reactCollapseMs": 64.8,
+          "paintMedianMs": 1.9,
+          "rafP95MedianMs": 56.181,
+          "longTasks": 8,
+          "longMaxMs": 203,
+          "renderMax": 2,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.1301450000000841,
+          "distribuicao_radial": 0.11689799999999195,
+          "construcao_reservas": 0.0359600000001592,
+          "obstaculos_propagacao": 41.89252600000009,
+          "seguranca_componentes": 0.46040100000004713,
+          "diagnostico_saida": 3.2208100000000286
+        }
+      }
+    },
+    {
+      "count": 200,
+      "scenario": "multinivel",
+      "before": {
+        "cpu": {
+          "count": 200,
+          "kind": "multinivel",
+          "projectionMs": 0.09639900000001944,
+          "layoutMs": 8.68364600000018,
+          "checks": 88570,
+          "validation": 16414,
+          "index": null,
+          "diagnostic": null,
+          "moves": 393,
+          "affected": 135,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 88.9,
+          "reactCollapseMs": 132.7,
+          "paintMedianMs": 3,
+          "rafP95MedianMs": 58.334,
+          "longTasks": 9,
+          "longMaxMs": 178,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.05294899999989866,
+          "distribuicao_radial": 0.2715570000000298,
+          "construcao_reservas": 0.028379000000086307,
+          "obstaculos_propagacao": 5.0039560000000165,
+          "seguranca_componentes": 2.146724999999833,
+          "diagnostico_saida": 0.9460340000000542
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 200,
+          "kind": "multinivel",
+          "projectionMs": 0.09239600000000792,
+          "layoutMs": 8.642194000000018,
+          "checks": 88570,
+          "validation": 16414,
+          "index": 19,
+          "diagnostic": 22060,
+          "moves": 393,
+          "affected": 135,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 107.4,
+          "reactCollapseMs": 70.1,
+          "paintMedianMs": 3.1,
+          "rafP95MedianMs": 41.7,
+          "longTasks": 6,
+          "longMaxMs": 182,
+          "renderMax": 2,
+          "degradedSamples": 0,
+          "durationMaxMs": 580
+        },
+        "stages": {
+          "hierarquia_indice": 0.13693699999998898,
+          "distribuicao_radial": 0.4977850000000217,
+          "construcao_reservas": 0.06702500000005784,
+          "obstaculos_propagacao": 5.69625700000006,
+          "seguranca_componentes": 2.2873239999998987,
+          "diagnostico_saida": 1.089031999999861
+        }
+      }
+    },
+    {
+      "count": 200,
+      "scenario": "independente",
+      "before": {
+        "cpu": {
+          "count": 200,
+          "kind": "independente",
+          "projectionMs": 0.09140499999989515,
+          "layoutMs": 9.697812999999996,
+          "checks": 104029,
+          "validation": 19404,
+          "index": null,
+          "diagnostic": null,
+          "moves": 438,
+          "affected": 178,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 18.0,
+          "reactCollapseMs": 226.1,
+          "paintMedianMs": 1.9,
+          "rafP95MedianMs": 64.514,
+          "longTasks": 8,
+          "longMaxMs": 275,
+          "renderMax": 2,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.048164999999926295,
+          "distribuicao_radial": 0.13163600000007136,
+          "construcao_reservas": 0.024026000000048953,
+          "obstaculos_propagacao": 6.480827999999974,
+          "seguranca_componentes": 2.221211999999923,
+          "diagnostico_saida": 1.0653810000001158
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 200,
+          "kind": "independente",
+          "projectionMs": 0.08908899999983078,
+          "layoutMs": 9.639768000000004,
+          "checks": 104029,
+          "validation": 19404,
+          "index": 10,
+          "diagnostic": 24556,
+          "moves": 438,
+          "affected": 178,
+          "reserves": 2,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 32.6,
+          "reactCollapseMs": 153.8,
+          "paintMedianMs": 2.2,
+          "rafP95MedianMs": 64.314,
+          "longTasks": 8,
+          "longMaxMs": 218,
+          "renderMax": 2,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.12127800000007483,
+          "distribuicao_radial": 0.10789999999997235,
+          "construcao_reservas": 0.027426999999988766,
+          "obstaculos_propagacao": 6.396723999999949,
+          "seguranca_componentes": 2.474913000000015,
+          "diagnostico_saida": 1.1757629999999608
+        }
+      }
+    },
+    {
+      "count": 200,
+      "scenario": "interdependente",
+      "before": {
+        "cpu": {
+          "count": 200,
+          "kind": "interdependente",
+          "projectionMs": 0.09385999999994965,
+          "layoutMs": 13.256799,
+          "checks": 158979,
+          "validation": 19669,
+          "index": null,
+          "diagnostic": null,
+          "moves": 714,
+          "affected": 188,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 112.5,
+          "reactCollapseMs": 79.4,
+          "paintMedianMs": 1.8,
+          "rafP95MedianMs": 56.281,
+          "longTasks": 8,
+          "longMaxMs": 169,
+          "renderMax": 2,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.06512100000009013,
+          "distribuicao_radial": 0.2231059999999161,
+          "construcao_reservas": 0.047528999999940424,
+          "obstaculos_propagacao": 9.767630000000054,
+          "seguranca_componentes": 2.243987000000061,
+          "diagnostico_saida": 1.0820859999998902
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 200,
+          "kind": "interdependente",
+          "projectionMs": 0.08884699999998702,
+          "layoutMs": 13.178601999999955,
+          "checks": 158979,
+          "validation": 19669,
+          "index": 10,
+          "diagnostic": 24556,
+          "moves": 714,
+          "affected": 188,
+          "reserves": 2,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 96.8,
+          "reactCollapseMs": 63.2,
+          "paintMedianMs": 1.9,
+          "rafP95MedianMs": 47.698,
+          "longTasks": 8,
+          "longMaxMs": 158,
+          "renderMax": 2,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.11526499999990847,
+          "distribuicao_radial": 0.17300599999998667,
+          "construcao_reservas": 0.03441399999996975,
+          "obstaculos_propagacao": 9.586585000000014,
+          "seguranca_componentes": 2.412313999999924,
+          "diagnostico_saida": 1.1962100000000646
+        }
+      }
+    },
+    {
+      "count": 500,
+      "scenario": "esparso",
+      "before": {
+        "cpu": {
+          "count": 500,
+          "kind": "esparso",
+          "projectionMs": 0.23075400000016089,
+          "layoutMs": 22.087382999999818,
+          "checks": 128420,
+          "validation": 43747,
+          "index": null,
+          "diagnostic": null,
+          "moves": 234,
+          "affected": 102,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 196.4,
+          "reactCollapseMs": 43.3,
+          "paintMedianMs": 4.95,
+          "rafP95MedianMs": 33.378,
+          "longTasks": 6,
+          "longMaxMs": 297,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.11140199999999822,
+          "distribuicao_radial": 0.16283199999998033,
+          "construcao_reservas": 0.014733999999862135,
+          "obstaculos_propagacao": 7.334426000000121,
+          "seguranca_componentes": 8.283053000000109,
+          "diagnostico_saida": 5.747249000000011
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 500,
+          "kind": "esparso",
+          "projectionMs": 0.22661799999991672,
+          "layoutMs": 22.357204000000138,
+          "checks": 128420,
+          "validation": 43747,
+          "index": 5,
+          "diagnostic": 130678,
+          "moves": 234,
+          "affected": 102,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 50.1,
+          "reactCollapseMs": 170.4,
+          "paintMedianMs": 4.85,
+          "rafP95MedianMs": 58.34,
+          "longTasks": 6,
+          "longMaxMs": 239,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.26874100000009093,
+          "distribuicao_radial": 0.14343299999995907,
+          "construcao_reservas": 0.020694999999932406,
+          "obstaculos_propagacao": 7.698041999999987,
+          "seguranca_componentes": 8.525462999999945,
+          "diagnostico_saida": 6.159421000000066
+        }
+      }
+    },
+    {
+      "count": 500,
+      "scenario": "denso",
+      "before": {
+        "cpu": {
+          "count": 500,
+          "kind": "denso",
+          "projectionMs": 0.24518600000010338,
+          "layoutMs": 30.494612999999845,
+          "checks": 85227,
+          "validation": 0,
+          "index": null,
+          "diagnostic": null,
+          "moves": 4000,
+          "affected": 490,
+          "reserves": 1,
+          "components": null,
+          "residuals": 11282,
+          "reserveResiduals": 181,
+          "fallback": "budget"
+        },
+        "render": {
+          "reactExpandMs": 46.5,
+          "reactCollapseMs": 191.7,
+          "paintMedianMs": 4.85,
+          "rafP95MedianMs": 99.957,
+          "longTasks": 12,
+          "longMaxMs": 318,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.127666999999974,
+          "distribuicao_radial": 0.20806199999992714,
+          "construcao_reservas": 0.03587900000002264,
+          "obstaculos_propagacao": 20.357281000000057,
+          "seguranca_componentes": 0.0024620000001505105,
+          "diagnostico_saida": 9.478231999999934
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 500,
+          "kind": "denso",
+          "projectionMs": 0.24517100000002756,
+          "layoutMs": 32.560167999999976,
+          "checks": 85227,
+          "validation": 0,
+          "index": 5,
+          "diagnostic": 130303,
+          "moves": 4000,
+          "affected": 490,
+          "reserves": 1,
+          "components": null,
+          "residuals": 11282,
+          "reserveResiduals": 181,
+          "fallback": "budget"
+        },
+        "render": {
+          "reactExpandMs": 53.0,
+          "reactCollapseMs": 168.5,
+          "paintMedianMs": 4.75,
+          "rafP95MedianMs": 100.023,
+          "longTasks": 12,
+          "longMaxMs": 258,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.28671299999996336,
+          "distribuicao_radial": 0.16384100000004764,
+          "construcao_reservas": 0.03890300000011848,
+          "obstaculos_propagacao": 21.142383000000336,
+          "seguranca_componentes": 0.002696999999898253,
+          "diagnostico_saida": 10.396619999999984
+        }
+      }
+    },
+    {
+      "count": 500,
+      "scenario": "multinivel",
+      "before": {
+        "cpu": {
+          "count": 500,
+          "kind": "multinivel",
+          "projectionMs": 0.23404200000004494,
+          "layoutMs": 40.17667900000015,
+          "checks": 372217,
+          "validation": 73390,
+          "index": null,
+          "diagnostic": null,
+          "moves": 704,
+          "affected": 198,
+          "reserves": 1,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 201.9,
+          "reactCollapseMs": 49.2,
+          "paintMedianMs": 4.85,
+          "rafP95MedianMs": 47.748,
+          "longTasks": 6,
+          "longMaxMs": 319,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.12051599999995233,
+          "distribuicao_radial": 0.31663399999979447,
+          "construcao_reservas": 0.03173500000002605,
+          "obstaculos_propagacao": 20.350894000000153,
+          "seguranca_componentes": 11.350308000000041,
+          "diagnostico_saida": 5.496289000000161
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 500,
+          "kind": "multinivel",
+          "projectionMs": 0.22974199999998746,
+          "layoutMs": 40.22429699999975,
+          "checks": 372217,
+          "validation": 73390,
+          "index": 19,
+          "diagnostic": 130510,
+          "moves": 704,
+          "affected": 198,
+          "reserves": 1,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 170.5,
+          "reactCollapseMs": 57.0,
+          "paintMedianMs": 5.0,
+          "rafP95MedianMs": 40.605,
+          "longTasks": 6,
+          "longMaxMs": 307,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.289792000000034,
+          "distribuicao_radial": 0.4823810000002595,
+          "construcao_reservas": 0.053515000000061264,
+          "obstaculos_propagacao": 21.38582699999961,
+          "seguranca_componentes": 11.465619999999944,
+          "diagnostico_saida": 6.966105999999854
+        }
+      }
+    },
+    {
+      "count": 500,
+      "scenario": "independente",
+      "before": {
+        "cpu": {
+          "count": 500,
+          "kind": "independente",
+          "projectionMs": 0.23337000000037733,
+          "layoutMs": 49.4979800000001,
+          "checks": 452807,
+          "validation": 99325,
+          "index": null,
+          "diagnostic": null,
+          "moves": 834,
+          "affected": 284,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 48.3,
+          "reactCollapseMs": 189.0,
+          "paintMedianMs": 4.5,
+          "rafP95MedianMs": 83.357,
+          "longTasks": 9,
+          "longMaxMs": 317,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.11620700000003126,
+          "distribuicao_radial": 0.19591600000012477,
+          "construcao_reservas": 0.025944999999865104,
+          "obstaculos_propagacao": 25.735037999999804,
+          "seguranca_componentes": 13.357723999999962,
+          "diagnostico_saida": 5.809522000000015
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 500,
+          "kind": "independente",
+          "projectionMs": 0.2424879999998666,
+          "layoutMs": 51.2480929999997,
+          "checks": 452807,
+          "validation": 99325,
+          "index": 10,
+          "diagnostic": 136606,
+          "moves": 834,
+          "affected": 284,
+          "reserves": 2,
+          "components": {
+            "accepted": 1,
+            "rejected": 0,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 0,
+          "fallback": null
+        },
+        "render": {
+          "reactExpandMs": 52.2,
+          "reactCollapseMs": 163.5,
+          "paintMedianMs": 5.1,
+          "rafP95MedianMs": 74.974,
+          "longTasks": 8,
+          "longMaxMs": 303,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.2841570000000502,
+          "distribuicao_radial": 0.16380900000012844,
+          "construcao_reservas": 0.041753999999855296,
+          "obstaculos_propagacao": 26.53908199999978,
+          "seguranca_componentes": 14.374250000000302,
+          "diagnostico_saida": 7.270040999999765
+        }
+      }
+    },
+    {
+      "count": 500,
+      "scenario": "interdependente",
+      "before": {
+        "cpu": {
+          "count": 500,
+          "kind": "interdependente",
+          "projectionMs": 0.2349050000002535,
+          "layoutMs": 59.85651999999982,
+          "checks": 750000,
+          "validation": 42291,
+          "index": null,
+          "diagnostic": null,
+          "moves": 1480,
+          "affected": 74,
+          "reserves": 2,
+          "components": null,
+          "residuals": 0,
+          "reserveResiduals": 221,
+          "fallback": "collisions"
+        },
+        "render": {
+          "reactExpandMs": 53.5,
+          "reactCollapseMs": 195.5,
+          "paintMedianMs": 4.45,
+          "rafP95MedianMs": 58.391,
+          "longTasks": 6,
+          "longMaxMs": 258,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.11408299999993687,
+          "distribuicao_radial": 0.20118300000012823,
+          "construcao_reservas": 0.03317900000001828,
+          "obstaculos_propagacao": 45.89021199999979,
+          "seguranca_componentes": 6.105309999999918,
+          "diagnostico_saida": 5.848790000000008
+        }
+      },
+      "after": {
+        "cpu": {
+          "count": 500,
+          "kind": "interdependente",
+          "projectionMs": 0.23281600000018443,
+          "layoutMs": 55.96179600000005,
+          "checks": 749990,
+          "validation": 0,
+          "index": 10,
+          "diagnostic": 135954,
+          "moves": 1480,
+          "affected": 74,
+          "reserves": 2,
+          "components": {
+            "accepted": 0,
+            "rejected": 1,
+            "interdependent": 0
+          },
+          "residuals": 0,
+          "reserveResiduals": 221,
+          "fallback": "budget"
+        },
+        "render": {
+          "reactExpandMs": 48.1,
+          "reactCollapseMs": 164.4,
+          "paintMedianMs": 4.8,
+          "rafP95MedianMs": 58.304,
+          "longTasks": 6,
+          "longMaxMs": 231,
+          "renderMax": 1,
+          "degradedSamples": 6,
+          "durationMaxMs": 0
+        },
+        "stages": {
+          "hierarquia_indice": 0.31457000000000335,
+          "distribuicao_radial": 0.15906300000006013,
+          "construcao_reservas": 0.044174999999995634,
+          "obstaculos_propagacao": 46.81562900000017,
+          "seguranca_componentes": 0.1512630000001991,
+          "diagnostico_saida": 7.366952999999739
+        }
+      }
+    }
+  ]
+}

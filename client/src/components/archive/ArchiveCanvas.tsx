@@ -235,136 +235,198 @@ const GraphContent = memo(function GraphContent({
             })()
           : null}
       </svg>
-      {places.map((p) => {
-        const titles = related.get(p.cardId) ?? [];
-        const info = nodes?.get(p.id);
-        const compact = p.width < 230 || p.height < 160;
-        return (
-          <article
-            key={p.id}
-            data-placement={p.id}
-            data-base-x={p.x}
-            data-base-y={p.y}
-            data-base-width={p.width}
-            data-base-height={p.height}
-            data-card={p.cardId}
-            data-category={p.card.category}
-            data-compact={compact || undefined}
-            data-tiny={p.height < 148 || undefined}
-            className={`archive-card${selected?.id === p.id ? " is-selected" : ""}`}
-            style={{
-              ...archiveCategoryStyle(p.card.category),
-              left: p.x,
-              top: p.y,
-              width: p.width,
-              height: p.height,
-              zIndex: p.zIndex + 1 + (selected?.id === p.id ? 1000001 : 0),
-            }}
-            aria-label={p.card.title}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.target === e.currentTarget && e.key === "Enter") {
-                e.preventDefault();
-                onConsult?.(p.cardId);
-              }
-            }}
-            onDoubleClick={(e) => {
-              const target = e.target as Element;
-              if (target.closest("button, .archive-resize")) return;
-              onConsult?.(p.cardId, true);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            <header onPointerDown={(e) => onStart(e, "move", p)}>
-              <ArchiveCategoryIcon category={p.card.category} />
-              <span>
-                <small>
-                  {NARRATIVE_CATEGORY_LABELS[p.card.category] ??
-                    "Card narrativo"}
-                </small>
-                <strong>{p.card.title}</strong>
-              </span>
-            </header>
-            <div
-              className="archive-card-copy"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                onSelect({ kind: "card", id: p.id });
-              }}
-            >
-              <p>{p.card.summary || "Sem resumo."}</p>
-              {!compact && titles.length > 0 ? (
-                <ul>
-                  {titles
-                    .slice(0, Math.max(1, Math.floor((p.height - 150) / 22)))
-                    .map((t, i) => (
-                      <li key={i}>{t}</li>
-                    ))}
-                </ul>
-              ) : null}
-            </div>
-            <footer>
-              <span>{info?.relationCount ?? titles.length} conexões</span>
-              {info?.children.length ? (
-                <button
-                  type="button"
-                  className="archive-branch-toggle"
-                  aria-label={`${info.expanded ? "Recolher" : "Expandir"} ramificações de ${p.card.title}`}
-                  aria-expanded={info.expanded}
-                  disabled={!onToggle}
-                  title={`${info.children.length} ramificações diretas; ${info.hiddenLinks} vínculos ocultos`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggle?.(p.id);
-                  }}
-                >
-                  {info.expanded ? "−" : "+"} {info.children.length}
-                </button>
-              ) : null}
-              {info?.hiddenLinks ? (
-                <small
-                  className="archive-hidden-links"
-                  aria-label={`${info.hiddenLinks} vínculos ocultos`}
-                >
-                  ↗ {info.hiddenLinks}
-                </small>
-              ) : null}
-              <button
-                type="button"
-                aria-label={`Ações de ${p.card.title}`}
-                onClick={(event) => {
-                  const rect = event.currentTarget.getBoundingClientRect();
-                  onMenu(
-                    { x: rect.left + rect.width / 2, y: rect.top },
-                    { kind: "card", id: p.id },
-                  );
-                }}
-              >
-                <Icon name="gear" size={14} />
-              </button>
-            </footer>
-            <button
-              type="button"
-              className="archive-port"
-              aria-label={`Conectar ${p.card.title}`}
-              onPointerDown={(e) => onStart(e, "connect", p)}
-            >
-              +
-            </button>
-            {["n", "s", "e", "w", "ne", "nw", "se", "sw"].map((edge) => (
-              <div
-                key={edge}
-                className={`archive-resize edge-${edge}`}
-                onPointerDown={(e) => onStart(e, "resize", p, edge)}
-                aria-hidden="true"
-              />
-            ))}
-          </article>
-        );
-      })}
+      {places.map((p) => (
+        <ArchiveCard
+          key={p.id}
+          p={p}
+          titles={related.get(p.cardId) ?? []}
+          info={nodes?.get(p.id)}
+          isSelected={selected?.id === p.id}
+          onStart={onStart}
+          onSelect={onSelect}
+          onMenu={onMenu}
+          onToggle={onToggle}
+          onConsult={onConsult}
+        />
+      ))}
     </>
   );
 });
+
+/** Cards invariantes não precisam remontar seu conteúdo a cada intenção de layout. */
+const ArchiveCard = memo(
+  function ArchiveCard({
+    p,
+    titles,
+    info,
+    isSelected,
+    onStart,
+    onSelect,
+    onMenu,
+    onToggle,
+    onConsult,
+  }: {
+    p: NarrativePlacementDto;
+    titles: string[];
+    info?: ArchiveNodeProjection;
+    isSelected: boolean;
+    onStart: (
+      e: PointerEvent,
+      mode: Gesture["mode"],
+      p: NarrativePlacementDto,
+      edge?: string,
+    ) => void;
+    onSelect: Props["onSelect"];
+    onMenu: Props["onMenu"];
+    onToggle?: Props["onToggle"];
+    onConsult?: Props["onConsult"];
+  }) {
+    const compact = p.width < 230 || p.height < 160;
+    return (
+      <article
+        data-placement={p.id}
+        data-base-x={p.x}
+        data-base-y={p.y}
+        data-base-width={p.width}
+        data-base-height={p.height}
+        data-card={p.cardId}
+        data-category={p.card.category}
+        data-compact={compact || undefined}
+        data-tiny={p.height < 148 || undefined}
+        className={`archive-card${isSelected ? " is-selected" : ""}`}
+        style={{
+          ...archiveCategoryStyle(p.card.category),
+          left: p.x,
+          top: p.y,
+          width: p.width,
+          height: p.height,
+          zIndex: p.zIndex + 1 + (isSelected ? 1000001 : 0),
+        }}
+        aria-label={p.card.title}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.target === e.currentTarget && e.key === "Enter") {
+            e.preventDefault();
+            onConsult?.(p.cardId);
+          }
+        }}
+        onDoubleClick={(e) => {
+          const target = e.target as Element;
+          if (target.closest("button, .archive-resize")) return;
+          onConsult?.(p.cardId, true);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <header onPointerDown={(e) => onStart(e, "move", p)}>
+          <ArchiveCategoryIcon category={p.card.category} />
+          <span>
+            <small>
+              {NARRATIVE_CATEGORY_LABELS[p.card.category] ?? "Card narrativo"}
+            </small>
+            <strong>{p.card.title}</strong>
+          </span>
+        </header>
+        <div
+          className="archive-card-copy"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onSelect({ kind: "card", id: p.id });
+          }}
+        >
+          <p>{p.card.summary || "Sem resumo."}</p>
+          {!compact && titles.length > 0 ? (
+            <ul>
+              {titles
+                .slice(0, Math.max(1, Math.floor((p.height - 150) / 22)))
+                .map((t, i) => (
+                  <li key={i}>{t}</li>
+                ))}
+            </ul>
+          ) : null}
+        </div>
+        <footer>
+          <span>{info?.relationCount ?? titles.length} conexões</span>
+          {info?.children.length ? (
+            <button
+              type="button"
+              className="archive-branch-toggle"
+              aria-label={`${info.expanded ? "Recolher" : "Expandir"} ramificações de ${p.card.title}`}
+              aria-expanded={info.expanded}
+              disabled={!onToggle}
+              title={`${info.children.length} ramificações diretas; ${info.hiddenLinks} vínculos ocultos`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle?.(p.id);
+              }}
+            >
+              {info.expanded ? "−" : "+"} {info.children.length}
+            </button>
+          ) : null}
+          {info?.hiddenLinks ? (
+            <small
+              className="archive-hidden-links"
+              aria-label={`${info.hiddenLinks} vínculos ocultos`}
+            >
+              ↗ {info.hiddenLinks}
+            </small>
+          ) : null}
+          <button
+            type="button"
+            aria-label={`Ações de ${p.card.title}`}
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              onMenu(
+                { x: rect.left + rect.width / 2, y: rect.top },
+                { kind: "card", id: p.id },
+              );
+            }}
+          >
+            <Icon name="gear" size={14} />
+          </button>
+        </footer>
+        <button
+          type="button"
+          className="archive-port"
+          aria-label={`Conectar ${p.card.title}`}
+          onPointerDown={(e) => onStart(e, "connect", p)}
+        >
+          +
+        </button>
+        {["n", "s", "e", "w", "ne", "nw", "se", "sw"].map((edge) => (
+          <div
+            key={edge}
+            className={`archive-resize edge-${edge}`}
+            onPointerDown={(e) => onStart(e, "resize", p, edge)}
+            aria-hidden="true"
+          />
+        ))}
+      </article>
+    );
+  },
+  (a, b) =>
+    a.p.card === b.p.card &&
+    a.p.id === b.p.id &&
+    a.p.parentPlacementId === b.p.parentPlacementId &&
+    a.p.branchOffsetX === b.p.branchOffsetX &&
+    a.p.branchOffsetY === b.p.branchOffsetY &&
+    a.p.x === b.p.x &&
+    a.p.y === b.p.y &&
+    a.p.width === b.p.width &&
+    a.p.height === b.p.height &&
+    a.p.zIndex === b.p.zIndex &&
+    a.isSelected === b.isSelected &&
+    a.onStart === b.onStart &&
+    a.onSelect === b.onSelect &&
+    a.onMenu === b.onMenu &&
+    a.onToggle === b.onToggle &&
+    a.onConsult === b.onConsult &&
+    a.info?.expanded === b.info?.expanded &&
+    a.info?.children.length === b.info?.children.length &&
+    a.info?.hiddenLinks === b.info?.hiddenLinks &&
+    a.info?.relationCount === b.info?.relationCount &&
+    a.titles.length === b.titles.length &&
+    a.titles.every((title, i) => title === b.titles[i]),
+);
 export function ArchiveCanvas({
   layout,
   snapshot,

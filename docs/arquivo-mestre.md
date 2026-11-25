@@ -1722,3 +1722,15 @@ Build e testes isolados; sem publicação, aguardando autorização para o novo 
 Ampliação para 1120 publicada em 25/11/2026 após autorização explícita, no SHA
 `46eadd3e912a5e47e0360ad0a3dffa339196ff58`. Backend e 47 WIPs preservados;
 aguardando aceite manual. Relatório em `docs/fichario-reserva-estabilidade.md`.
+
+
+## Consolidação posterior — 8.5.2.4
+
+O novo escopo informa os aceites históricos de 20/20 da 8.5.2.3 e 14/14 da
+8.5.2.3.1; o aceite específico da margem posterior de 1120 segue pendente.
+Implementação multinível e hardening preparada exclusivamente no frontend,
+sem publicação. Âncoras internas relativas entre centros, memória lógica
+reconciliada e veto localizado conservador reutilizam o motor vigente.
+Parâmetros e identidade visual preservados. Relatório, testes, medições e
+limitações em `docs/fichario-multinivel-hardening.md`. Aguardar autorização de
+publicação e aceite; não iniciada a 8.5.3. As notas anteriores são históricas.

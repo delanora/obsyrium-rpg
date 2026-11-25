@@ -1,4 +1,5 @@
 import type { NarrativePlacementDto } from "../../../../src/modules/shared/narrative";
+import { archiveHierarchy } from "./archiveHierarchy";
 import type { ArchiveProjection } from "./archiveProjection";
 import type { ArchiveRect } from "./archiveCamera";
 
@@ -11,6 +12,65 @@ export interface ArchiveAnchor {
   y: number;
   baseX: number;
   baseY: number;
+  parentId?: string;
+  offsetX?: number;
+  offsetY?: number;
+  signature?: string;
+}
+/** A posição própria e a linhagem validam a âncora; transladar/redimensionar
+ * um ancestral não invalida o vetor entre centros. Trocar pertencimento invalida. */
+export function archiveAnchorSignature(
+  p: NarrativePlacementDto,
+  placements: readonly NarrativePlacementDto[],
+  index?: ReadonlyMap<string, NarrativePlacementDto>,
+) {
+  const byId = index ?? new Map(placements.map((item) => [item.id, item]));
+  const seen = new Set<string>(),
+    parts: unknown[] = [];
+  let current: NarrativePlacementDto | undefined = p;
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    parts.push([
+      current.id,
+      current.parentPlacementId,
+      ...(current.id === p.id
+        ? [
+            current.x,
+            current.y,
+            current.width,
+            current.height,
+            current.branchOffsetX,
+            current.branchOffsetY,
+          ]
+        : []),
+    ]);
+    current = byId.get(current.parentPlacementId ?? "");
+  }
+  return JSON.stringify(parts);
+}
+export function captureArchiveAnchor(
+  p: NarrativePlacementDto,
+  shown: ArchiveGeometry,
+  graph: ArchiveProjection["graph"],
+  geometry: ReadonlyMap<string, ArchiveGeometry>,
+): ArchiveAnchor {
+  const parent = p.parentPlacementId
+    ? geometry.get(p.parentPlacementId)
+    : undefined;
+  return {
+    x: shown.x,
+    y: shown.y,
+    baseX: p.x,
+    baseY: p.y,
+    ...(parent
+      ? {
+          parentId: p.parentPlacementId!,
+          offsetX: shown.x + shown.width / 2 - parent.x - parent.width / 2,
+          offsetY: shown.y + shown.height / 2 - parent.y - parent.height / 2,
+          signature: archiveAnchorSignature(p, graph.placements),
+        }
+      : {}),
+  };
 }
 export const ARCHIVE_LAYOUT_CONFIG = {
   gap: 32,
@@ -59,6 +119,18 @@ export interface ArchiveLayout {
     manualOverlaps: [string, string][];
     reserveFallback: "budget" | "collisions" | null;
     reserveValidationChecks: number;
+    reserveComponents?: {
+      accepted: number;
+      rejected: number;
+      interdependent: number;
+    };
+    reserveIndexChecks?: number;
+    diagnosticChecks?: number;
+    diagnosticsIncomplete?: boolean;
+    reserveStatus?: {
+      sourceId: string;
+      state: "satisfied" | "partial" | "vetoed" | "budget" | "protected";
+    }[];
     reserveResiduals: {
       sourceId: string;
       cardId: string;
@@ -135,21 +207,26 @@ export function relativeGestureVisual(
   visual: Record<string, ArchiveGeometry>,
 ) {
   const result = { ...visual };
+  const { children } = archiveHierarchy(graph.placements);
+  const raw = new Map(graph.placements.map((p) => [p.id, p]));
   const queue = Object.keys(visual);
   const visited = new Set(queue);
   for (let i = 0; i < queue.length; i++) {
     const parentId = queue[i],
       parent = result[parentId];
-    for (const child of graph.placements) {
-      if (
-        child.parentPlacementId !== parentId ||
-        !isCustomBranch(child) ||
-        visited.has(child.id)
-      )
+    for (const child of children.get(parentId) ?? []) {
+      if (child.parentPlacementId !== parentId || visited.has(child.id))
         continue;
       visited.add(child.id);
       queue.push(child.id);
-      result[child.id] = relativeGeometry(child, parent);
+      const original = raw.get(parentId)!;
+      result[child.id] = isCustomBranch(child)
+        ? relativeGeometry(child, parent)
+        : {
+            ...geometryOf(child),
+            x: child.x + parent.x - original.x,
+            y: child.y + parent.y - original.y,
+          };
     }
   }
   return result;
@@ -212,8 +289,20 @@ export function layoutArchive(
   } = {},
 ): ArchiveLayout {
   const config = { ...ARCHIVE_LAYOUT_CONFIG, ...options.config };
-  const cards = [...projection.graph.placements].sort((a, b) =>
-    order(a.id, b.id),
+  const finite = (n: number, fallback: number, min: number, max: number) =>
+    Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+  const cards = projection.graph.placements
+    .map((p) => ({
+      ...p,
+      x: finite(p.x, 0, -config.limit, config.limit),
+      y: finite(p.y, 0, -config.limit, config.limit),
+      width: finite(p.width, 280, 1, 1600),
+      height: finite(p.height, 200, 1, 1600),
+      zIndex: finite(p.zIndex, 0, -config.limit, config.limit),
+    }))
+    .sort((a, b) => order(a.id, b.id));
+  const originalById = new Map(
+    projection.graph.placements.map((p) => [p.id, p]),
   );
   const raw = new Map(cards.map((p) => [p.id, p]));
   const result = new Map(cards.map((p) => [p.id, geometryOf(p)]));
@@ -226,24 +315,12 @@ export function layoutArchive(
     manualOverlaps: [],
     reserveFallback: null,
     reserveValidationChecks: 0,
+    reserveIndexChecks: 0,
     reserveResiduals: [],
   };
   const causes = new Map<string, { sourceId: string; depth: number }>();
-  const depth = (id: string) => {
-    let n = 0,
-      cursor = raw.get(id);
-    const seen = new Set<string>();
-    while (
-      cursor?.parentPlacementId &&
-      raw.has(cursor.parentPlacementId) &&
-      !seen.has(cursor.id)
-    ) {
-      seen.add(cursor.id);
-      n++;
-      cursor = raw.get(cursor.parentPlacementId);
-    }
-    return n;
-  };
+  const hierarchy = archiveHierarchy(cards);
+  const depth = (id: string) => hierarchy.depths.get(id) ?? 0;
   const groups = cards
     .filter(
       (p) =>
@@ -253,7 +330,9 @@ export function layoutArchive(
     .sort((a, b) => depth(a.id) - depth(b.id) || order(a.id, b.id));
   if (!groups.length)
     return {
-      graph: projection.graph,
+      graph: cards.some((p) => !archiveSameGeometry(p, originalById.get(p.id)!))
+        ? { ...projection.graph, placements: cards }
+        : projection.graph,
       geometry: result,
       offsets: new Map(),
       affected: [],
@@ -270,7 +349,8 @@ export function layoutArchive(
       pin.baseY === p.y &&
       Number.isFinite(pin.x) &&
       Number.isFinite(pin.y) &&
-      !isCustomBranch(p)
+      !isCustomBranch(p) &&
+      !p.parentPlacementId
     ) {
       pinned.add(p.id);
       result.set(p.id, {
@@ -291,7 +371,10 @@ export function layoutArchive(
       result.set(p.id, relativeGeometry(p, result.get(p.parentPlacementId!)!));
   const exhausted = () => {
     if (
-      diagnostics.checks >= config.maxChecks ||
+      diagnostics.checks +
+        (diagnostics.reserveIndexChecks ?? 0) +
+        diagnostics.reserveValidationChecks >=
+        config.maxChecks ||
       diagnostics.moves >= config.maxMoves
     ) {
       diagnostics.capped = true;
@@ -331,6 +414,7 @@ export function layoutArchive(
     const children = projection.nodes
       .get(group.id)!
       .children.filter((p) => raw.has(p.id))
+      .map((p) => raw.get(p.id)!)
       .sort(
         (a, b) => angleOf(a, group) - angleOf(b, group) || order(a.id, b.id),
       );
@@ -381,6 +465,27 @@ export function layoutArchive(
       let outer = previousOuter;
       batch.forEach((child, index) => {
         radial.add(child.id);
+        const pin = options.anchors?.[child.id];
+        if (
+          anchors.has(child.id) &&
+          pin?.parentId === group.id &&
+          pin.signature ===
+            archiveAnchorSignature(
+              child,
+              projection.graph.placements,
+              originalById,
+            ) &&
+          Number.isFinite(pin.offsetX) &&
+          Number.isFinite(pin.offsetY) &&
+          !custom.has(child.id)
+        ) {
+          result.set(child.id, {
+            ...geometryOf(child),
+            x: core.x + core.width / 2 + pin.offsetX! - child.width / 2,
+            y: core.y + core.height / 2 + pin.offsetY! - child.height / 2,
+          });
+          pinned.add(child.id);
+        }
         if (
           custom.has(child.id) ||
           (anchors.has(child.id) && pinned.has(child.id))
@@ -452,6 +557,11 @@ export function layoutArchive(
       ring++;
     }
   }
+  const indexCheck = () => {
+    if (exhausted()) return false;
+    diagnostics.reserveIndexChecks = (diagnostics.reserveIndexChecks ?? 0) + 1;
+    return true;
+  };
   // União localizada: não cria uma envoltória gigante entre um ramo remoto e o núcleo.
   const reserves: ArchiveReserve[] = [];
   const expandedIds = new Set(groups.map((g) => g.id));
@@ -500,6 +610,7 @@ export function layoutArchive(
         for (let j = 0; j < localRegions.length; j++)
           if (
             !connected.has(j) &&
+            indexCheck() &&
             archiveIntersects(localRegions[i], localRegions[j], 0)
           )
             connected.add(j);
@@ -572,6 +683,13 @@ export function layoutArchive(
       members: r.members,
     })),
   );
+  const coreZones = new Map<string, ArchiveGeometry[]>();
+  for (const obstacle of reserveObstacles)
+    if (obstacle.cluster === 0) {
+      const list = coreZones.get(obstacle.sourceId) ?? [];
+      list.push(obstacle.region!);
+      coreZones.set(obstacle.sourceId, list);
+    }
   const fixedObstacles: Obstacle[] = fixed.map((id) => ({
     id,
     sourceId: causes.get(id)?.sourceId ?? id,
@@ -583,6 +701,8 @@ export function layoutArchive(
     b.region ? !b.members!.has(id) && !manual.has(id) : introduced(b.id, id);
   const moves = new Map<string, number>();
   let reservePhase = false;
+  const sweeps = new Map<string, ArchiveGeometry>();
+  const reserveDependencies = new Map<string, Set<string>>();
   let physical: Map<string, ArchiveGeometry> | undefined;
   let physicalCauses:
     | Map<string, { sourceId: string; depth: number }>
@@ -652,9 +772,7 @@ export function layoutArchive(
           bottom = b.y + b.height,
           top = b.y;
         if (hit.region && hit.cluster === 0) {
-          const zones = reserveObstacles
-            .filter((o) => o.sourceId === hit!.sourceId && o.cluster === 0)
-            .map(geometry);
+          const zones = coreZones.get(hit.sourceId)!;
           const horizontal = zones.filter(
             (r) =>
               r.y < current.y + current.height + config.gap &&
@@ -698,6 +816,24 @@ export function layoutArchive(
           }))
           .find((p) => inBounds(p) && !archiveIntersects(p, b, config.gap));
         if (!next) break;
+        if (reservePhase) {
+          if (hit.region) {
+            const entries =
+              reserveDependencies.get(hit.sourceId) ?? new Set<string>();
+            entries.add(card.id);
+            reserveDependencies.set(hit.sourceId, entries);
+          }
+          const old = sweeps.get(card.id) ?? current;
+          const x = Math.min(old.x, next.x),
+            y = Math.min(old.y, next.y);
+          sweeps.set(card.id, {
+            ...old,
+            x,
+            y,
+            width: Math.max(old.x + old.width, next.x + next.width) - x,
+            height: Math.max(old.y + old.height, next.y + next.height) - y,
+          });
+        }
         result.set(card.id, next);
         causes.set(card.id, cause);
         moves.set(card.id, (moves.get(card.id) ?? 0) + 1);
@@ -717,40 +853,174 @@ export function layoutArchive(
         )
         .map((p) => p.id),
     );
-    // A reserva é uma preferência: veta a piora física sem recalcular o layout.
-    outer: for (let i = 0; i < cards.length; i++)
+    // Componentes pelo caminho percorrido, não pela hierarquia. Uma trajetória
+    // envolve todos os seus destinos intermediários (caixa conservadora).
+    const ids = [...changed].sort(order),
+      parents = new Map(ids.map((id) => [id, id]));
+    const find = (id: string): string => {
+      let root = id;
+      while (parents.get(root)! !== root) root = parents.get(root)!;
+      while (id !== root) {
+        const next = parents.get(id)!;
+        parents.set(id, root);
+        id = next;
+      }
+      return root;
+    };
+    const join = (a: string, b: string) => {
+      a = find(a);
+      b = find(b);
+      if (a !== b) parents.set(b, a);
+    };
+    const safety = () => {
+      if (
+        diagnostics.checks +
+          (diagnostics.reserveIndexChecks ?? 0) +
+          diagnostics.reserveValidationChecks >=
+        config.maxChecks
+      ) {
+        diagnostics.capped = true;
+        diagnostics.reserveFallback = "budget";
+        return false;
+      }
+      diagnostics.reserveValidationChecks++;
+      return true;
+    };
+    let uncertain = false;
+    const bad = new Set<string>();
+    for (let i = 0; i < cards.length && !uncertain; i++)
       for (let j = i + 1; j < cards.length; j++) {
         const a = cards[i].id,
           b = cards[j].id;
         if (!changed.has(a) && !changed.has(b)) continue;
-        diagnostics.reserveValidationChecks++;
+        if (!safety()) {
+          uncertain = true;
+          break;
+        }
         const area = archiveOverlapArea(
           result.get(a)!,
           result.get(b)!,
           config.gap,
         );
-        if (
+        const worsened =
           area > originalArea(a, b) + EPS &&
           area >
             archiveOverlapArea(physical.get(a)!, physical.get(b)!, config.gap) +
-              EPS
-        ) {
-          diagnostics.reserveFallback = "collisions";
-          break outer;
+              EPS;
+        if (worsened) {
+          // Com uma única família não existe outra reserva independente a salvar.
+          // Manter o veto rápido evita construir componentes sem benefício.
+          if (reserves.length === 1) {
+            uncertain = true;
+            break;
+          }
+          if (changed.has(a) && changed.has(b)) join(a, b);
+          if (changed.has(a)) bad.add(a);
+          if (changed.has(b)) bad.add(b);
         }
       }
-    if (diagnostics.reserveFallback) {
+    if (bad.size) {
+      for (const entries of reserveDependencies.values()) {
+        const linked = [...entries].filter((id) => changed.has(id));
+        for (let i = 1; i < linked.length; i++) {
+          if (!safety()) {
+            uncertain = true;
+            break;
+          }
+          join(linked[0], linked[i]);
+        }
+        if (uncertain) break;
+      }
+      for (let i = 0; i < ids.length && !uncertain; i++)
+        for (let j = i + 1; j < ids.length; j++) {
+          if (!safety()) {
+            uncertain = true;
+            break;
+          }
+          if (
+            archiveIntersects(
+              sweeps.get(ids[i])!,
+              sweeps.get(ids[j])!,
+              config.gap,
+            )
+          )
+            join(ids[i], ids[j]);
+        }
+    }
+    const rejected = new Set([...bad].map(find));
+    const roots = new Set(ids.map(find));
+    if (!uncertain) {
+      for (const id of ids)
+        if (rejected.has(find(id))) {
+          result.set(id, physical.get(id)!);
+          const cause = physicalCauses!.get(id);
+          if (cause) causes.set(id, cause);
+          else causes.delete(id);
+        }
+      // A restauração pode reencontrar destinos de outra tentativa. Validar a
+      // composição conjunta; qualquer dúvida volta ao snapshot físico inteiro.
+      for (let i = 0; i < cards.length && !uncertain && rejected.size > 0; i++)
+        for (let j = i + 1; j < cards.length; j++) {
+          const a = cards[i].id,
+            b = cards[j].id;
+          if (!changed.has(a) && !changed.has(b)) continue;
+          if (!safety()) {
+            uncertain = true;
+            break;
+          }
+          if (
+            archiveOverlapArea(result.get(a)!, result.get(b)!, config.gap) >
+            Math.max(
+              originalArea(a, b),
+              archiveOverlapArea(
+                physical.get(a)!,
+                physical.get(b)!,
+                config.gap,
+              ),
+            ) +
+              EPS
+          ) {
+            uncertain = true;
+            break;
+          }
+        }
+    }
+    diagnostics.reserveComponents = {
+      accepted: uncertain
+        ? 0
+        : bad.size
+          ? roots.size - rejected.size
+          : ids.length
+            ? 1
+            : 0,
+      rejected: uncertain ? (ids.length ? 1 : 0) : rejected.size,
+      interdependent: ids.length - roots.size,
+    };
+    if (rejected.size || uncertain)
+      diagnostics.reserveFallback ??= "collisions";
+    if (uncertain) {
       for (const [id, g] of physical) result.set(id, g);
       causes.clear();
       for (const [id, cause] of physicalCauses!) causes.set(id, cause);
     }
   }
+
   for (const reserve of reserves)
     for (const card of cards) {
       if (reserve.members.has(card.id)) continue;
       if (
-        reserve.regions.some((r) =>
-          archiveIntersects(r, result.get(card.id)!, config.gap),
+        (diagnostics.diagnosticChecks ?? 0) >= ARCHIVE_LAYOUT_CONFIG.maxChecks
+      ) {
+        diagnostics.diagnosticsIncomplete = true;
+        break;
+      }
+      if (
+        reserve.regions.some(
+          (r) =>
+            (diagnostics.diagnosticChecks =
+              (diagnostics.diagnosticChecks ?? 0) + 1) <=
+              ARCHIVE_LAYOUT_CONFIG.maxChecks &&
+            archiveIntersects(r, result.get(card.id)!, config.gap),
         )
       )
         diagnostics.reserveResiduals.push({
@@ -760,6 +1030,29 @@ export function layoutArchive(
           protected: reserved.has(card.id),
         });
     }
+  diagnostics.reserveStatus = reserves.map((reserve) => {
+    const remaining = diagnostics.reserveResiduals.filter(
+      (r) => r.sourceId === reserve.sourceId,
+    );
+    const applied = [...(reserveDependencies.get(reserve.sourceId) ?? [])].some(
+      (id) =>
+        physical && !archiveSameGeometry(result.get(id)!, physical.get(id)!),
+    );
+    return {
+      sourceId: reserve.sourceId,
+      state:
+        diagnostics.diagnosticsIncomplete ||
+        diagnostics.reserveFallback === "budget"
+          ? "budget"
+          : !remaining.length
+            ? "satisfied"
+            : remaining.every((r) => r.manual || r.protected)
+              ? "protected"
+              : applied
+                ? "partial"
+                : "vetoed",
+    };
+  });
   const offsets = new Map<string, { x: number; y: number }>(),
     affected: ArchiveLayout["affected"] = [];
   for (const p of cards) {
@@ -784,6 +1077,13 @@ export function layoutArchive(
     for (let j = i + 1; j < cards.length; j++) {
       const a = cards[i].id,
         b = cards[j].id;
+      if (
+        (diagnostics.diagnosticChecks ?? 0) >= ARCHIVE_LAYOUT_CONFIG.maxChecks
+      ) {
+        diagnostics.diagnosticsIncomplete = true;
+        break;
+      }
+      diagnostics.diagnosticChecks = (diagnostics.diagnosticChecks ?? 0) + 1;
       if (archiveIntersects(result.get(a)!, result.get(b)!, config.gap)) {
         if (
           manual.has(a) ||

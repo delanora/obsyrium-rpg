@@ -1225,6 +1225,21 @@ try {
   await mobileEditor.getByRole("button", { name: "Fechar editor" }).click();
   await mobileReader.waitFor();
   await mobileReader.getByRole("button", { name: "Fechar consulta" }).click();
+  if (process.env.ARCHIVE_MULTILEVEL_EVIDENCE) {
+    const { exerciseArchiveMultilevel } = await import(
+      "./archive-multilevel-browser-scenarios.mjs"
+    );
+    await exerciseArchiveMultilevel({
+      page,
+      placements,
+      links,
+      names,
+      uuid,
+      requests,
+      shot,
+      state,
+    });
+  }
   if (process.env.ARCHIVE_STABILITY_EVIDENCE) {
     const probe = await page.evaluate(() => ({
       paints: window.__archivePaints,

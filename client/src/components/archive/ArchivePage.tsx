@@ -50,6 +50,8 @@ import {
 } from "./archiveCamera";
 import {
   layoutArchive,
+  captureArchiveAnchor,
+  archiveAnchorSignature,
   archiveGestureCommit,
   type ArchiveAnchor,
   type ArchiveReserveExceptions,
@@ -60,6 +62,7 @@ import {
   relativeGestureVisual,
 } from "./archiveLayout";
 import { ArchiveReader, type ArchiveReaderHandle } from "./ArchiveReader";
+import { archiveDescendants } from "./archiveHierarchy";
 import { projectArchive } from "./archiveProjection";
 import "./archive.css";
 const EMPTY_EXPANSION = new Set<string>();
@@ -232,6 +235,39 @@ export function ArchivePage() {
     () => (projection ? layoutArchive(projection, { anchors, manual }) : null),
     [projection, anchors, manual],
   );
+  useLayoutEffect(() => {
+    if (!projection) return;
+    setLayoutAnchors((previous) => {
+      const entries = previous[boardId];
+      if (
+        !entries ||
+        Object.entries(entries).every(
+          ([id, pin]) => projection.visibleIds.has(id) || !!pin.parentId,
+        )
+      )
+        return previous;
+      return {
+        ...previous,
+        [boardId]: Object.fromEntries(
+          Object.entries(entries).filter(
+            ([id, pin]) => projection.visibleIds.has(id) || !!pin.parentId,
+          ),
+        ),
+      };
+    });
+    const sources = new Set(layout?.reserves.map((r) => r.sourceId));
+    setReserveExceptions((previous) => {
+      const entries = previous[boardId];
+      if (!entries || Object.keys(entries).every((id) => sources.has(id)))
+        return previous;
+      return {
+        ...previous,
+        [boardId]: Object.fromEntries(
+          Object.entries(entries).filter(([id]) => sources.has(id)),
+        ),
+      };
+    });
+  }, [projection, layout, boardId]);
   const gestureCommit = useRef<{
     id: string;
     visual: Geometry;
@@ -342,9 +378,18 @@ export function ArchivePage() {
       setLayoutAnchors((previous) => {
         if (!previous[chosen]) return previous;
         const valid: Record<string, ArchiveAnchor> = {};
+        const byId = new Map(next.placements.map((p) => [p.id, p]));
         for (const p of next.placements) {
           const pin = previous[chosen][p.id];
-          if (pin && pin.baseX === p.x && pin.baseY === p.y) valid[p.id] = pin;
+          if (
+            pin &&
+            pin.baseX === p.x &&
+            pin.baseY === p.y &&
+            (!pin.parentId ||
+              pin.signature ===
+                archiveAnchorSignature(p, next.placements, byId))
+          )
+            valid[p.id] = pin;
         }
         return { ...previous, [chosen]: valid };
       });
@@ -428,18 +473,27 @@ export function ArchivePage() {
     const c = current.current;
     if (c.busy || c.pending || interacting.current) return;
     const opening = !c.expanded.has(id);
+    const descendants = archiveDescendants(c.graph?.placements ?? [], id);
     setReserveExceptions((previous) => {
       const next = { ...(previous[c.boardId] ?? {}) };
-      delete next[id];
+      for (const child of descendants) delete next[child];
       return { ...previous, [c.boardId]: next };
     });
     const base = c.graph?.placements.find((p) => p.id === id),
       shown = presentation.current?.geometry(id) ?? c.layout?.geometry.get(id);
     setLayoutAnchors((previous) => {
       const next = { ...(previous[c.boardId] ?? {}) };
-      if (opening && base && shown)
-        next[id] = { x: shown.x, y: shown.y, baseX: base.x, baseY: base.y };
-      else delete next[id];
+      // Âncoras relativas ocultas ficam inativas e serão rebaseadas no pai atual.
+      // Nunca reativar uma antiga coordenada absoluta de descendente.
+      for (const child of descendants)
+        if (child === id || !next[child]?.parentId) delete next[child];
+      if (opening && base && shown && c.layout)
+        next[id] = captureArchiveAnchor(
+          base,
+          shown,
+          c.graph!,
+          c.layout.geometry,
+        );
       return { ...previous, [c.boardId]: next };
     });
     setExpansion((previous) => {
@@ -556,12 +610,17 @@ export function ArchivePage() {
               ...previous,
               [c.boardId]: {
                 ...(previous[c.boardId] ?? {}),
-                [input.placementId]: {
-                  x: final.x,
-                  y: final.y,
-                  baseX: input.geometry.x,
-                  baseY: input.geometry.y,
-                },
+                [input.placementId]: captureArchiveAnchor(
+                  {
+                    ...c.graph!.placements.find(
+                      (p) => p.id === input.placementId,
+                    )!,
+                    ...input.geometry,
+                  },
+                  final,
+                  c.graph!,
+                  c.layout!.geometry,
+                ),
               },
             }));
           }
@@ -576,12 +635,12 @@ export function ArchivePage() {
                 ...previous,
                 [c.boardId]: {
                   ...(previous[c.boardId] ?? {}),
-                  [id]: {
-                    x: shown.x,
-                    y: shown.y,
-                    baseX: base.x,
-                    baseY: base.y,
-                  },
+                  [id]: captureArchiveAnchor(
+                    base,
+                    shown,
+                    c.graph!,
+                    c.layout!.geometry,
+                  ),
                 },
               }));
           }
