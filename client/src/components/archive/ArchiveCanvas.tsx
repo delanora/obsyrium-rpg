@@ -28,6 +28,10 @@ import { ArchiveBackground } from "./ArchiveBackground";
 import { ArchiveRelationLabel } from "./ArchiveRelationLabel";
 import { cameraPoint, zoomArchive, type ArchiveCamera } from "./archiveCamera";
 import { useArchiveMotion, type ArchivePresentation } from "./useArchiveMotion";
+import {
+  archiveFilterKind,
+  type ArchiveFilterPresentation,
+} from "./archiveFilters";
 import type { ArchiveLayout } from "./archiveLayout";
 import { archiveLinkGeometry } from "./archiveLinkGeometry";
 export const CATEGORY_ICONS: Record<NarrativeCategory, IconName> = {
@@ -58,6 +62,7 @@ interface Props {
   snapshot?: NarrativeGraphDto;
   presentation?: RefObject<ArchivePresentation | null>;
   nodes?: Map<string, ArchiveNodeProjection>;
+  filter?: ArchiveFilterPresentation;
   onToggle?: (id: string) => void;
   onConsult?: (id: string, pointer?: boolean) => void;
   graph: NarrativeGraphDto;
@@ -96,6 +101,7 @@ interface Gesture {
 /** O memo evita recalcular relações/títulos quando apenas a câmera se move. */
 const GraphContent = memo(function GraphContent({
   nodes,
+  filter,
   onToggle,
   onConsult,
   graph,
@@ -106,6 +112,7 @@ const GraphContent = memo(function GraphContent({
   onMenu,
   temporary,
 }: {
+  filter?: ArchiveFilterPresentation;
   nodes?: Map<string, ArchiveNodeProjection>;
   onToggle?: (id: string) => void;
   onConsult?: (id: string, pointer?: boolean) => void;
@@ -188,6 +195,13 @@ const GraphContent = memo(function GraphContent({
             <g
               key={link.id}
               data-link={link.id}
+              data-filter-hidden={
+                (filter?.active &&
+                  filter.mode === "isolate" &&
+                  (!filter.visibleIds.has(a.id) ||
+                    !filter.visibleIds.has(b.id))) ||
+                undefined
+              }
               className={selected?.id === link.id ? "is-selected" : ""}
             >
               <path
@@ -239,6 +253,10 @@ const GraphContent = memo(function GraphContent({
         <ArchiveCard
           key={p.id}
           p={p}
+          filterKind={archiveFilterKind(filter, p.id, p.cardId)}
+          hiddenMatches={
+            filter?.active ? (filter.hiddenByOwner.get(p.id) ?? 0) : 0
+          }
           titles={related.get(p.cardId) ?? []}
           info={nodes?.get(p.id)}
           isSelected={selected?.id === p.id}
@@ -257,6 +275,8 @@ const GraphContent = memo(function GraphContent({
 const ArchiveCard = memo(
   function ArchiveCard({
     p,
+    filterKind,
+    hiddenMatches,
     titles,
     info,
     isSelected,
@@ -267,6 +287,8 @@ const ArchiveCard = memo(
     onConsult,
   }: {
     p: NarrativePlacementDto;
+    filterKind: string;
+    hiddenMatches: number;
     titles: string[];
     info?: ArchiveNodeProjection;
     isSelected: boolean;
@@ -285,6 +307,8 @@ const ArchiveCard = memo(
     return (
       <article
         data-placement={p.id}
+        data-filter={filterKind}
+        hidden={filterKind === "hidden"}
         data-base-x={p.x}
         data-base-y={p.y}
         data-base-width={p.width}
@@ -303,7 +327,7 @@ const ArchiveCard = memo(
           zIndex: p.zIndex + 1 + (isSelected ? 1000001 : 0),
         }}
         aria-label={p.card.title}
-        tabIndex={0}
+        tabIndex={filterKind === "hidden" ? -1 : 0}
         onKeyDown={(e) => {
           if (e.target === e.currentTarget && e.key === "Enter") {
             e.preventDefault();
@@ -346,6 +370,40 @@ const ArchiveCard = memo(
         </div>
         <footer>
           <span>{info?.relationCount ?? titles.length} conexões</span>
+          {p.card.groups?.length ? (
+            <button
+              className="archive-card-group-count"
+              type="button"
+              title={p.card.groups.map((g) => g.name).join(" · ")}
+              aria-label={`Agrupamentos de ${p.card.title}: ${p.card.groups.map((g) => g.name).join(", ")}`}
+              onClick={() => onConsult?.(p.cardId)}
+            >
+              {p.card.groups.slice(0, 2).map((g) => (
+                <span
+                  key={g.id}
+                  style={{
+                    color: /^#[0-9a-fA-F]{6}$/.test(g.color)
+                      ? g.color
+                      : "#B89A5A",
+                  }}
+                >
+                  ●
+                </span>
+              ))}{" "}
+              {p.card.groups.length} grupos
+            </button>
+          ) : null}
+          {hiddenMatches ? (
+            <small
+              className="archive-filter-hidden-count"
+              title={`${hiddenMatches} correspondências em descendentes recolhidos`}
+            >
+              {hiddenMatches} recolhidos
+            </small>
+          ) : null}
+          {filterKind === "context" ? (
+            <small className="archive-filter-context">Contexto</small>
+          ) : null}
           {info?.children.length ? (
             <button
               type="button"
@@ -400,10 +458,13 @@ const ArchiveCard = memo(
             aria-hidden="true"
           />
         ))}
+        <span className="archive-filter-veil" aria-hidden="true" />
       </article>
     );
   },
   (a, b) =>
+    a.filterKind === b.filterKind &&
+    a.hiddenMatches === b.hiddenMatches &&
     a.p.card === b.p.card &&
     a.p.id === b.p.id &&
     a.p.parentPlacementId === b.p.parentPlacementId &&
@@ -428,6 +489,7 @@ const ArchiveCard = memo(
     a.titles.every((title, i) => title === b.titles[i]),
 );
 export function ArchiveCanvas({
+  filter,
   layout,
   snapshot,
   presentation,
@@ -757,6 +819,7 @@ export function ArchiveCanvas({
       >
         <GraphContent
           nodes={nodes}
+          filter={filter}
           onToggle={busy ? undefined : onToggle}
           onConsult={busy ? undefined : consultCard}
           graph={motion.graph}

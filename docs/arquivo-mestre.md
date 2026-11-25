@@ -1751,3 +1751,18 @@ editor lateral, consulta, multinível, ausência de piscadas e fluidez geral.
 desempenho/escala e cobertura concorrente. A prevenção do incidente operacional
 foi separada em `docs/build-seguro.md`; não houve novo deploy ou restart.
 8.5.3 não iniciada.
+
+## 8.5.3 — Agrupamentos reutilizáveis e filtros (25/11/2026)
+
+Implementados modelos relacionais canônicos, CRUD MASTER com CAS/idempotência,
+associações atômicas no editor, chips na consulta e filtros ANY/ALL com destaque
+e isolamento, contagens recolhidas e contexto ancestral. A apresentação é posterior
+ao layout, sem alterar reservas, expansão, câmera ou animação espacial.
+
+Validação em checkout/Client/PostgreSQL próprios e Chromium com API simulada;
+47 WIPs e artefatos ativos preservados. Migration narrativa aditiva preparada e
+não aplicada em produção. A divergência operacional Prisma/geografia/DiceRollLog
+permanece condicionante para publicação futura; nenhum Client ativo foi gerado.
+Sem deploy/restart ou aceite antecipado; aguardar autorização e validação manual.
+A 8.5.4 não foi iniciada. Relatório, medições, rollback e checklist em
+[fichario-agrupamentos-filtros.md](fichario-agrupamentos-filtros.md).

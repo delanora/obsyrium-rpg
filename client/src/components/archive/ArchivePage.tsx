@@ -16,6 +16,7 @@ import {
   archiveOperation,
   listBoards,
   listCards,
+  listGroups,
   loadGraph,
   type ArchiveOperation,
 } from "../../archiveApi";
@@ -29,6 +30,7 @@ import {
   type NarrativeCardDto,
   type NarrativeCategory,
   type NarrativeRelation,
+  type NarrativeGroupDto,
 } from "../../../../src/modules/shared/narrative";
 import { Icon } from "../Icon";
 import {
@@ -64,6 +66,16 @@ import {
 import { ArchiveReader, type ArchiveReaderHandle } from "./ArchiveReader";
 import { archiveDescendants } from "./archiveHierarchy";
 import { projectArchive } from "./archiveProjection";
+import {
+  ArchiveGroupManager,
+  ArchiveGroupPicker,
+  ArchiveFilterControls,
+} from "./ArchiveGroupControls";
+import {
+  filterArchive,
+  EMPTY_ARCHIVE_FILTER,
+  type ArchiveFilterState,
+} from "./archiveFilters";
 import "./archive.css";
 const EMPTY_EXPANSION = new Set<string>();
 const EMPTY_RESERVE_EXCEPTIONS: ArchiveReserveExceptions = {};
@@ -218,10 +230,38 @@ export function ArchivePage() {
   // Memória desta janela, por quadro; não persiste nem publica expansão.
   const [expansion, setExpansion] = useState<Record<string, Set<string>>>({});
   const expanded = expansion[boardId] ?? EMPTY_EXPANSION;
+  const [groups, setGroups] = useState<NarrativeGroupDto[]>([]);
+  const [groupsOpen, setGroupsOpen] = useState(false);
+  const [filters, setFilters] = useState<Record<string, ArchiveFilterState>>(
+    {},
+  );
+  const filterState = filters[boardId] ?? EMPTY_ARCHIVE_FILTER;
   const projection = useMemo(
     () => (graph ? projectArchive(graph, expanded) : null),
     [graph, expanded],
   );
+  const filterPresentation = useMemo(
+    () =>
+      graph && projection
+        ? filterArchive(graph, projection, filterState)
+        : null,
+    [graph, projection, filterState],
+  );
+  useEffect(() => {
+    const valid = new Set(groups.map((g) => g.id));
+    setFilters((previous) => {
+      let changed = false;
+      const next = Object.fromEntries(
+        Object.entries(previous).map(([id, state]) => {
+          const groupIds = state.groupIds.filter((id) => valid.has(id));
+          if (groupIds.length === state.groupIds.length) return [id, state];
+          changed = true;
+          return [id, { ...state, groupIds }];
+        }),
+      );
+      return changed ? next : previous;
+    });
+  }, [groups]);
   const [layoutAnchors, setLayoutAnchors] = useState<
     Record<string, Record<string, ArchiveAnchor>>
   >({});
@@ -315,6 +355,7 @@ export function ArchivePage() {
     category: "note" as NarrativeCategory,
     summary: "",
     content: "",
+    groupIds: [] as string[],
     relation: "related" as NarrativeRelation,
     label: "",
     directed: true,
@@ -323,6 +364,7 @@ export function ArchivePage() {
   const onInteraction = useCallback((active: boolean) => {
     interacting.current = active;
   }, []);
+  const lastCanvasFocus = useRef<ArchiveSelection>(null);
   const root = useRef<HTMLDivElement>(null),
     lock = useRef(false),
     generation = useRef(0),
@@ -375,6 +417,7 @@ export function ArchivePage() {
       const next = await loadGraph(chosen);
       if (request !== generation.current) return;
       setGraph(next);
+      if (next.groups) setGroups(next.groups);
       setLayoutAnchors((previous) => {
         if (!previous[chosen]) return previous;
         const valid: Record<string, ArchiveAnchor> = {};
@@ -416,6 +459,11 @@ export function ArchivePage() {
     } else {
       setGraph(null);
       setBoardId("");
+      try {
+        setGroups((await listGroups()).groups);
+      } catch (e) {
+        if (!(e instanceof ApiError && e.status === 404)) throw e;
+      }
     }
     onApplied?.();
     setLoading(false);
@@ -469,6 +517,69 @@ export function ArchivePage() {
       setSelected(owner ? { kind: "card", id: owner } : null);
     }
   }, [projection, selected, graph, radial]);
+  useLayoutEffect(() => {
+    if (!filterPresentation?.active || filterPresentation.mode !== "isolate")
+      return;
+    const visible = filterPresentation.visibleIds;
+    if (selected?.kind === "card" && !visible.has(selected.id))
+      setSelected(null);
+    if (
+      radial?.targetId &&
+      radial.kind !== "link" &&
+      !visible.has(radial.targetId)
+    )
+      setRadial(null);
+    if (radial?.kind === "link") {
+      const link = graph?.links.find((l) => l.id === radial.targetId);
+      if (
+        link &&
+        graph?.placements.some(
+          (p) =>
+            (p.cardId === link.sourceId || p.cardId === link.targetId) &&
+            !visible.has(p.id),
+        )
+      )
+        setRadial(null);
+    }
+    if (selected?.kind === "link") {
+      const link = graph?.links.find((l) => l.id === selected.id);
+      if (
+        link &&
+        !graph?.placements
+          .filter(
+            (p) => p.cardId === link.sourceId || p.cardId === link.targetId,
+          )
+          .every((p) => visible.has(p.id))
+      ) {
+        setSelected(null);
+        setRadial(null);
+      }
+    }
+    const active = document.activeElement;
+    const focused = active?.closest<HTMLElement>("[data-placement]");
+    const remembered = lastCanvasFocus.current;
+    const rememberedHidden =
+      remembered?.kind === "card"
+        ? !visible.has(remembered.id)
+        : remembered?.kind === "link" &&
+          !!graph?.links.some(
+            (link) =>
+              link.id === remembered.id &&
+              graph.placements.some(
+                (p) =>
+                  (p.cardId === link.sourceId || p.cardId === link.targetId) &&
+                  !visible.has(p.id),
+              ),
+          );
+    // hidden pode transferir o foco para body antes do layout effect no Chromium.
+    if (
+      (focused && !visible.has(focused.dataset.placement!)) ||
+      (active === document.body && rememberedHidden)
+    )
+      root.current
+        ?.querySelector<HTMLElement>(".archive-viewport")
+        ?.focus({ preventScroll: true });
+  }, [filterPresentation, selected, radial, graph]);
   const toggleBranches = useCallback((id: string) => {
     const c = current.current;
     if (c.busy || c.pending || interacting.current) return;
@@ -730,6 +841,7 @@ export function ArchivePage() {
       category: card.category,
       summary: card.summary,
       content: card.content,
+      groupIds: (card.groups ?? []).map((g) => g.id),
     }));
     setEditor({ kind: "card", id: card.id, version: card.version });
   }, []);
@@ -746,6 +858,7 @@ export function ArchivePage() {
       category,
       summary: "",
       content: "",
+      groupIds: [],
     }));
     setEditor({ kind: "card", parentPlacementId });
   };
@@ -789,6 +902,7 @@ export function ArchivePage() {
                 category: draft.category,
                 summary: draft.summary,
                 content: draft.content,
+                groups: groups.filter((g) => draft.groupIds.includes(g.id)),
               },
             }
           : p,
@@ -802,6 +916,8 @@ export function ArchivePage() {
     draft.category,
     draft.summary,
     draft.content,
+    draft.groupIds,
+    groups,
   ]);
   const closeRadial = useCallback(() => setRadial(null), []);
   const openContextMenu = useCallback(
@@ -1114,6 +1230,16 @@ export function ArchivePage() {
       className="archive-page"
       ref={root}
       aria-label="Fichário do Mestre"
+      onFocusCapture={(event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const card = target?.closest<HTMLElement>("[data-placement]");
+        const link = target?.closest("[data-link]")?.getAttribute("data-link");
+        lastCanvasFocus.current = card
+          ? { kind: "card", id: card.dataset.placement! }
+          : link
+            ? { kind: "link", id: link }
+            : null;
+      }}
     >
       <div className="archive-notices">
         {error && !editor ? (
@@ -1161,6 +1287,15 @@ export function ArchivePage() {
             graph={graph}
             projection={projection}
             busy={guarded}
+            onFilterGroup={(id) =>
+              setFilters((previous) => ({
+                ...previous,
+                [boardId]: {
+                  ...(previous[boardId] ?? EMPTY_ARCHIVE_FILTER),
+                  groupIds: [id],
+                },
+              }))
+            }
             onEdit={(cardId) => {
               const p = current.current.graph?.placements.find(
                 (p) => p.cardId === cardId,
@@ -1176,6 +1311,7 @@ export function ArchivePage() {
             presentation={presentation}
             nodes={projection!.nodes}
             onToggle={toggleBranches}
+            filter={filterPresentation ?? undefined}
             camera={camera}
             onCamera={onCamera}
             selected={selected}
@@ -1245,6 +1381,23 @@ export function ArchivePage() {
             </h2>
             <small>Arquivo privado · malha narrativa</small>
           </div>
+          <ArchiveFilterControls
+            groups={groups}
+            state={filterState}
+            result={filterPresentation}
+            disabled={guarded}
+            onManage={() => setGroupsOpen(true)}
+            onChange={(state) =>
+              setFilters((previous) => ({ ...previous, [boardId]: state }))
+            }
+          />
+          <button
+            className="btn btn-small"
+            type="button"
+            onClick={() => setGroupsOpen(true)}
+          >
+            Agrupamentos
+          </button>
           <label>
             Quadro
             <select
@@ -1408,6 +1561,13 @@ export function ArchivePage() {
           </div>
         ) : null}
       </footer>
+      {groupsOpen ? (
+        <ArchiveGroupManager
+          groups={groups}
+          onClose={() => setGroupsOpen(false)}
+          onRefresh={() => refresh(boardId)}
+        />
+      ) : null}
       {radial && !editor ? (
         <SceneEditorRadialMenu
           point={radial.point}
@@ -1642,6 +1802,7 @@ export function ArchivePage() {
                     category: draft.category,
                     summary: draft.summary,
                     content: draft.content,
+                    groupIds: draft.groupIds,
                   };
                   run(
                     editor.id
@@ -1738,6 +1899,13 @@ export function ArchivePage() {
                       ))}
                     </select>
                   </label>
+                  <ArchiveGroupPicker
+                    disabled={guarded}
+                    groups={groups}
+                    selected={draft.groupIds}
+                    onChange={(ids) => setDraft({ ...draft, groupIds: ids })}
+                    onManage={() => setGroupsOpen(true)}
+                  />
                   <label>
                     Resumo
                     <textarea

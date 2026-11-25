@@ -3,7 +3,31 @@ import {
   NARRATIVE_CATEGORIES,
   NARRATIVE_RELATIONS,
 } from "../shared/narrative.js";
+import {
+  normalizeNarrativeGroupName,
+  NARRATIVE_GROUP_LIMITS,
+} from "../shared/narrative-groups.js";
 const id = z.string().uuid();
+const group = {
+  name: z
+    .string()
+    .max(1000)
+    .transform(normalizeNarrativeGroupName)
+    .pipe(z.string().min(1).max(NARRATIVE_GROUP_LIMITS.name)),
+  description: z.string().max(NARRATIVE_GROUP_LIMITS.description).default(""),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .transform((c) => c.toUpperCase()),
+};
+const groupIds = z
+  .array(id)
+  .max(500)
+  .transform((ids) => [...new Set(ids)].sort())
+  .refine(
+    (ids) => ids.length <= NARRATIVE_GROUP_LIMITS.perCard,
+    "Limite de 30 agrupamentos por card.",
+  );
 const receipt = { operationId: z.string().min(1).max(128) };
 const version = { expectedVersion: z.number().int().nonnegative() };
 const name = z.string().trim().min(1).max(160);
@@ -13,6 +37,7 @@ const card = {
   category: z.enum(NARRATIVE_CATEGORIES),
   summary: z.string().max(1000),
   content: z.string().max(100000),
+  groupIds: groupIds.optional(),
 };
 export const narrativeGeometrySchema = z
   .object({
@@ -44,6 +69,26 @@ const branch = {
   branchRelation: branchRelation.optional(),
 };
 export const archiveOperationSchema = z.discriminatedUnion("action", [
+  z
+    .object({ ...receipt, action: z.literal("group.create"), ...group })
+    .strict(),
+  z
+    .object({
+      ...receipt,
+      ...version,
+      action: z.literal("group.update"),
+      groupId: id,
+      ...group,
+    })
+    .strict(),
+  z
+    .object({
+      ...receipt,
+      ...version,
+      action: z.literal("group.delete"),
+      groupId: id,
+    })
+    .strict(),
   z
     .object({
       ...receipt,

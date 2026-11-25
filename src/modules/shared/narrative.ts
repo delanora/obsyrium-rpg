@@ -1,3 +1,11 @@
+import type {
+  NarrativeGroupSummaryDto,
+  NarrativeGroupDto,
+} from "./narrative-groups.js";
+export type {
+  NarrativeGroupSummaryDto,
+  NarrativeGroupDto,
+} from "./narrative-groups.js";
 /** Classificações narrativas; não concedem ações nem efeitos mecânicos. */
 export const NARRATIVE_CATEGORIES = [
   "region",
@@ -74,6 +82,8 @@ export interface NarrativeBoardDto {
   updatedAt: string;
 }
 export interface NarrativeCardDto {
+  /** Aditivo: ausente em clientes/snapshots anteriores. Identidade canônica. */
+  groups?: NarrativeGroupSummaryDto[];
   id: string;
   title: string;
   category: NarrativeCategory;
@@ -110,6 +120,7 @@ export interface NarrativeLinkDto {
   version: number;
 }
 export interface NarrativeGraphDto {
+  groups?: NarrativeGroupDto[];
   board: NarrativeBoardDto;
   placements: NarrativePlacementDto[];
   links: NarrativeLinkDto[];

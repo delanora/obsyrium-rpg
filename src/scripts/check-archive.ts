@@ -97,6 +97,15 @@ try {
       y: 456,
     });
     checks++;
+    const groups = await readFile(
+      new URL(
+        "../../prisma/migrations/20261125120000_narrative_groups/migration.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    for (const statement of groups.split(";").filter((s) => s.trim()))
+      await tx.$executeRawUnsafe(statement);
     await tx.$executeRaw`DELETE FROM narrative_boards WHERE id=${legacyBoard}`;
     await tx.$executeRaw`DELETE FROM narrative_cards WHERE id=${legacyCard}`;
     await tx.$executeRawUnsafe(

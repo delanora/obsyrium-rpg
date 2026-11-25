@@ -8,8 +8,18 @@ import {
   archiveOperationSchema,
   type ArchiveOperation,
 } from "./archive.schema.js";
-import { boardDto, cardDto, linkDto } from "./archive.dto.js";
+import {
+  groupDto,
+  cardGroupsInclude,
+  boardDto,
+  cardDto,
+  linkDto,
+} from "./archive.dto.js";
 import type { NarrativeGraphDto } from "../shared/narrative.js";
+import {
+  narrativeGroupNameKey,
+  NARRATIVE_GROUP_LIMITS,
+} from "../shared/narrative-groups.js";
 export interface ArchiveActor {
   userId: string;
   role: string;
@@ -36,9 +46,21 @@ export async function listArchiveCards(actor: ArchiveActor) {
     select: { id: true, title: true, category: true, version: true },
   });
 }
+export async function listArchiveGroups(actor: ArchiveActor) {
+  requireMaster(actor);
+  return (
+    await prisma.narrativeGroup.findMany({
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      include: { _count: { select: { cards: true } } },
+    })
+  ).map(groupDto);
+}
 export async function getArchiveCard(actor: ArchiveActor, id: string) {
   requireMaster(actor);
-  const r = await prisma.narrativeCard.findUnique({ where: { id } });
+  const r = await prisma.narrativeCard.findUnique({
+    where: { id },
+    include: cardGroupsInclude,
+  });
   if (!r) throw new HttpError("Card não encontrado.", 404);
   return cardDto(r);
 }
@@ -53,7 +75,7 @@ export async function getArchiveGraph(
       if (!board) throw new HttpError("Quadro não encontrado.", 404);
       const placements = await db.narrativePlacement.findMany({
         where: { boardId: id },
-        include: { card: true },
+        include: { card: { include: cardGroupsInclude } },
         orderBy: [{ zIndex: "asc" }, { id: "asc" }],
       });
       const ids = placements.map((p) => p.cardId);
@@ -63,6 +85,12 @@ export async function getArchiveGraph(
       });
       return {
         board: boardDto(board),
+        groups: (
+          await db.narrativeGroup.findMany({
+            orderBy: [{ name: "asc" }, { id: "asc" }],
+            include: { _count: { select: { cards: true } } },
+          })
+        ).map(groupDto),
         placements: placements.map((p) => ({ ...p, card: cardDto(p.card) })),
         links: links.map(linkDto),
       };
@@ -245,8 +273,133 @@ export async function operateArchive(
               data: { ...data, createdById: actor.userId },
             });
         };
+        const replaceGroups = async (
+          cardId: string,
+          ids: string[] | undefined,
+        ) => {
+          if (ids === undefined) return; // Contratos antigos preservam as associações.
+          if (
+            ids.length &&
+            (await db.narrativeGroup.count({ where: { id: { in: ids } } })) !==
+              ids.length
+          )
+            throw new HttpError(
+              "Um agrupamento foi excluído. Recarregue antes de salvar.",
+              409,
+              "GROUP_NOT_FOUND",
+            );
+          const old = await db.narrativeCardGroup.findMany({
+            where: { cardId },
+            select: { groupId: true },
+          });
+          const previous = new Set(old.map((g) => g.groupId)),
+            next = new Set(ids);
+          const changed = [...new Set([...previous, ...next])].filter(
+            (id) => previous.has(id) !== next.has(id),
+          );
+          if (!changed.length) return;
+          // O CAS do agrupamento também protege a quantidade exibida na confirmação.
+          await db.narrativeGroup.updateMany({
+            where: { id: { in: changed } },
+            data: { version: { increment: 1 } },
+          });
+          await db.narrativeCardGroup.deleteMany({ where: { cardId } });
+          if (ids.length)
+            await db.narrativeCardGroup.createMany({
+              data: ids.map((groupId) => ({ cardId, groupId })),
+            });
+        };
         let receipt: ArchiveReceipt;
         switch (input.action) {
+          case "group.create":
+          case "group.update": {
+            const nameKey = narrativeGroupNameKey(input.name);
+            const duplicate = await db.narrativeGroup.findUnique({
+              where: { nameKey },
+            });
+            if (
+              duplicate &&
+              (input.action === "group.create" ||
+                duplicate.id !== input.groupId)
+            )
+              throw new HttpError(
+                "Já existe um agrupamento com esse nome.",
+                409,
+                "DUPLICATE_GROUP",
+              );
+            const data = {
+              name: input.name,
+              nameKey,
+              color: input.color,
+              description: input.description,
+            };
+            if (input.action === "group.create") {
+              if (
+                (await db.narrativeGroup.count()) >=
+                NARRATIVE_GROUP_LIMITS.total
+              )
+                throw new HttpError(
+                  "Limite de 500 agrupamentos atingido.",
+                  400,
+                  "GROUP_LIMIT",
+                );
+              const r = await db.narrativeGroup.create({
+                data: { ...data, createdById: actor.userId },
+              });
+              receipt = { id: r.id, version: r.version };
+            } else {
+              if (
+                !(await db.narrativeGroup.findUnique({
+                  where: { id: input.groupId },
+                }))
+              )
+                throw new HttpError("Agrupamento não encontrado.", 404);
+              if (
+                !(
+                  await db.narrativeGroup.updateMany({
+                    where: {
+                      id: input.groupId,
+                      version: input.expectedVersion,
+                    },
+                    data: { ...data, version: { increment: 1 } },
+                  })
+                ).count
+              )
+                throw conflict();
+              receipt = {
+                id: input.groupId,
+                version: input.expectedVersion + 1,
+              };
+            }
+            break;
+          }
+          case "group.delete": {
+            const r = await db.narrativeGroup.findUnique({
+              where: { id: input.groupId },
+            });
+            if (!r) throw new HttpError("Agrupamento não encontrado.", 404);
+            if (r.version !== input.expectedVersion) throw conflict();
+            const cards = await db.narrativeCardGroup.findMany({
+              where: { groupId: r.id },
+              select: { cardId: true },
+            });
+            if (
+              !(
+                await db.narrativeGroup.deleteMany({
+                  where: { id: r.id, version: input.expectedVersion },
+                })
+              ).count
+            )
+              throw conflict();
+            // A remoção do vínculo participa do CAS do card, inclusive em editor pendente.
+            if (cards.length)
+              await db.narrativeCard.updateMany({
+                where: { id: { in: cards.map((c) => c.cardId) } },
+                data: { version: { increment: 1 } },
+              });
+            receipt = { id: r.id };
+            break;
+          }
           case "board.create": {
             if ((await db.narrativeBoard.count()) >= 100)
               throw new HttpError("Limite de 100 quadros atingido.", 400);
@@ -316,6 +469,7 @@ export async function operateArchive(
                 },
               });
               cardId = card.id;
+              await replaceGroups(cardId, input.groupIds);
             } else {
               await ensureCard(input.cardId);
               cardId = input.cardId;
@@ -483,8 +637,18 @@ export async function operateArchive(
                   branchOffsetY: null,
                 },
               });
+              const groups = await db.narrativeCardGroup.findMany({
+                where: { cardId: input.cardId },
+                select: { groupId: true },
+              });
+              if (groups.length)
+                await db.narrativeGroup.updateMany({
+                  where: { id: { in: groups.map((g) => g.groupId) } },
+                  data: { version: { increment: 1 } },
+                });
               await db.narrativeCard.delete({ where: { id: input.cardId } });
-            } else
+            } else {
+              await replaceGroups(input.cardId, input.groupIds);
               await db.narrativeCard.update({
                 where: { id: input.cardId },
                 data: {
@@ -494,6 +658,7 @@ export async function operateArchive(
                   content: input.content,
                 },
               });
+            }
             receipt = { id: input.cardId, version: input.expectedVersion + 1 };
             break;
           }

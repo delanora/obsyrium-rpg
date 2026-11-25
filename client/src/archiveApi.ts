@@ -4,11 +4,14 @@ import type {
   NarrativeBoardDto,
   NarrativeGraphDto,
   NarrativeCardDto,
+  NarrativeGroupDto,
 } from "../../src/modules/shared/narrative";
 export type { ArchiveOperation };
 export const ARCHIVE_CHANGED = "obsyrium:archive-changed";
 export const notifyArchiveChanged = () =>
   window.dispatchEvent(new Event(ARCHIVE_CHANGED));
+export const listGroups = () =>
+  api<{ groups: NarrativeGroupDto[] }>("/api/archive/groups");
 export const listBoards = () =>
   api<{ boards: NarrativeBoardDto[] }>("/api/archive/boards");
 export const loadGraph = (id: string) =>

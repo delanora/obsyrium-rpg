@@ -1902,6 +1902,7 @@ model NarrativeCard {
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  groups      NarrativeCardGroup[]
   placements  NarrativePlacement[]
   outgoing    NarrativeLink[] @relation("NarrativeSource")
   incoming    NarrativeLink[] @relation("NarrativeTarget")
@@ -1962,4 +1963,31 @@ model NarrativeOperation {
   createdAt   DateTime @default(now())
   @@unique([actorId, operationId])
   @@map("narrative_operations")
+}
+
+/// Biblioteca global privada do Arquivo, sem hierarquia ou geometria.
+model NarrativeGroup {
+  id          String @id @default(uuid())
+  name        String
+  nameKey     String @unique
+  color       String
+  description String @default("")
+  version     Int @default(0)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cards       NarrativeCardGroup[]
+  @@map("narrative_groups")
+}
+
+/// Associação canônica: jamais pertence à representação ou ao quadro.
+model NarrativeCardGroup {
+  cardId String
+  groupId String
+  createdAt DateTime @default(now())
+  card NarrativeCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  group NarrativeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  @@id([cardId, groupId])
+  @@index([groupId])
+  @@map("narrative_card_groups")
 }

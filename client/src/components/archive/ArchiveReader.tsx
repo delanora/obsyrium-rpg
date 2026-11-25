@@ -10,6 +10,7 @@ import {
   NARRATIVE_CATEGORY_LABELS,
   NARRATIVE_RELATION_LABELS,
 } from "../../../../src/modules/shared/narrative";
+import { GroupChips } from "./ArchiveGroupControls";
 import { ArchiveCategoryIcon } from "./ArchiveCategoryIcon";
 import type { ArchiveProjection } from "./archiveProjection";
 export interface ArchiveReaderHandle {
@@ -23,9 +24,13 @@ export const ArchiveReader = forwardRef<
     graph: NarrativeGraphDto | null;
     projection: ArchiveProjection | null;
     onEdit: (cardId: string) => void;
+    onFilterGroup?: (id: string) => void;
     busy: boolean;
   }
->(function ArchiveReader({ graph, projection, onEdit, busy }, ref) {
+>(function ArchiveReader(
+  { graph, projection, onEdit, onFilterGroup, busy },
+  ref,
+) {
   const [id, setId] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [tab, setTab] = useState<"narrative" | "relations">("narrative");
@@ -136,6 +141,7 @@ export const ArchiveReader = forwardRef<
           Editar card
         </button>
       </div>
+      <GroupChips groups={card.groups ?? []} onPick={onFilterGroup} />
       <nav aria-label="Conteúdo da consulta">
         <button
           type="button"

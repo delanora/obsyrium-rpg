@@ -5,10 +5,19 @@ import {
   getArchiveGraph,
   listArchiveBoards,
   listArchiveCards,
+  listArchiveGroups,
   operateArchive,
 } from "./archive.service.js";
 export const archiveRouter = Router();
 archiveRouter.use(authenticate, requireRole("MASTER"));
+archiveRouter.get("/groups", async (req, res) =>
+  res.json({
+    groups: await listArchiveGroups({
+      userId: req.user!.sub,
+      role: req.user!.role,
+    }),
+  }),
+);
 archiveRouter.get("/boards", async (req, res) =>
   res.json({
     boards: await listArchiveBoards({

@@ -2,6 +2,7 @@ import type {
   NarrativeBoard,
   NarrativeCard,
   NarrativeLink,
+  NarrativeGroup,
 } from "@prisma/client";
 import type {
   NarrativeBoardDto,
@@ -13,9 +14,31 @@ export const boardDto = (r: NarrativeBoard): NarrativeBoardDto => ({
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),
 });
-export const cardDto = (r: NarrativeCard): NarrativeCardDto => ({
+export const groupSummary = (r: NarrativeGroup) => ({
+  id: r.id,
+  name: r.name,
+  color: r.color,
+  version: r.version,
+});
+export const groupDto = (
+  r: NarrativeGroup & { _count?: { cards: number } },
+) => ({
+  ...groupSummary(r),
+  description: r.description,
+  createdById: r.createdById,
+  createdAt: r.createdAt.toISOString(),
+  updatedAt: r.updatedAt.toISOString(),
+  cardCount: r._count?.cards ?? 0,
+});
+export const cardGroupsInclude = {
+  groups: { include: { group: true }, orderBy: { groupId: "asc" as const } },
+};
+export const cardDto = (
+  r: NarrativeCard & { groups?: { group: NarrativeGroup }[] },
+): NarrativeCardDto => ({
   ...r,
   category: r.category as NarrativeCardDto["category"],
+  groups: (r.groups ?? []).map((entry) => groupSummary(entry.group)),
   createdAt: r.createdAt.toISOString(),
   updatedAt: r.updatedAt.toISOString(),
 });

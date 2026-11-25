@@ -1,0 +1,805 @@
+[
+  {
+    "n": 50,
+    "mode": "none",
+    "measurements": [
+      {
+        "filterEventMs": 17.5,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          9.799999952316284,
+          0.20000004768371582
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 30.099999964237213,
+        "filterCpuMs": 0,
+        "reactMs": [
+          11.600000023841858,
+          0.3999999761581421
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 30.600000023841858,
+        "filterCpuMs": 0,
+        "reactMs": [
+          8.900000035762787,
+          0.20000004768371582
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 50,
+    "mode": "highlight-any",
+    "measurements": [
+      {
+        "filterEventMs": 52.5,
+        "filterCpuMs": 0,
+        "reactMs": [
+          36.10000002384186,
+          0.800000011920929
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.19999998807907,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          10.900000035762787,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.30000001192093,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          9,
+          0.30000001192092896
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 50,
+    "mode": "highlight-all",
+    "measurements": [
+      {
+        "filterEventMs": 32.200000047683716,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          19.40000009536743,
+          0.30000001192092896
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.5,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          9.099999964237213,
+          0.30000001192092896
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.5,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          8,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 50,
+    "mode": "isolate-any",
+    "measurements": [
+      {
+        "filterEventMs": 41.10000002384186,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          25.19999998807907,
+          0.30000001192092896
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.099999964237213,
+        "filterCpuMs": 0,
+        "reactMs": [
+          7.899999976158142,
+          0.30000001192092896
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.5,
+        "filterCpuMs": 0,
+        "reactMs": [
+          8.000000059604645,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 50,
+    "mode": "isolate-all",
+    "measurements": [
+      {
+        "filterEventMs": 32.40000003576279,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          20.999999940395355,
+          0.30000001192092896
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.30000001192093,
+        "filterCpuMs": 0,
+        "reactMs": [
+          8.099999964237213,
+          0.20000004768371582
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 17.100000023841858,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          10,
+          0.30000001192092896
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 100,
+    "mode": "none",
+    "measurements": [
+      {
+        "filterEventMs": 120.29999995231628,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          59.299999952316284,
+          0.30000001192092896
+        ],
+        "longTasks": [
+          70
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 30.200000047683716,
+        "filterCpuMs": 0.2999999523162842,
+        "reactMs": [
+          25.80000001192093,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.399999976158142,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          16.100000023841858,
+          0.2999999523162842
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 100,
+    "mode": "highlight-any",
+    "measurements": [
+      {
+        "filterEventMs": 81.5,
+        "filterCpuMs": 0,
+        "reactMs": [
+          56.999999940395355,
+          0.3999999761581421
+        ],
+        "longTasks": [
+          66
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 22.799999952316284,
+        "filterCpuMs": 0,
+        "reactMs": [
+          10.300000071525574,
+          0.09999996423721313
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 30.899999976158142,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          3.0000000596046448,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 100,
+    "mode": "highlight-all",
+    "measurements": [
+      {
+        "filterEventMs": 33.19999998807907,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          7.199999988079071,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          3,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.099999964237213,
+        "filterCpuMs": 0,
+        "reactMs": [
+          2.800000011920929,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 100,
+    "mode": "isolate-any",
+    "measurements": [
+      {
+        "filterEventMs": 34.10000002384186,
+        "filterCpuMs": 0.20000004768371582,
+        "reactMs": [
+          10.999999940395355,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.19999998807907,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          2.899999976158142,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 20.30000001192093,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          2.800000011920929,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 100,
+    "mode": "isolate-all",
+    "measurements": [
+      {
+        "filterEventMs": 34.40000003576279,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          7.599999964237213,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 23.600000023841858,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          2.799999952316284,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 21.899999976158142,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          15.5,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 200,
+    "mode": "none",
+    "measurements": [
+      {
+        "filterEventMs": 133.60000002384186,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          25.79999989271164,
+          0
+        ],
+        "longTasks": [
+          87
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 30.599999964237213,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          8.800000011920929,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          4.899999976158142,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 200,
+    "mode": "highlight-any",
+    "measurements": [
+      {
+        "filterEventMs": 83.40000003576279,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          23.899999916553497,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.19999998807907,
+        "filterCpuMs": 0.20000004768371582,
+        "reactMs": [
+          7.800000071525574,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.099999964237213,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          8.199999988079071,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 200,
+    "mode": "highlight-all",
+    "measurements": [
+      {
+        "filterEventMs": 102.90000003576279,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          65.69999998807907,
+          0.19999998807907104
+        ],
+        "longTasks": [
+          77
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 38.5,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          32.29999989271164,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 36.39999997615814,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          30.399999916553497,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 200,
+    "mode": "isolate-any",
+    "measurements": [
+      {
+        "filterEventMs": 77.59999996423721,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          35.59999990463257,
+          0
+        ],
+        "longTasks": [
+          51
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.099999964237213,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          8.799999833106995,
+          0.09999996423721313
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.5,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          5.099999964237213,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 200,
+    "mode": "isolate-all",
+    "measurements": [
+      {
+        "filterEventMs": 36.39999997615814,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          13.599999964237213,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 20.30000001192093,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          5.199999928474426,
+          0.09999996423721313
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 22.399999976158142,
+        "filterCpuMs": 0.10000002384185791,
+        "reactMs": [
+          4.799999952316284,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 500,
+    "mode": "none",
+    "measurements": [
+      {
+        "filterEventMs": 460.9000000357628,
+        "filterCpuMs": 0.2999999523162842,
+        "reactMs": [
+          168.70000010728836,
+          0.19999998807907104
+        ],
+        "longTasks": [
+          216,
+          234
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 37.59999996423721,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          21.399999916553497,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 33.39999997615814,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          18.90000009536743,
+          0.09999996423721313
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 500,
+    "mode": "highlight-any",
+    "measurements": [
+      {
+        "filterEventMs": 179.19999998807907,
+        "filterCpuMs": 0.30000001192092896,
+        "reactMs": [
+          55.700000524520874,
+          0.20000004768371582
+        ],
+        "longTasks": [
+          99,
+          65
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 44.90000003576279,
+        "filterCpuMs": 0.30000001192092896,
+        "reactMs": [
+          20.399999976158142,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 32.80000001192093,
+        "filterCpuMs": 0.40000003576278687,
+        "reactMs": [
+          18.499999940395355,
+          0.20000004768371582
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 500,
+    "mode": "highlight-all",
+    "measurements": [
+      {
+        "filterEventMs": 244.5,
+        "filterCpuMs": 0.30000001192092896,
+        "reactMs": [
+          157.39999985694885,
+          0
+        ],
+        "longTasks": [
+          186
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 32.89999997615814,
+        "filterCpuMs": 0.30000001192092896,
+        "reactMs": [
+          17.900000035762787,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 30.899999976158142,
+        "filterCpuMs": 0.30000001192092896,
+        "reactMs": [
+          17.000000059604645,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 500,
+    "mode": "isolate-any",
+    "measurements": [
+      {
+        "filterEventMs": 168.30000001192093,
+        "filterCpuMs": 0.3999999761581421,
+        "reactMs": [
+          52.00000011920929,
+          0.19999998807907104
+        ],
+        "longTasks": [
+          92,
+          60
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 25.899999976158142,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          12.300000011920929,
+          0.19999998807907104
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.400000035762787,
+        "filterCpuMs": 0.40000003576278687,
+        "reactMs": [
+          15.399999916553497,
+          0
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  },
+  {
+    "n": 500,
+    "mode": "isolate-all",
+    "measurements": [
+      {
+        "filterEventMs": 94.5,
+        "filterCpuMs": 0.2999999523162842,
+        "reactMs": [
+          35.10000002384186,
+          0.20000004768371582
+        ],
+        "longTasks": [
+          65
+        ],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.100000023841858,
+        "filterCpuMs": 0.19999998807907104,
+        "reactMs": [
+          13.899999916553497,
+          0.09999996423721313
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      },
+      {
+        "filterEventMs": 31.200000047683716,
+        "filterCpuMs": 0.09999996423721313,
+        "reactMs": [
+          12.5,
+          0.10000002384185791
+        ],
+        "longTasks": [],
+        "layouts": 0,
+        "sameGeometry": true
+      }
+    ]
+  }
+]
