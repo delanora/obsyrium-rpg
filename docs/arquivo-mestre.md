@@ -1664,3 +1664,49 @@ e correção das piscadas. A organização interna radial não foi ampliada.
 Implementação, reprodução, política manual, testes, métricas e limites em
 `docs/fichario-reserva-estabilidade.md`. Sem publicação/restart; aguardar análise
 e novo aceite. A Fase 8.5.2.4 não foi iniciada.
+
+### Publicação controlada da 8.5.2.3.1 — 24/11/2026
+
+Autorização específica do responsável para o commit funcional
+`4c7e866832804800675c1b01f09f4962a2bd1aae`, branch `main`, repositório
+`delanora/obsyrium-rpg`. HEAD, origin/main e `git ls-remote` novamente conferidos,
+iguais ao SHA autorizado antes da operação. Os 47 WIPs preservados por caminhos e
+hashes; nenhum foi incorporado à entrega.
+
+A composição ativa (`index-tPm1jDVE.js` / `index-BwtHA_mH.css`) foi registrada.
+Espelho isolado em `/tmp/reserva-publicacao` reproduziu byte a byte os 340 arquivos
+da versão publicada antes da sobreposição. Aplicados somente os cinco módulos
+frontend autorizados, conferidos por hash contra o commit. Build/typecheck no
+espelho; nenhum build no diretório ativo. Margem 280, distribuição interna,
+curvas, temporizações, limites, textura e identidade visual sem alteração adicional.
+
+Backup integral de 355 arquivos, com hashes conferidos:
+`/var/backups/obsyrium/20261124-reserva-85231/client-dist/`. Manifests, logs e
+`rollback-frontend.py` no diretório superior. Rollback restaura assets antes do HTML
+por rename atômico, preserva bundles novos para clientes com cache e não toca no
+backend/banco nem exige restart.
+
+Reexecutadas **1.923 verificações puras**: reserva 441, animação 723, layout 718,
+projeção 25 e câmera 16. Chromium isolado com fixtures/API simulada: estabilidade
+com 100 ciclos, criação/crescimento/restauração, múltiplos núcleos, personalização,
+gestos, confirmação/ACK, retry/conflito, editor/consulta, externo, reload, mobile,
+conexões, fundo e câmera passaram. Suíte integrada registrou 7.425 pinturas sem
+descontinuidades; nenhuma fixture real ou escrita indevida na campanha.
+
+Publicado `assets/index-CkUT7t6F.js` antes da substituição atômica do HTML. CSS
+`assets/index-BwtHA_mH.css`, PNGs e demais assets mantidos; bundles anteriores
+preservados. Os 340 arquivos do novo build foram conferidos em disco; os 354
+artefatos anteriores além do HTML continuam íntegros. HTML, JS, CSS e linho
+responderam 200 com os hashes esperados. Health retornou `status: ok`,
+`database: up`; rotas privadas do Arquivo recusaram acesso sem autenticação (401).
+Logs do serviço sem erros relevantes durante a operação. PID 2467899 inalterado.
+Backend compilado, Prisma Client, schema/migrations e WIPs preservados por hash.
+Sem alteração de banco, migration, geração de Prisma ou restart.
+
+Espelho reutilizável atualizado após as verificações. Alerta de bundle grande
+permanece. Preservados o histórico do aceite inicial 20/20 e da identificação
+posterior das piscadas. **A 8.5.2.3 permanece em hardening até novo aceite manual.**
+Veto conservador da reserva, conflitos residuais densos, custos adicionais do
+resolvedor, renderização, long tasks e limites de animação continuam como dívidas
+registradas em `docs/fichario-reserva-estabilidade.md`; não foram declarados
+resolvidos. A Fase 8.5.2.4 não foi iniciada.

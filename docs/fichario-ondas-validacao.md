@@ -84,3 +84,8 @@ externa mais generosa. A Fase 8.5.2.3 está reaberta para hardening pontual; a
 8.5.2.3.1 não equivale a aceite definitivo nem autoriza publicação automática.
 Os benchmarks anteriores e suas dívidas permanecem válidos. Detalhes em
 `docs/fichario-reserva-estabilidade.md`. A 8.5.2.4 não foi iniciada.
+
+A 8.5.2.3.1 foi posteriormente publicada exclusivamente no frontend, por
+autorização controlada do commit `4c7e866832804800675c1b01f09f4962a2bd1aae`.
+Mantém-se a 8.5.2.3 em hardening até novo aceite manual; as dívidas de escala,
+veto conservador, conflitos residuais e long tasks não foram declaradas resolvidas.

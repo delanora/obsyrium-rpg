@@ -1,6 +1,7 @@
 # Fichário — 8.5.2.3.1: reserva externa e continuidade visual
 
-Implementação frontend, **sem publicação**. A 8.5.2.3 recebeu aceite inicial
+**Publicada exclusivamente no frontend por autorização controlada**, SHA
+`4c7e866832804800675c1b01f09f4962a2bd1aae`. A 8.5.2.3 recebeu aceite inicial
 informado de 20/20 e foi reaberta após uso adicional. Esta entrega é hardening
 pontual, aguarda novo aceite e não inicia a 8.5.2.4.
 
@@ -235,8 +236,8 @@ benchmark. Documentação pertinente atualizada, Roadmap resumido. Nenhum backen
 DTO de persistência, schema ou migration desta entrega.
 
 SHA final, push e conferência `origin/main`/`git ls-remote` são apresentados na entrega.
-Um único commit isolado; 47 WIPs preservados. Publicação depende de autorização
-separada. Aguardar novo aceite manual da 8.5.2.3 em hardening.
+Um único commit isolado; 47 WIPs preservados. Publicação realizada por autorização separada; registro operacional em
+`docs/arquivo-mestre.md`. Aguardar novo aceite manual da 8.5.2.3 em hardening.
 
 ### Checklist manual e dívidas
 
