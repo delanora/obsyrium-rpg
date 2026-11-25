@@ -1818,3 +1818,100 @@ Health `ok/database:up`, sem avisos/erros recentes no journal. Backend e Prisma
 Client idênticos por hash; PID `3297180` mantido, sem restart, migrations ou escrita
 no banco. Os 47 WIPs permanecem idênticos por caminhos e hashes. Aguarda aceite
 visual do responsável; sem avanço de fase ou quitação das dívidas existentes.
+## Aceite manual da 8.5.3 — 25/11/2026
+
+O responsável informou o aceite manual integral da fase de agrupamentos e filtros:
+**28/28 critérios aprovados em 25/11/2026**. A 8.5.3 está concluída no escopo
+funcional, com a publicação controlada de 25/11/2026 (`1b1bdc7`), migration
+narrativa aditiva aplicada isoladamente e backend reiniciado de forma controlada.
+
+Permanecem abertas, sem reabrir a fase: divergência global Prisma/geografia,
+dívidas de escala, permissões e cobertura concorrente. O refinamento intermediário
+da barra em uma linha e do botão de ajuda “?” (`76f77b6`) continua **sem aceite
+visual específico**; trata-se de pendência própria, não da 8.5.3.
+
+## 8.5.4 — divisão da fase de relações
+
+- **8.5.4.1 — Identidade Visual das Relações** (implementada e publicada em
+  `bb1c9b7`, 25/11/2026; validação complementar aprovada, aguardando aceite visual).
+- **8.5.4.2 — Roteamento Inteligente das Conexões** (não iniciada).
+- **8.5.4.3 — Destaque e Interação Relacional** (não iniciada).
+- **8.5.4.4 — Navegação pela Câmera e Histórico** (não iniciada).
+
+## 8.5.4.1 — Identidade visual das relações
+
+Tabela central `archiveRelationStyle.ts` com os 12 tipos reais: tom, tonalidade
+de sombra, espessura, tracejado, ponta direcional e camada de profundidade.
+`ArchiveCanvas` desenha uma definição de ponta por tipo, encaixes de origem e
+destino (`data-link-end`), camada de bainha e área clicável com `data-relation`
+e `data-filter-*`. `ArchiveRelationLabel` monta a cápsula em vetor puro — dois
+retângulos, dois losangos e texto — sem `foreignObject`. `useArchiveMotion`
+atualiza caminho, bainha, área clicável, encaixes e deslocamento do rótulo no
+mesmo quadro, mantendo o scheduler único; nada de medição DOM ou render React
+por frame. `archive.css` consome as custom properties do tipo, com hover
+independente de linha e rótulo, seleção, atenuação e isolamento de filtros.
+
+### Validação complementar (25/11/2026)
+
+- Suítes puras reexecutadas: layout **718**, projeção **25**, câmera **16**,
+  reserva **479**, animação **723**, multinível **396** = **2.357** invariantes
+  espaciais; filtros **802**; identidade visual **7**.
+- Chromium real (158.0.8127.18, cache do host com bibliotecas extraídas em
+  diretório isolado, sem instalar nada na aplicação): estabilidade com sonda por
+  pintura **221 chamadas/0 falhas**, cenários de animação, fundo espacial,
+  desempenho de animação e desempenho multinível aprovados.
+- Suíte nova `check-archive-relations-browser.mjs` (fixture sintética, API
+  simulada, sem campanha): **134 verificações/0 falhas**, 124 pinturas sondadas,
+  300 nós SVG no quadro de 20 vínculos. Cobre os 12 tipos, direção, pontas,
+  rótulos curtos/longos/personalizados, hover isolado de linha e rótulo, seleção,
+  teclado, destaque e isolamento de filtros, inacessibilidade do que está oculto,
+  expansão, recolhimento, reversão rápida, movimento, redimensionamento, pan,
+  zoom, `prefers-reduced-motion`, consulta narrativa e três vínculos no mesmo par.
+- Três suítes antigas de navegador (`check-archive-browser`,
+  `check-archive-groups-browser`, `check-archive-radial-browser`) falham neste
+  host por encerramento/timeout do Chromium **antes** da identidade visual: o
+  mesmo comportamento foi reproduzido no baseline `d7d6fe6`. Não são regressões
+  da 8.5.4.1 e permanecem como limitação de infraestrutura local.
+
+### Desempenho medido (quadro sintético de 180 relações)
+
+| Métrica | `d7d6fe6` | 8.5.4.1 | Variação |
+| --- | --- | --- | --- |
+| Nós SVG | 1.443 | 2.425 | +982 (+68%) |
+| Pintura mediana | 2,3 ms | 3,2 ms | +0,9 ms |
+| Pintura p95 | 2,6 ms | 3,9 ms | +1,3 ms |
+
+Custo coerente com os novos elementos por vínculo (ponta nomeada, bainha,
+encaixes, cápsula e ornamentos), sem long task observada (máximo 3,9 ms). Um
+quadro pequeno não autoriza conclusão universal: as dívidas históricas de escala
+do Fichário permanecem, e a otimização não faz parte desta tarefa.
+
+### Limitações registradas
+
+- Rótulos ainda podem se sobrepor em zoom muito afastado e em pares densos; o
+  resolvedor de colisão pertence à 8.5.4.2 e não foi antecipado.
+- A identificação dos tipos não depende só de cor: espessura, tracejado, ponta e
+  ornamento também distinguem — os doze tons permanecem distinguíveis em zoom usual.
+- A composição ativa foi preservada; nenhum build foi feito em `/opt/rpg`, nenhum
+  backend, schema, Prisma Client, migration ou serviço foi tocado.
+### Build isolado e composição candidata
+
+`npm run build:isolated -- --frontend` executado em `/root/val-8541` (cópia do
+worktree sem `node_modules`, `client/dist` e `dist` reais), com `typecheck:client`,
+build Vite, 51 verificações da guarda operacional e 340 hashes em
+`build-manifest.json`. Nenhum build foi feito em `/opt/rpg` e a composição ativa
+permaneceu intacta.
+
+Comparação por SHA256 contra o frontend publicado (`client/dist` ativo, 362
+arquivos com bundles antigos preservados para cache):
+
+- 338 arquivos idênticos ao ativo;
+- ativo: `assets/index-b3SPDXN9.js` (`72f7acdd…`) e
+  `assets/index-BHXS79W5.css` (`205c247d…`);
+- candidato: `assets/index-DxB60kYH.js` (`9ed9bd19…`) e
+  `assets/index-Cff_cOhu.css` (`cd21e762…`), com `index.html` correspondente;
+- 24 bundles antigos permanecem apenas no diretório ativo.
+
+A composição candidata é, portanto, o frontend publicado sobreposto pelos dois
+artefatos da 8.5.4.1 — não um build genérico de outra composição. **Nada foi
+publicado**: a troca atômica exige autorização e aceite visual do responsável.
