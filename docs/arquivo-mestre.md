@@ -1800,3 +1800,21 @@ simulada aprovados: seis larguras de 390 a 1600 px, ajuda por mouse/teclado e
 38 verificações de agrupamentos, incluindo 100 ciclos de filtros. Sem testes ou
 alterações nos dados reais. Artefatos ativos e 47 WIPs preservados. Este refinamento
 ainda não foi publicado e exige autorização do SHA; não inicia a 8.5.4.
+
+### Publicação da barra compacta — 25/11/2026
+
+Frontend funcional `76f77b6a71887e0753e15c3088b6f2aaeaee1b48` publicado após
+autorização, com main/origin/main e remoto canônico conferidos. Build e typecheck
+ocorreram no espelho isolado `/tmp/barra-fichario/checkout`; 51 verificações da
+guarda e Chromium com API simulada passaram (38 verificações, 100 ciclos e barra
+em seis larguras). Nenhum dado real foi usado como fixture mutável.
+
+Backup integral validado por hash em
+`/opt/rpg/backups/barra-fichario-20261125T213859Z`, com manifest e procedimento de
+rollback frontend. Assets publicados antes da troca atômica do HTML; 360 arquivos
+anteriores, 340 do candidato e 362 finais, preservando bundles para caches.
+Os 340 artefatos servidos foram conferidos por SHA256 via HTTP local.
+Health `ok/database:up`, sem avisos/erros recentes no journal. Backend e Prisma
+Client idênticos por hash; PID `3297180` mantido, sem restart, migrations ou escrita
+no banco. Os 47 WIPs permanecem idênticos por caminhos e hashes. Aguarda aceite
+visual do responsável; sem avanço de fase ou quitação das dívidas existentes.
