@@ -438,7 +438,7 @@ Retorna `{ "status": "ok", "database": "up" }` quando o banco está acessível.
 | Comando | Descrição |
 |---------|-----------|
 | `npm run dev` | Servidor em modo desenvolvimento (`tsx watch`). |
-| `npm run build` | Compila o TypeScript para `dist/`. |
+| `npm run build` | Build backend protegido; emite em `dist/` somente no checkout isolado. |
 | `npm start` | Executa a build compilada (produção). |
 | `npm run typecheck` | Checagem de tipos sem gerar arquivos. |
 | `npm run prisma:migrate` | Cria/aplica migrations em desenvolvimento. |
@@ -448,11 +448,13 @@ Retorna `{ "status": "ok", "database": "up" }` quando o banco está acessível.
 | `npm run smoke` | Smoke test ponta a ponta (exige o servidor rodando). |
 | `npm run setup` | Instala as dependências do backend e do frontend. |
 | `npm run dev:client` | Frontend em modo desenvolvimento (`http://localhost:5173`). |
-| `npm run build:client` | Compila o frontend para `client/dist/`. |
+| `npm run build:client` | Build frontend protegido; não publica. |
+| `npm run build:isolated -- --frontend` | Valida checkout isolado e produz manifest SHA256. |
+| `npm run test:build-safety` / `audit:build-safety` | Testes descartáveis / auditoria somente de leitura. |
 
 ### Verificação automática (smoke test)
 
-Não há testes unitários: a verificação é o **smoke test ponta a ponta** (`npm run smoke`), que exige o servidor rodando, cria as próprias contas, exercita API e WebSocket e limpa tudo no fim. Ele cobre 31 seções — cadastro/login, tempo real, regras de D&D 5e, combate, Level Up, compêndio, a **Fase 0 (seções 14 a 21)** e os complementos de ataques/itens/moedas, do ataque derivado, do downgrade de nível, dos vários tipos de dano e do catálogo de ferramentas (seções 22 a 31):
+Há suítes puras e testes de UI/infra; consulte AGENTS.md. O **smoke legado ponta a ponta** (`npm run smoke`), que exige o servidor rodando, cria as próprias contas, exercita API e WebSocket e limpa tudo no fim. Ele cobre 31 seções — cadastro/login, tempo real, regras de D&D 5e, combate, Level Up, compêndio, a **Fase 0 (seções 14 a 21)** e os complementos de ataques/itens/moedas, do ataque derivado, do downgrade de nível, dos vários tipos de dano e do catálogo de ferramentas (seções 22 a 31):
 
 | Seção | O que verifica |
 |-------|----------------|
@@ -477,7 +479,10 @@ Não há testes unitários: a verificação é o **smoke test ponta a ponta** (`
 | **32** | **Categoria da Poção** — a categoria **Poção** ganha o campo opcional `details.potionCategory` (`healing`…`longevity`), que convive com `effectRoll`/`duration` sem alterá-los; um valor fora da lista é recusado (400); poção antiga sem categoria continua válida; item de **outra** categoria com `potionCategory` é **descartado** pelo `sanitizeItemDetails`; e a edição atualiza a categoria mantendo os demais atributos. |
 | **33** | **Poção de Cura (cura estruturada)** — a poção com `potionCategory: 'healing'` ganha `details.healingDice` (`{ count 1..10, sides 4/6/8/10/12, bonus 0..20 }`; fora disso, 400), que só é guardado quando a finalidade é Cura (sanitize descarta nas demais); no editor o texto livre de rolagem dá lugar a **Dado/Quantidade/Bônus**; e o uso do item rola `count×sides + bonus` no servidor, aplica `hpCurrent = min(hpMax, hpCurrent + total)` na **mesma** escrita que desconta a unidade, publica `sheet:updated` e registra a cura no log como `kind: 'item'` (rótulo `Cura (<poção>)`, detalhe dado a dado). Poção não de Cura (ou de Cura sem `healingDice`) mantém o comportamento antigo. |
 
-Em produção, rode `npm run build` (e `npm run build:client`) **antes** de reiniciar o serviço — o systemd executa `dist/`. Se rodar o smoke várias vezes seguidas, reinicie o serviço entre as execuções: o rate limiter do login é em memória (e as seções novas **reaproveitam** fichas já criadas para não estourar o limite de 30 contas por 15 min do modo produção).
+**Não executar builds ou smokes na instalação ativa.** O smoke legado acima é
+histórico e não é seguro para a campanha real. Use fixtures e banco descartáveis;
+não reinicie o serviço para contornar rate limits. Builds isolados, publicação
+autorizada, restart e migrations são operações distintas. Ver [build seguro](docs/build-seguro.md).
 
 ### Ambiente local já configurado (esta máquina)
 
@@ -520,12 +525,11 @@ systemctl daemon-reload
 systemctl enable --now grimorio
 ```
 
-O serviço executa a build compilada (`node dist/index.js`), então **rode `npm run build` (e `npm run build:client`) antes de reiniciar** depois de alterar o código:
-
-```bash
-npm run build && npm run build:client
-systemctl restart grimorio
-```
+O serviço executa artefatos já publicados (`node dist/index.js`). Nunca execute
+builds em `/opt/rpg`. Construa e valide em outro checkout; depois, somente com
+autorização específica, publique os artefatos. Frontend não exige restart; backend,
+restart e migrations possuem escopos separados. O script legado `npm run deploy`
+foi desativado. Procedimento e rollback em [build seguro](docs/build-seguro.md).
 
 Operando o serviço:
 
@@ -638,12 +642,15 @@ npm run dev
 npm run dev:client
 ```
 
-Abra `http://localhost:5173`. Para publicar numa única porta (acesso por IP), use o build:
+Abra `http://localhost:5173`. Para validar a versão compilada em uma única porta **num checkout de
+desenvolvimento isolado**, sem o banco da campanha:
 
 ```bash
-npm run build && npm run build:client && npm start
-# agora tudo é servido em http://SEU_IP:3000
+npm run build:isolated -- --all
+# npm start é execução local, não autorização de publicação.
 ```
+
+Na instalação ativa, siga a publicação controlada de [build seguro](docs/build-seguro.md).
 
 ### Modelagem da ficha
 

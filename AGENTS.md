@@ -123,23 +123,33 @@ Duelos entre personagens são consentimento do aplicativo: apenas o jogador desa
 > conter `NODE_ENV`, senão o serviço sobe como `development` (e o rate limiter
 > afrouxa). Deixe comentado, como no `.env.example`.
 
-### Ambientes de execução
+### Ambientes de execução e isolamento obrigatório
 
-- **Local (esta máquina / dev):** `npm run dev` (backend em `tsx watch`) +
-  `npm run dev:client` (Vite em `5173`).
-- **Serviço systemd (produção nesta máquina):** `deploy/grimorio.service` roda
-  `node dist/index.js` com `NODE_ENV=production`. Alterar código exige
-  **rebuild antes de reiniciar**:
-
-  ```bash
-  npm run build && npm run build:client
-  sudo systemctl restart grimorio
-  ```
-
-  O unit é versionado em `deploy/grimorio.service` e copiado para
-  `/etc/systemd/system/grimorio.service` (`daemon-reload` + `enable --now`).
-- **Deploy genérico:** `npm run prisma:deploy && npm start` (mais `npm run build`).
-  Health check em `GET /api/health` → `{ "status": "ok", "database": "up" }`.
+- **Desenvolvimento:** `npm run dev` e `npm run dev:client` em checkout de
+  desenvolvimento, separado da instalação ativa. Não copiar automaticamente
+  `.env`, uploads ou dados da campanha para ambientes de teste.
+- **Instalação ativa desta máquina:** raiz `/opt/rpg`, frontend em
+  `/opt/rpg/client/dist`, backend compilado em `/opt/rpg/dist`. O serviço real
+  auditado é `rpg.service`; `deploy/grimorio.service` preserva o modelo histórico.
+  Conferir a configuração efetiva antes de qualquer operação, sem alterá-la
+  automaticamente.
+- **Build:** obrigatório em checkout/espelho isolado. Antes de uma publicação,
+  verificar `npm run audit:build-safety`, os caminhos reais e a integridade da
+  composição de referência. `npm run build:isolated -- --frontend` valida e gera
+  hashes, mas não publica. O modo `--all` também requer dependências/backend
+  compatíveis. Ver `docs/build-seguro.md`.
+- **Publicação:** exige autorização própria de SHA, backup validado, assets antes
+  do HTML atômico, preservação de bundles e verificações/rollback. Autorizar
+  commit/push não autoriza deploy. Autorizar frontend não autoriza backend,
+  restart, migrations ou geração Prisma. Nunca construir em produção, mesmo
+  quando sua publicação estiver autorizada.
+- **Backend e migrations:** build isolado e publicação de backend são distintos
+  do restart autorizado. Migrations e geração Prisma exigem seu próprio escopo
+  autorizado. `npm start` não constitui procedimento de migração/publicação.
+- O antigo `deploy/deploy.sh` foi desativado; termina com erro e orientação,
+  sem build, publicação ou restart. A proteção oficial não substitui permissões
+  do sistema operacional: root, ferramentas diretas e configurações alternativas
+  podem contorná-la. Não remover a guarda nem introduzir flags de bypass.
 
 ---
 
@@ -353,9 +363,11 @@ shared/
   visuais ficam lá, não em estilos inline espalhados.
 - **Tema:** claro = "pergaminho", escuro = "grimório amaldiçoado"; `index.html`
   aplica o tema salvo **antes da primeira pintura** para evitar flash.
-- **`client/dist` é estático**: para publicar no serviço basta `npm run build:client`
-  (o Express serve os arquivos; **não** precisa reiniciar o backend), mas mudanças
-  no **backend** exigem `npm run build` **e** restart.
+- **`client/dist` é estático**: o build em checkout isolado prepara os artefatos;
+  somente a publicação frontend explicitamente autorizada substitui o HTML e
+  os assets ativos, sem restart. Mudanças de backend exigem build isolado,
+  publicação própria e restart separadamente autorizado. Nunca executar
+  `npm run build`/`build:client` na instalação ativa.
 
 ---
 
@@ -385,7 +397,7 @@ Scripts do `package.json` raiz:
 | Comando | Descrição |
 |---------|-----------|
 | `npm run dev` | backend em dev (`tsx watch`) |
-| `npm run build` | compila o backend (`tsc -p`) para `dist/` |
+| `npm run build` | wrapper protegido: compila em memória, valida destinos e emite em `dist/` somente fora da instalação ativa |
 | `npm start` | roda o build (`node dist/index.js`) |
 | `npm run typecheck` | `tsc --noEmit` (backend) |
 | `npm run prisma:generate` | gera o Prisma Client (rodar após mexer no schema) |
@@ -396,7 +408,9 @@ Scripts do `package.json` raiz:
 | `npm run test:combat-ui` | verificações estruturais e comportamentais da UI de combate |
 | `npm run test:operation-id` | invariantes de operação/idempotência |
 | `npm run setup` | instala deps do backend e do frontend |
-| `npm run dev:client` / `build:client` / `typecheck:client` | frontend |
+| `npm run dev:client` / `build:client` / `typecheck:client` | frontend; build protegido e separado da publicação |
+| `npm run test:build-safety` / `audit:build-safety` | fixtures descartáveis / auditoria somente de leitura |
+| `npm run build:isolated -- --frontend` | typecheck, build, testes e manifest; nunca publica |
 | `npm run create-master -- ...` | cria/promove a conta de mestre |
 
 ### Testes automatizados — isolamento antes de qualquer execução
@@ -431,9 +445,10 @@ recusar schemas com dados reais e qualquer ambiente ambíguo. Conexões ao
 servidor da campanha não são aceitas. O fato de haver zero combates ativos
 **não comprova isolamento**. Cleanup restrito e verificação pós-teste.
 
-Checklist de verificações sem escrita (ajustar às alterações):
+Checklist de validação (builds escrevem arquivos **somente no checkout isolado**; testes não podem escrever na campanha):
 
 ```bash
+# Executar em checkout isolado, nunca em /opt/rpg.
 npm run typecheck
 npm run typecheck:client
 npm run build
@@ -1252,7 +1267,7 @@ qualquer novo caso, parar e perguntar ao usuário antes de implementar.
 3. **Rate limiter e backend de produção:** não reinicie serviço real só para
    tornar um smoke possível. Use servidor de teste/schema descartável.
 4. **`NODE_ENV` e systemd:** confira as regras da seção 2 antes do deploy.
-5. **Backend exige build + reinício autorizado;** cliente usa build estático.
+5. **Build sempre isolado.** Publicação, restart e migrations possuem autorizações distintas; conferir a proteção antes de publicar.
 6. **Não versionar** `tmp-*`, `uploads/`, `dist/`, `node_modules/`,
    `.env` ou qualquer segredo.
 7. **WIPs são dinâmicos.** Identifique `git status`, `git diff` e

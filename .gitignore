@@ -3,6 +3,7 @@ node_modules/
 
 # Build
 dist/
+build-manifest.json
 
 # Imagens enviadas pelo mestre (localidades)
 uploads/

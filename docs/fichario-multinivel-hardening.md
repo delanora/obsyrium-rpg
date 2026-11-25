@@ -1,7 +1,8 @@
 # Fichário — 8.5.2.4: multinível e hardening espacial
 
-Implementação frontend publicada controladamente em 25/11/2026. Permanece em
-validação funcional/visual e de desempenho até aceite manual. Não inicia a 8.5.3.
+Implementação frontend publicada controladamente e aceita em 25/11/2026: 20/20
+critérios funcionais/visuais, incluindo margem 1120. Dívidas de desempenho/escala
+e cobertura concorrente permanecem abertas. Não inicia a 8.5.3.
 
 ## Auditoria da implementação (antes da publicação)
 
@@ -293,3 +294,14 @@ esparsos **43,3 → 170,4 ms**, aumento de CPU em cenários esparsos, long tasks
 colisões extremas, fallback global quando a independência não é comprovada,
 cobertura concorrente não exaustiva, limites 160/200 e aviso de bundle >500 kB.
 Não se declara encerrado o hardening. Nenhuma frente da 8.5.3 foi iniciada.
+
+## Aceite posterior — 25/11/2026
+
+O responsável confirmou integralmente 20/20: margem externa 1120, editor lateral,
+Consulta Narrativa, expansão multinível, ausência de piscadas e fluidez geral.
+A fundação da Expansão Orgânica e a 8.5.2 estão concluídas no escopo funcional.
+Este aceite resolve as pendências funcionais/visuais anteriores; não apaga o
+incidente operacional nem encerra benchmarks, long tasks, escala ou cobertura
+concorrente. Mantidos os aceites anteriores 20/20 e 14/14 no histórico.
+A prevenção de builds acidentais é tratada separadamente em `build-seguro.md`.
+Não iniciada a 8.5.3.

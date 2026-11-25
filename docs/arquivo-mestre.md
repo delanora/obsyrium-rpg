@@ -1742,3 +1742,12 @@ diretório ativo e recuperação documentados em `docs/fichario-multinivel-harde
 Mantida em validação, com margem 1120, aceite multinível e desempenho pendentes.
 A regressão React 500 esparsos (43,3→170,4 ms), long tasks e demais dívidas
 permanecem abertas; não iniciada a 8.5.3.
+
+### Aceite funcional da fundação — 25/11/2026
+
+8.5.2.4 aceita integralmente pelo responsável (20/20), incluindo reserva 1120,
+editor lateral, consulta, multinível, ausência de piscadas e fluidez geral.
+8.5.2 concluída no escopo funcional. Permanecem as dívidas documentadas de
+desempenho/escala e cobertura concorrente. A prevenção do incidente operacional
+foi separada em `docs/build-seguro.md`; não houve novo deploy ou restart.
+8.5.3 não iniciada.
