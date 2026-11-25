@@ -86,7 +86,7 @@ check(() => {
   assert.equal(reserved.reserves.length, 1);
   assert.equal(reserved.reserves[0].regions.length, 5);
   assert.equal(ARCHIVE_LAYOUT_CONFIG.gap, 32);
-  assert.equal(ARCHIVE_LAYOUT_CONFIG.reserveMargin, 560);
+  assert.equal(ARCHIVE_LAYOUT_CONFIG.reserveMargin, 1120);
 });
 const g = graph([
     ...inside,
@@ -350,12 +350,22 @@ check(() =>
 );
 check(() => assert.equal(expanded.diagnostics.reserveResiduals.length, 0));
 check(() => assert.equal(expanded.diagnostics.reserveFallback, null));
+const previousMargin = layoutArchive(projectArchive(g, new Set(["root"])), {
+  config: { reserveMargin: 560 },
+});
+check(() =>
+  assert.ok(
+    expanded.geometry.get("neighbor")!.x >
+      previousMargin.geometry.get("neighbor")!.x,
+    "Folga maior que o ajuste anterior de 560",
+  ),
+);
 const c = { x: 140, y: 100 };
 for (let i = 0; i < 24; i++) {
   const angle = (i * Math.PI) / 12,
     p = {
-      x: c.x + 900 * Math.cos(angle) - 1,
-      y: c.y + 900 * Math.sin(angle) - 1,
+      x: c.x + 1500 * Math.cos(angle) - 1,
+      y: c.y + 1500 * Math.sin(angle) - 1,
       width: 2,
       height: 2,
     };

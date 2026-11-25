@@ -282,3 +282,16 @@ recusar a ampliação pelo veto/budget. Não houve escrita na campanha.
 **Este ajuste ainda não foi publicado.** A autorização anterior era restrita ao
 SHA `4c7e866832804800675c1b01f09f4962a2bd1aae`. Aguardar autorização específica,
 com os 47 WIPs e os artefatos ativos preservados. A 8.5.2.4 não foi iniciada.
+
+
+### Nova ampliação solicitada — 1120 unidades
+
+O responsável pediu ainda mais espaço. A margem preparada foi duplicada de 560
+para **1120** unidades, quatro vezes a margem da versão publicada (280). Apenas
+a margem mudou; distribuição interna, faixas, limites, veto e animação permanecem.
+O histórico acima registra a primeira preparação de 560, que não foi publicada.
+
+Validação desta ampliação: 1961 verificações puras (reserva, layout, animação,
+projeção e câmera), typecheck, build e Chromium com API simulada passaram; 186 pinturas sem descontinuidades. A reserva maior mantém as
+exceções manuais e o fallback em cenários densos; as dívidas anteriores continuam.
+Sem publicação, backend, banco ou reinício. Aguardar autorização e aceite manual.

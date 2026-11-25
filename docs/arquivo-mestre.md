@@ -1714,6 +1714,7 @@ resolvidos. A Fase 8.5.2.4 não foi iniciada.
 ### Pedido posterior — mais espaço em torno do núcleo
 
 Preparado ajuste da reserva invisível para envolver continuamente o núcleo e suas
-ramificações próximas, com margem externa 560, sem desenhar círculo nem alterar
+ramificações próximas, inicialmente com margem externa 560 e ampliada a pedido
+para 1120, sem desenhar círculo nem alterar
 a distribuição interna. Detalhes e limitações em `docs/fichario-reserva-estabilidade.md`.
 Build e testes isolados; sem publicação, aguardando autorização para o novo commit.

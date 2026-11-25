@@ -14,7 +14,7 @@ export interface ArchiveAnchor {
 }
 export const ARCHIVE_LAYOUT_CONFIG = {
   gap: 32,
-  reserveMargin: 560,
+  reserveMargin: 1120,
   reserveBands: 12,
   limit: 1_000_000,
   maxChecks: 750_000,
