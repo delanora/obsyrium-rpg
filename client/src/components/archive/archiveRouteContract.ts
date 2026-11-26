@@ -160,19 +160,41 @@ export function encodeRoutePlan(
   };
 }
 
+/**
+ * Plano recebido só vira estado com a estrutura esperada. Um cabeçalho
+ * válido com corpo estranho é recusado aqui: `null` em vez de exceção, para
+ * que a apresentação siga com as rotas provisórias.
+ */
 export function decodeRoutePlan(
   dto: ArchiveRoutePlanDto | null | undefined,
 ): ArchiveRoutePlanSet | null {
-  if (!dto) return null;
-  return {
-    routes: new Map(
-      dto.routes.map(([id, route]) => [id, cloneRoutePlan(route)]),
-    ),
-    stats: { ...dto.stats },
-    placements: new Map(dto.placements.map(([id, rect]) => [id, { ...rect }])),
-    topology: new Map(dto.topology),
-    provisional: dto.provisional === true,
-  };
+  if (!dto || typeof dto !== "object") return null;
+  if (
+    !Array.isArray(dto.routes) ||
+    !Array.isArray(dto.placements) ||
+    !Array.isArray(dto.topology) ||
+    !dto.stats ||
+    typeof dto.stats !== "object"
+  )
+    return null;
+  try {
+    return {
+      routes: new Map(
+        dto.routes.map(([id, route]) => [id, cloneRoutePlan(route)]),
+      ),
+      stats: { ...dto.stats },
+      placements: new Map(
+        dto.placements.map(([id, rect]) => [
+          id,
+          { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        ]),
+      ),
+      topology: new Map(dto.topology),
+      provisional: dto.provisional === true,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** Cópia profunda o bastante: nenhum plano anterior é mutado por engano. */

@@ -215,7 +215,8 @@ const byId = (a: { id: string }, b: { id: string }) =>
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
-const archiveLinkLabel = (link: ArchiveRouteLink) =>
+/** Texto apresentado na cápsula: rótulo próprio ou nome do tipo. */
+export const archiveLinkLabel = (link: ArchiveRouteLink) =>
   link.label?.trim() ||
   NARRATIVE_RELATION_LABELS[link.relation as NarrativeRelation] ||
   "Relação";

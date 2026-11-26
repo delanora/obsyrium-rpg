@@ -10,6 +10,7 @@
  */
 import assert from "node:assert/strict";
 import {
+  archiveLinkLabel,
   planArchiveLinkRoutes,
   provisionalArchiveRoutePlan,
   type ArchiveRouteLink,
@@ -36,6 +37,7 @@ import {
 import { archiveLinkPathCommands } from "../src/components/archive/archiveLinkGeometry";
 import {
   archiveRelationLabelSignature,
+  archiveRelationMeasuredWidths,
   onArchiveRelationLabelWidthsChange,
   rememberArchiveRelationLabelWidth,
 } from "../src/components/archive/archiveRelationMetrics";
@@ -1044,6 +1046,183 @@ const job = (
     "resultado de outro quadro é descartado",
   );
   ok("resultado durante gesto é adiado; fora dele, aplicado se ainda for atual");
+}
+
+// 42 — plano malformado é recusado sem exceção
+{
+  const garbage: unknown[] = [
+    { routes: "nada", stats: {}, placements: [], topology: [], provisional: false },
+    {
+      routes: [["l1", { sides: null }]],
+      stats: {},
+      placements: [],
+      topology: [],
+      provisional: false,
+    },
+    { routes: [], stats: {}, placements: [["l2", null]], topology: [], provisional: false },
+    { routes: [], stats: {}, placements: [], topology: "x", provisional: false },
+    { routes: [], stats: null, placements: [], topology: [], provisional: false },
+    "plano",
+  ];
+  for (const value of garbage) {
+    let plan: unknown = "não verificado";
+    assert.doesNotThrow(() => {
+      plan = decodeRoutePlan(value as never);
+    }, "corpo estranho não lança na decodificação");
+    assert.equal(plan, null, "plano fora da estrutura esperada é recusado");
+  }
+  assert.equal(decodeRoutePlan(undefined), null, "plano ausente é recusado");
+  ok("plano malformado nunca vira estado nem exceção");
+}
+
+// 43 — cabeçalho válido com plano quebrado não trava o controlador
+{
+  const workers: FakeWorker[] = [];
+  let applied = 0;
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    maxRestarts: 4,
+    onResult: () => applied++,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  workers[0].deliver(0, { plan: { routes: "quebrado" } as never });
+  assert.equal(applied, 0, "plano quebrado não é aplicado");
+  assert.equal(planner.status().failed, false, "falha de corpo não é falha definitiva");
+  assert.equal(planner.status().inFlight, true, "o voo é reenviado, não abandonado");
+  const live = workers[workers.length - 1];
+  assert.ok(live !== workers[0], "um worker novo assume o pedido");
+  live.deliver(0);
+  assert.equal(applied, 1, "planejamento retoma depois da resposta malformada");
+  ok("resposta malformada substitui o worker em vez de travar a apresentação");
+}
+
+// 44 — retry parte da geometria mais recente
+{
+  const workers: FakeWorker[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    maxRestarts: 0,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  planner.request(job("s2"));
+  workers[0].onerror?.(new Error("queda"));
+  assert.equal(planner.status().failed, true, "falha declarada");
+  assert.equal(workers.length, 1, "sem recuperação automática no mesmo quadro");
+  planner.retry();
+  assert.equal(workers.length, 2, "retry cria worker novo");
+  assert.equal(
+    workers[1].requests[0].signature,
+    "s2",
+    "retry reenvia o pendente mais novo, não o voo quebrado",
+  );
+  workers[1].deliver(0);
+  assert.equal(planner.status().applied, 1, "plano aplicado depois do retry");
+  ok("recuperação controlada usa a geometria mais recente");
+}
+
+// 45 — geometria nova durante a falha também é a base do retry
+{
+  const workers: FakeWorker[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    maxRestarts: 0,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  workers[0].onerror?.(new Error("queda"));
+  assert.equal(planner.status().failed, true, "falha declarada");
+  planner.request(job("s2"));
+  assert.equal(workers.length, 1, "mesmo quadro não dispara tentativa sozinha");
+  assert.equal(planner.status().pending, false, "nada fica preso na fila");
+  planner.retry();
+  assert.equal(
+    workers[1].requests[0].signature,
+    "s2",
+    "retry parte do que está na tela",
+  );
+  ok("retry depois de mover cards planeja a geometria atual");
+}
+
+// 46 — quadro segue utilizável com rotas provisórias
+{
+  const data = board();
+  const workers: FakeWorker[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    maxRestarts: 0,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1", data));
+  workers[0].onerror?.(new Error("queda"));
+  assert.equal(planner.status().failed, true, "falha definitiva declarada");
+  assert.equal(planner.status().applied, 0, "nada definitivo é aplicado");
+  const provisional = provisionalArchiveRoutePlan({
+    placements: data.placements,
+    links: data.links,
+  });
+  assert.equal(provisional.provisional, true, "plano declarado provisório");
+  assert.equal(
+    provisional.routes.size,
+    data.links.length,
+    "toda relação continua desenhada",
+  );
+  assert.ok(
+    [...provisional.routes.values()].every((route) => route.state === "unverified"),
+    "nada é anunciado como verificado",
+  );
+  ok("quadro continua utilizável com rotas provisórias depois da falha");
+}
+
+// 47 — métricas do texto efetivamente apresentado
+{
+  const plain = link("l1", "a", "b", "knows", "");
+  const custom = link("l2", "a", "c", "knows", "Reconhece o brasão");
+  const unknown = link("l3", "a", "d", "", "");
+  assert.equal(archiveLinkLabel(plain), "Conhece", "sem rótulo próprio vale o nome do tipo");
+  assert.equal(archiveLinkLabel(custom), "Reconhece o brasão", "rótulo próprio vence");
+  assert.equal(archiveLinkLabel(unknown), "Relação", "tipo desconhecido tem nome genérico");
+
+  const texts = [plain, custom, unknown].map((item) => archiveLinkLabel(item));
+  rememberArchiveRelationLabelWidth("Conhece", 210);
+  rememberArchiveRelationLabelWidth("Reconhece o brasão", 266);
+  rememberArchiveRelationLabelWidth("Relação", 128);
+  const base = archiveRelationLabelSignature(texts);
+  const labels = archiveRelationMeasuredWidths(texts);
+  assert.deepEqual(
+    labels.map(([text]) => text).sort(),
+    ["Conhece", "Reconhece o brasão", "Relação"].sort(),
+    "a medida do nome padrão também é enviada",
+  );
+  const request = encodeRouteRequest({ ...job("s"), labels }, 1, 1);
+  assert.ok(
+    request.labels.some(([text, width]) => text === "Conhece" && width === 210),
+    "o nome do tipo viaja com a largura medida",
+  );
+  rememberArchiveRelationLabelWidth("Conhece", 320);
+  assert.notEqual(
+    archiveRelationLabelSignature(texts),
+    base,
+    "largura nova do nome padrão replaneja",
+  );
+  ok("relações sem rótulo próprio também recebem as métricas do texto apresentado");
 }
 
 console.log(`\n${total} verificações de planejamento assíncrono das relações.`);

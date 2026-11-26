@@ -142,8 +142,13 @@ export class ArchiveRoutePlanner {
     if (this.disposed) return this.generation;
     if (this.failed) {
       // Só outro quadro (mudança relevante de contexto) reabilita sozinho;
-      // repetir o mesmo pedido não gera tentativas infinitas.
-      if (job.boardId === this.failedBoardId) return this.generation;
+      // repetir o mesmo pedido não gera tentativas infinitas. Mesmo assim a
+      // geometria atual fica guardada: a recuperação controlada precisa
+      // reenviar o que o quadro mostra agora, não o pedido que quebrou.
+      if (job.boardId === this.failedBoardId) {
+        this.current = encodeRouteRequest(job, this.requestId, this.generation);
+        return this.generation;
+      }
       this.recover();
     }
     this.generation++;
@@ -291,7 +296,13 @@ export class ArchiveRoutePlanner {
       this.pump();
       return;
     }
-    const plan = decodeRoutePlan(response.plan);
+    let plan: ArchiveRoutePlanSet | null = null;
+    try {
+      plan = decodeRoutePlan(response.plan);
+    } catch {
+      // Nenhum formato inesperado escapa do controlador.
+      plan = null;
+    }
     if (!plan) {
       this.counts.errors++;
       this.fail(worker, "plano vazio");
@@ -325,7 +336,8 @@ export class ArchiveRoutePlanner {
     this.flight = null;
     this.clearTimer();
     if (this.restarts >= limit) {
-      this.current = null;
+      // `current` sobrevive: a falha precisa saber qual quadro quebrou e o
+      // `retry` precisa de uma geometria para reenviar.
       this.declareFailed(`worker substituído demais (${reason})`);
       return;
     }
@@ -385,6 +397,9 @@ export class ArchiveRoutePlanner {
   }
 
   private declareFailed(message: string): void {
+    // Um pendente que chegou depois do voo quebrado é a geometria que o
+    // quadro mostra agora: ele sobrevive para o `retry`, em vez de sumir.
+    if (this.pending) this.current = this.pending;
     this.failed = true;
     this.failedBoardId = this.current?.boardId ?? "";
     this.pending = null;

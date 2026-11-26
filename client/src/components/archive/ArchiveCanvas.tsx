@@ -21,7 +21,6 @@ import type {
 } from "../../../../src/modules/shared/narrative";
 import {
   NARRATIVE_CATEGORY_LABELS,
-  NARRATIVE_RELATION_LABELS,
   NARRATIVE_RELATIONS,
 } from "../../../../src/modules/shared/narrative";
 import type { ArchiveNodeProjection } from "./archiveProjection";
@@ -40,6 +39,7 @@ import {
   onArchiveRelationLabelWidthsChange,
 } from "./archiveRelationMetrics";
 import {
+  archiveLinkLabel,
   archiveLinkRouteGeometry,
   archiveRouteSignature,
   provisionalArchiveRoutePlan,
@@ -221,7 +221,7 @@ const GraphContent = memo(function GraphContent({
             b,
           );
           const { path, labelPoint, from, to } = route;
-          const label = link.label || NARRATIVE_RELATION_LABELS[link.relation];
+          const label = archiveLinkLabel(link);
           const sheath = archiveRelationVisual(link.relation).sheath;
           // Filtro em destaque: vínculo que toca card atenuado também recua.
           const dim =
@@ -620,8 +620,11 @@ export function ArchiveCanvas({
       ),
     [],
   );
+  // O texto que a cápsula apresenta — inclusive o nome padrão do tipo — é o
+  // que o roteador precisa medir: sem ele a relação sem rótulo próprio seria
+  // planejada com a largura estimada, não com a largura real do texto.
   const labelTexts = useMemo(
-    () => motion.graph.links.map((link) => link.label ?? "").filter(Boolean),
+    () => motion.graph.links.map((link) => archiveLinkLabel(link)),
     [motion.graph],
   );
   const routeSignature = useMemo(
