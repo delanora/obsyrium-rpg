@@ -2160,5 +2160,43 @@ de otimização.
 - **Desempenho**: nenhuma regressão relevante; long tasks do planejador seguem
   zero em Chromium e as dívidas de montagem/repintura/seleção/hub distante ficam
   registradas para o hardening geral.
-- A 8.5.4.2 continua **não publicada**; a 8.5.4.3 não foi iniciada.
+- A 8.5.4.2 permaneceu não publicada na própria microfase; a publicação
+  seletiva ocorreu depois, registrada na seção seguinte. A 8.5.4.3 não foi
+  iniciada.
 
+## 8.5.4.2 — Publicação seletiva do roteamento inteligente (26/11/2026)
+
+As microfases 8.5.4.2.1, 8.5.4.2.2 e 8.5.4.2.3 ficam consolidadas nesta
+publicação, exclusivamente frontend, sob autorização do responsável: backend,
+banco, schema, Prisma e `rpg.service` intocados, sem restart.
+
+- **Commits funcionais**: `cba77a9` (roteamento angular), `fd0ce85` (hardening
+  geométrico), `b04e6be` (planejamento assíncrono), `25515cf` (integração
+  assíncrona) e `f1d5a46` (correções da revisão final). A revisão encontrou e
+  corrigiu três falhas de integração: rótulo padrão sem medida real, recuperação
+  com geometria antiga e plano malformado capaz de escapar do controlador.
+- **Verificações**: 47 assíncronas, 28 de roteamento puro, 17 de hardening, 802
+  de filtros, 25 de projeção/fundo espacial (`check-archive-projection.ts`), 53
+  em Chromium com worker real, 51 da guarda de build, typecheck do cliente limpo
+  e 8 verificações do worker na composição servida. As três suítes Chromium
+  históricas seguem não aprovadas.
+- **Composição publicada**: `index.html`
+  `fabfd46667e83b02f8b3ab8e0abb18d5ffb891c099771481c73e2121b017e457`,
+  `assets/index-Atxhy3xH.js`
+  `df8862459398c940729b97ff680dfe17921701c29b6253d208735d703c727ad4`,
+  `assets/archiveRoute.worker-BVZhXqok.js`
+  `b24e665ee14e2f90c2789fbdd962c9b8a6cd08267329821e520f40b6778fa093` e
+  `assets/index-C0vlXmbn.css` inalterado
+  (`139d84c06975009ebbc7ee9d10b3d6944820e15e3f48e4301f638f5abf12dc85`).
+  Manifest de 341 arquivos
+  (`0e42cab0a70f2acfab8b7eabca2198a72ec59b6046122d057ce62371f09b7959`),
+  candidato em `/root/val-8542-pub`. Delta: 1 HTML modificado, 2 assets novos,
+  338 idênticos e 25 antigos preservados — 366 arquivos ativos.
+- **Backup e rollback**: `backups/frontend-8542pub-20261126T191446Z` com os 364
+  arquivos anteriores verificados por SHA256 e `rollback.sh` restaurando o HTML
+  por rename atômico.
+- **Operação**: HTTP 200 com MIME correto para HTML, bundle, worker, CSS e
+  bundle anterior; health `ok` com banco `up`; PID inalterado; 48 WIPs
+  preservados.
+- A 8.5.4.2 está **publicada, com aceite manual pendente**; não foi declarada
+  concluída. A 8.5.4.3 não foi iniciada.

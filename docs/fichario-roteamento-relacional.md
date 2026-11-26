@@ -541,7 +541,8 @@ retos foi substituído pela folga única, aplicada igual a retas e arcos.
 
 ### 19.6 Testes
 
-- `npm run test:archive-async-routing` — **41** verificações: ciclo de vida
+- `npm run test:archive-async-routing` — **47** verificações (41 na
+  microfase e 5 novas na revisão final, §20.1): ciclo de vida
   (estouro sem pendente, worker mudo, resposta inválida, `messageerror`,
   resultado de worker substituído, recuperação, troca de quadro, cancelamento,
   desmontagem), DTO sem extras, larguras de rótulo, assinatura com tolerância,
@@ -578,4 +579,110 @@ Montagem inicial de 500 cards, repintura de centenas de relações, seleção em
 quadros com ~1 000 vínculos, hubs extremamente conectados e custo computacional
 do planejamento distante continuam dívidas do hardening geral do Fichário. As
 três suítes Chromium históricas seguem falhando por infraestrutura do host.
-Nada foi publicado nesta microfase e a 8.5.4.3 não foi iniciada.
+Nada foi publicado na própria microfase; a publicação seletiva está no
+§20 e a 8.5.4.3 não foi iniciada.
+
+## 20. Publicação seletiva do roteamento inteligente (26/11/2026)
+
+Publicação exclusivamente frontend da fase 8.5.4.2, sob autorização do
+responsável. Backend, banco, schema, Prisma e `rpg.service` não foram tocados e
+não houve reinício.
+
+### 20.1 Correções da revisão final
+
+Três pontos da revisão independente se confirmaram como falhas reais de
+integração e foram corrigidos **antes** de publicar (commit `f1d5a46`):
+
+- **Rótulo padrão sem medida**: o canvas alimentava o roteador só com
+  `link.label`, mas a cápsula apresenta o nome do tipo quando não há rótulo
+  próprio. Relações sem rótulo eram planejadas com a largura estimada (mínimo de
+  88 unidades). Agora o texto efetivamente apresentado vem de `archiveLinkLabel`
+  — usado no render, na assinatura e no pedido — e a largura medida do nome do
+  tipo também viaja para o worker.
+- **Recuperação com geometria antiga**: `retry()` reenviava o último voo
+  despachado, que podia ser mais antigo que o quadro. Agora o pendente mais novo
+  sobrevive à falha definitiva, um pedido que chega com o controlador falho
+  atualiza a geometria guardada e o retry sempre parte do que está na tela. O
+  quadro continua utilizável com rotas provisórias (`unverified`).
+- **Plano malformado**: `decodeRoutePlan` não validava a estrutura e podia
+  lançar dentro do `onmessage`, deixando o controlador sem voo e sem erro
+  declarado. Agora valida arrays, estatísticas e cada entrada, devolve `null` em
+  vez de exceção, e a decodificação na fronteira do worker é protegida; o worker
+  é substituído e o planejamento retoma.
+
+As verificações assíncronas passam de 41 para **47** casos, cobrindo os três
+cenários.
+
+### 20.2 Verificações finais
+
+| Verificação | Resultado |
+| --- | --- |
+| `check-archive-async-routing` | 47/47 |
+| `check-archive-link-routing` | 28/28 |
+| `check-archive-link-routing-hardening` | 17/17 |
+| `check-archive-filters` | 802/802 (110 ciclos sem mutação) |
+| `check-archive-projection` | 25/25 |
+| `check-archive-async-browser` (Chromium, worker real) | 53/53, 0 falha |
+| Guarda operacional de build | 51/51 |
+| Typecheck do cliente | limpo |
+| Worker compilado na composição servida | 8/8 |
+| Árvore do candidato × `f1d5a46` | 1.337 arquivos, 0 divergência |
+
+A suíte de 25 invariantes de projeção/fundo espacial é
+`client/scripts/check-archive-projection.ts`. As três suítes Chromium
+históricas (`check-archive-browser`, `check-archive-groups-browser`,
+`check-archive-radial-browser`) continuam **não aprovadas**, com a mesma falha
+de infraestrutura reproduzida no baseline `b04e6be`.
+
+### 20.3 Composição publicada
+
+Build isolado em `/root/val-8542-pub`, gerado por `git archive` de `f1d5a46`
+com dependências copiadas — sem hardlink com a aplicação ativa e sem build em
+`/opt/rpg`. O disco do host estava sem espaço livre: o cache do npm foi limpo
+(o cache de navegadores do Playwright foi preservado) e a árvore isolada
+anterior foi reaproveitada somente depois de conferida byte a byte contra o
+commit (1.337 arquivos, `git hash-object` × `git ls-tree`).
+
+| Arquivo | SHA256 |
+| --- | --- |
+| `index.html` | `fabfd46667e83b02f8b3ab8e0abb18d5ffb891c099771481c73e2121b017e457` |
+| `assets/index-Atxhy3xH.js` | `df8862459398c940729b97ff680dfe17921701c29b6253d208735d703c727ad4` |
+| `assets/archiveRoute.worker-BVZhXqok.js` | `b24e665ee14e2f90c2789fbdd962c9b8a6cd08267329821e520f40b6778fa093` |
+| `assets/index-C0vlXmbn.css` | `139d84c06975009ebbc7ee9d10b3d6944820e15e3f48e4301f638f5abf12dc85` (idêntico ao publicado) |
+
+Manifest do candidato: **341 arquivos**, SHA256
+`0e42cab0a70f2acfab8b7eabca2198a72ec59b6046122d057ce62371f09b7959`.
+
+Reconciliação por caminho e SHA256: 338 idênticos, 1 modificado
+(`index.html`), 2 novos (bundle principal e chunk do worker) e 25 arquivos
+antigos preservados — nada fora do delta esperado. A composição ativa passa de
+364 para **366 arquivos**; `assets/index-BEp4RUM0.js` continua disponível para
+clientes com cache.
+
+### 20.4 Backup e rollback
+
+`backups/frontend-8542pub-20261126T191446Z/` guarda os 364 arquivos anteriores
+com `manifest-active.sha256` conferido arquivo a arquivo, o HTML anterior, os
+bundles antigos e `rollback.sh`, que restaura o HTML por `rename` atômico. Os
+bundles preservados não são removidos em nenhum caminho de rollback.
+
+### 20.5 Operação
+
+- HTML, bundle principal, chunk do worker, CSS, bundle anterior e ícone: 200;
+  `text/html`, `text/javascript` e `text/css` corretos; hashes servidos iguais
+  aos publicados.
+- O bundle principal referencia `archiveRoute.worker-BVZhXqok.js`.
+- `/api/health`: `ok`, banco `up`; PID `3297180` inalterado, sem reinício.
+- 48 WIPs preservados: 4.221 das 4.226 entradas do inventário
+  (`/root/wip85423.txt`) intactas; as 5 restantes são exatamente os arquivos
+  deste próprio commit.
+
+### 20.6 Aceite e limites
+
+A avaliação visual e funcional dos quadros reais é manual e **ainda não
+realizada**: nada nesta publicação foi declarado estético ou funcionalmente
+aprovado. Permanecem as dívidas conhecidas — montagem de 500 cards, seleção em
+~1.000 relações, repintura extrema, hubs densos, fallbacks, cruzamentos
+residuais, custo do planejamento distante, divergência global do Prisma e
+isolamento adicional por permissões do sistema operacional. A 8.5.4.3 não foi
+iniciada.
