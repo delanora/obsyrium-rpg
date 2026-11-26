@@ -1,5 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { NarrativeRelation } from "../../../../src/modules/shared/narrative";
+import {
+  estimateArchiveRelationLabelWidth,
+  rememberArchiveRelationLabelWidth,
+} from "./archiveRelationMetrics";
 
 // Relações repetidas compartilham a medição; o carregamento da fonte invalida a chave.
 const labelWidths = new Map<string, number>();
@@ -18,7 +22,7 @@ export function ArchiveRelationLabel({
 }) {
   const text = useRef<SVGTextElement>(null);
   const [width, setWidth] = useState(() =>
-    Math.max(88, label.length * 7 + 30),
+    estimateArchiveRelationLabelWidth(label),
   );
   useLayoutEffect(() => {
     let active = true;
@@ -34,6 +38,8 @@ export function ArchiveRelationLabel({
         );
         if (labelWidths.size >= 512) labelWidths.clear();
         labelWidths.set(key, measured);
+        // O roteador reusa esta medição para posicionar a cápsula.
+        rememberArchiveRelationLabelWidth(label, measured);
       }
       setWidth(measured);
     };

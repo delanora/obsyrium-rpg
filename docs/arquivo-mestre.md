@@ -1834,7 +1834,9 @@ visual específico**; trata-se de pendência própria, não da 8.5.3.
 
 - **8.5.4.1 — Identidade Visual das Relações** (implementada e publicada em
   `bb1c9b7`, 25/11/2026; validação complementar aprovada, aguardando aceite visual).
-- **8.5.4.2 — Roteamento Inteligente das Conexões** (não iniciada).
+- **8.5.4.2 — Roteamento Inteligente das Conexões** (implementada e
+  validada; composição candidata pronta, aguardando autorização de
+  publicação).
 - **8.5.4.3 — Destaque e Interação Relacional** (não iniciada).
 - **8.5.4.4 — Navegação pela Câmera e Histórico** (não iniciada).
 
@@ -1991,3 +1993,72 @@ Continuam abertos o custo de renderização em quadros extensos (+982 nós SVG,
 (8.5.4.2), as falhas antigas das três suítes Chromium neste host, a divergência
 global do Prisma e o isolamento adicional por permissões do sistema operacional.
 A 8.5.4.2 não foi iniciada e seu planejamento não foi alterado.
+
+## 8.5.4.2 — Roteamento inteligente das conexões
+
+Implementação de apresentação pura, sem schema, banco, API, DTOs, migrations,
+Prisma Generate, restart ou publicação. Detalhes técnicos em
+`docs/fichario-roteamento-relacional.md`.
+
+### Arquitetura
+
+- `archiveLinkGeometry.ts`: primitivas puras — portas, conexões angulares com
+  diagonais preferenciais de 45°, corredores deslocados, arredondamento de
+  cantos, comandos SVG e amostragem por comprimento de arco.
+- `archiveLinkRouting.ts`: planejador determinístico — candidatos por par de
+  lados e estratégia, obstáculos com folga de 26, função de custo documentada,
+  corredores para relações paralelas, posicionamento de rótulos, orçamentos e
+  fallback.
+- Uma única representação de rota: `ArchiveCanvas` calcula o plano em `useMemo`
+  sobre `archiveRouteSignature` e o compartilha por `routesRef` com
+  `useArchiveMotion`. Traço, bainha, hit area, marcadores e rótulos consomem o
+  mesmo `path`; não há caminho paralelo por camada.
+
+### Resultados
+
+- 28/28 verificações puras de roteamento (eixos, diagonais, quatro lados,
+  distribuição de portas, cantos, arredondamento, obstáculos simples/múltiplos/
+  alinhados, corredores estreitos, cards sobrepostos, paralelas, sentidos
+  opostos, geometria extrema, coordenadas negativas, determinismo, orçamento,
+  fallback, cache, rótulos, geometria persistida intacta).
+- Suíte Chromium de relações sobre fixture sintética: traço, bainha, hit area,
+  encaixes, marcadores, rótulos, hover, seleção, teclado, arraste, resize,
+  expansão, recolhimento, filtros, pan, zoom, reduced-motion e remoção.
+- Invariantes espaciais anteriores preservadas (layout, filtros, identidade,
+  animação, reserva, projeção, multinível, câmera, background, estabilidade).
+- Benchmark sintético contra a geometria publicada da 8.5.4.1 (50/100/200/500
+  cards; esparsa, densa, radial, núcleos, paralelas, distantes): quadros
+  esparsos, densos e com muitas paralelas passam de até 574 interseções de
+  interior de card e 960 rótulos sobrepostos para **zero**, sem fallback;
+  núcleos distantes caem de 574 para 121 interseções em 995 vínculos; hub único
+  é o pior caso e recorre a fallback registrado. Custo de cálculo em Node: 58 ms (100 vínculos) a 1,06 s (1 000 vínculos)
+  nas topologias esparsa/densa/paralelas, 81 ms a 2,34 s com vários núcleos
+  (995 vínculos), ~3,9 s no hub único de 499 vínculos (com fallback registrado) e
+  6,6 s em 995 vínculos de núcleos muito distantes. Pan e zoom não recalculam
+  rotas.
+
+### Composição candidata
+
+Baseline reconstruído a partir de `6bfcca4` em checkout isolado
+(`/root/val-8542-base`, `node_modules` por hardlink): `index-BEp4RUM0.js`
+(`636a31c5…`) e `index-C0vlXmbn.css` (`139d84c0…`) reproduzidos **byte a byte**
+contra a composição publicada. O candidato foi construído do mesmo checkout com
+apenas os arquivos desta fase sobrepostos (`/root/val-8542-check`), gerando
+`index-UkwsBWsS.js` (`7386058…`) e o CSS inalterado. Manifest SHA256 com 340
+arquivos; publicação **não executada**.
+
+### Limitações registradas
+
+Hub único com centenas de relações concentra portas e desvios inviáveis, com
+fallback frequente; topologias de núcleos distantes mantêm cruzamentos
+residuais (contornar cards concentra trajetos); mudanças de topologia de rota
+não interpolam strings SVG e usam atualização determinística. Dívidas históricas
+de escala, Prisma, infraestrutura de testes e isolamento operacional seguem
+abertas.
+
+### Encerramento autorizado da 8.5.4.1
+
+Aceite de **19/20** em 26/11/2026, sem registro de 20/20. O item aberto era a
+abertura de informações ao selecionar relação; a seleção visual foi confirmada e
+a Consulta Relacional transferida à 8.5.4.3.
+

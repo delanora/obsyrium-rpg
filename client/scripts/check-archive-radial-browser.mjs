@@ -447,13 +447,25 @@ const assertEndpoints = async () =>
         };
         const a = find(l.sourceId),
           b = find(l.targetId),
-          n = g
-            .querySelector(".archive-link")
-            .getAttribute("d")
-            .match(/[-+]?\d*\.?\d+(?:e[-+]?\d+)?/g)
-            .map(Number);
-        if (!a || !b || !edge(a, n[0], n[1]) || !edge(b, n[4], n[5]))
-          throw new Error(JSON.stringify({ id: l.id, a, b, n }));
+          path = g.querySelector(".archive-link");
+        if (!a || !b || !path)
+          throw new Error(JSON.stringify({ id: l.id, a, b }));
+        // O trajeto agora é angular: as pontas saem do próprio path, não de
+        // posições fixas no array de números da curva quadrática antiga.
+        const total = path.getTotalLength(),
+          start = path.getPointAtLength(0),
+          end = path.getPointAtLength(total);
+        if (!edge(a, start.x, start.y) || !edge(b, end.x, end.y))
+          throw new Error(
+            JSON.stringify({
+              id: l.id,
+              a,
+              b,
+              start,
+              end,
+              d: path.getAttribute("d"),
+            }),
+          );
       }
       return true;
     }, links),

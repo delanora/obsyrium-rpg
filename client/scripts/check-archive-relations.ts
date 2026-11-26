@@ -11,7 +11,7 @@ import {
   archiveRelationStyle,
   archiveRelationVisual,
 } from "../src/components/archive/archiveRelationStyle";
-import { archiveLinkGeometry } from "../src/components/archive/archiveLinkGeometry";
+import { archiveLinkRouteGeometry } from "../src/components/archive/archiveLinkRouting";
 
 let checks = 0;
 const check = (label: string, run: () => void) => {
@@ -78,15 +78,8 @@ check("as variáveis CSS espelham a tabela do tipo", () => {
 check("a geometria expõe as pontas usadas pelos encaixes", () => {
   const a = { x: 0, y: 0, width: 200, height: 120 };
   const b = { x: 400, y: 300, width: 200, height: 120 };
-  const geometry = archiveLinkGeometry(a, b, 0, 1);
-  // Bordas reais: o raio do card encontra a reta entre os centros.
-  assert.deepEqual(geometry.from, { x: 180, y: 120 });
-  assert.deepEqual(geometry.to, { x: 420, y: 300 });
-  assert.match(
-    geometry.path,
-    new RegExp(`^M${geometry.from.x},${geometry.from.y} Q.+ ${geometry.to.x},${geometry.to.y}$`),
-  );
-  // A curva não entra no miolo dos cards: cada ponta fica na borda do seu card.
+  const geometry = archiveLinkRouteGeometry(undefined, a, b);
+  // A porta fica sempre na borda real do card, nunca no miolo.
   const onBorder = (p: { x: number; y: number }, r: typeof a) =>
     (Math.abs(p.x - r.x) < 1e-6 ||
       Math.abs(p.x - (r.x + r.width)) < 1e-6 ||
@@ -98,6 +91,21 @@ check("a geometria expõe as pontas usadas pelos encaixes", () => {
     p.y <= r.y + r.height + 1e-6;
   assert.ok(onBorder(geometry.from, a));
   assert.ok(onBorder(geometry.to, b));
+  // O traço angular começa e termina nas mesmas pontas dos encaixes.
+  const rounded = (value: number) => Math.round(value * 100) / 100;
+  assert.ok(
+    geometry.path.startsWith(
+      `M${rounded(geometry.from.x)},${rounded(geometry.from.y)}`,
+    ),
+  );
+  assert.ok(
+    geometry.path.endsWith(
+      `L${rounded(geometry.to.x)},${rounded(geometry.to.y)}`,
+    ),
+  );
+  // Sem curvas amplas: só linhas, arcos pequenos de canto e nenhum fechamento.
+  assert.ok(/^[MLQ0-9.,\- ]+$/.test(geometry.path));
+  assert.ok(!/[CTSZ]/.test(geometry.path));
 });
 
 console.log(`\n${checks} verificações de identidade visual das relações.`);

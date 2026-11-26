@@ -34,7 +34,12 @@ import {
   type ArchiveFilterPresentation,
 } from "./archiveFilters";
 import type { ArchiveLayout } from "./archiveLayout";
-import { archiveLinkGeometry } from "./archiveLinkGeometry";
+import {
+  archiveLinkRouteGeometry,
+  archiveRouteSignature,
+  planArchiveLinkRoutes,
+  type ArchiveRoutePlanSet,
+} from "./archiveLinkRouting";
 import {
   ARCHIVE_RELATION_MARKERS,
   ARCHIVE_RELATION_VISUALS,
@@ -114,6 +119,7 @@ const GraphContent = memo(function GraphContent({
   onConsult,
   graph,
   visual,
+  routes,
   selected,
   onStart,
   onSelect,
@@ -126,6 +132,7 @@ const GraphContent = memo(function GraphContent({
   onConsult?: (id: string, pointer?: boolean) => void;
   graph: NarrativeGraphDto;
   visual: Record<string, Geometry>;
+  routes: ArchiveRoutePlanSet;
   selected: ArchiveSelection;
   onStart: (
     e: PointerEvent,
@@ -148,14 +155,6 @@ const GraphContent = memo(function GraphContent({
     () => new Map(places.map((p) => [p.cardId, p])),
     [places],
   );
-  const pairs = useMemo(() => {
-    const groups = new Map<string, string[]>();
-    for (const l of graph.links) {
-      const key = [l.sourceId, l.targetId].sort().join(":");
-      groups.set(key, [...(groups.get(key) ?? []), l.id]);
-    }
-    return groups;
-  }, [graph.links]);
   const related = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const link of graph.links) {
@@ -204,15 +203,12 @@ const GraphContent = memo(function GraphContent({
           const a = byCard.get(link.sourceId),
             b = byCard.get(link.targetId);
           if (!a || !b) return null;
-          const same = pairs.get(
-            [link.sourceId, link.targetId].sort().join(":"),
-          )!;
-          const { path, labelPoint, from, to } = archiveLinkGeometry(
+          const route = archiveLinkRouteGeometry(
+            routes.routes.get(link.id),
             a,
             b,
-            same.indexOf(link.id),
-            same.length,
           );
+          const { path, labelPoint, from, to } = route;
           const label = link.label || NARRATIVE_RELATION_LABELS[link.relation];
           const sheath = archiveRelationVisual(link.relation).sheath;
           // Filtro em destaque: vínculo que toca card atenuado também recua.
@@ -226,6 +222,8 @@ const GraphContent = memo(function GraphContent({
               key={link.id}
               data-link={link.id}
               data-relation={link.relation}
+              data-route={route.strategy}
+              data-route-fallback={route.residual.length || undefined}
               data-filter-hidden={
                 (filter?.active &&
                   filter.mode === "isolate" &&
@@ -584,6 +582,8 @@ export function ArchiveCanvas({
   onInteraction,
 }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
+  // O mesmo plano alimenta a pintura estática e o loop de animação.
+  const routesRef = useRef<ArchiveRoutePlanSet | null>(null);
   const motion = useArchiveMotion(
     viewport,
     graph,
@@ -591,9 +591,29 @@ export function ArchiveCanvas({
     snapshot,
     visual,
     presentation,
+    routesRef,
   );
   const motionRef = useRef(motion);
   motionRef.current = motion;
+  const routeSignature = useMemo(
+    () => archiveRouteSignature(motion.graph),
+    [motion.graph],
+  );
+  const previousRoutes = useRef<ArchiveRoutePlanSet | null>(null);
+  // Recalcula só quando geometria/topologia mudam: pan, zoom e opacidade não.
+  const routes = useMemo(
+    () =>
+      planArchiveLinkRoutes({
+        placements: motion.graph.placements,
+        links: motion.graph.links,
+        previous: previousRoutes.current,
+      }),
+    [routeSignature],
+  );
+  routesRef.current = routes;
+  useEffect(() => {
+    previousRoutes.current = routes;
+  }, [routes]);
   const gesture = useRef<Gesture | null>(null);
   const suppressConsultUntil = useRef(0);
   const lastTap = useRef<{
@@ -894,6 +914,7 @@ export function ArchiveCanvas({
         <GraphContent
           nodes={nodes}
           filter={filter}
+          routes={routes}
           onToggle={busy ? undefined : onToggle}
           onConsult={busy ? undefined : consultCard}
           graph={motion.graph}

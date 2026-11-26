@@ -16,7 +16,10 @@ import {
   type ArchivePose,
   type ArchiveMotionPlan,
 } from "./archiveMotion";
-import { archiveLinkGeometry } from "./archiveLinkGeometry";
+import {
+  archiveLinkRouteGeometry,
+  type ArchiveRoutePlanSet,
+} from "./archiveLinkRouting";
 
 export interface ArchivePresentation {
   geometry: (id: string) => ArchiveGeometry | undefined;
@@ -31,6 +34,7 @@ export function useArchiveMotion(
   snapshot: NarrativeGraphDto | undefined,
   visual: Record<string, ArchiveGeometry>,
   presentation?: RefObject<ArchivePresentation | null>,
+  routes?: RefObject<ArchiveRoutePlanSet | null>,
 ) {
   const [revision, update] = useState(0);
   const runtime = useRef({
@@ -151,23 +155,14 @@ export function useArchiveMotion(
         el,
       ]),
     );
-    const pairs = new Map<string, string[]>();
-    for (const l of rendering.links) {
-      const k = [l.sourceId, l.targetId].sort().join(":");
-      pairs.set(k, [...(pairs.get(k) ?? []), l.id]);
-    }
     const linkById = new Map(rendering.links.map((l) => [l.id, l]));
     const links = [...root.querySelectorAll<SVGGElement>("[data-link]")].map(
       (el) => {
         const link = linkById.get(el.dataset.link!)!;
-        const same = pairs.get(
-          [link.sourceId, link.targetId].sort().join(":"),
-        )!;
         const label = el.querySelector<SVGGElement>(".archive-relation-label");
         return {
           el,
           link,
-          same,
           label,
           paths: [
             ...el.querySelectorAll<SVGPathElement>(
@@ -231,15 +226,15 @@ export function useArchiveMotion(
           height: pose.height * pose.scale,
         });
       }
-      for (const { el, link, same, label, paths, sockets, hits } of links) {
+      for (const { el, link, label, paths, sockets, hits } of links) {
         const a = rects.get(link.sourceId),
           b = rects.get(link.targetId);
         if (!a || !b) continue;
-        const geometry = archiveLinkGeometry(
+        // Mesmo plano do React: a animação só adapta as pontas.
+        const geometry = archiveLinkRouteGeometry(
+          routes?.current?.routes.get(link.id),
           a,
           b,
-          same.indexOf(link.id),
-          same.length,
         );
         const originKey = `:${label?.dataset.originX}:${label?.dataset.originY}`;
         if (

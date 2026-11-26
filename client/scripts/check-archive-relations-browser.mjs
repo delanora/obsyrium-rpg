@@ -38,6 +38,7 @@ ${advance ? `import{ARCHIVE_RELATION_VISUALS}from'${source}/client/src/component
 import'${source}/client/src/components/archive/archive.css';
 
 const stress=new URLSearchParams(location.search).has('stress');
+const routing=new URLSearchParams(location.search).has('routing');
 const group=(id,name,color)=>({id,name,color,version:0,description:'',cardCount:0,createdById:'fixture',createdAt:'',updatedAt:''});
 const groups=[group('g-a','Núcleo','#b89a5a'),group('g-b','Vestígios','#7f9a83')];
 const place=(id,parent,x,y,w,h,category,extra)=>({id,cardId:id,boardId:'test',parentPlacementId:parent??null,x,y,width:w??300,height:h??200,zIndex:0,branchOffsetX:null,branchOffsetY:null,card:{id,title:id,category:category??'note',summary:'Fixture de relações',content:'',version:0,createdAt:'',updatedAt:'',groups:extra??[]}});
@@ -55,6 +56,25 @@ function graph(){
       push(place(id,'hub',Math.round(Math.cos(angle)*(900+ring*520)),Math.round(Math.sin(angle)*(900+ring*520)),300,200,i%2?'npc':'locality',i%3?[]:[groups[i%2]]));
       links.push(link('l-'+i,'hub',id,NARRATIVE_RELATIONS[i%NARRATIVE_RELATIONS.length],'',i%2===0));
     }
+    return{board,groups,placements,links};
+  }
+  if(routing){
+    const board={id:'rota',name:'Roteamento',description:'',version:0,createdAt:'',updatedAt:''};
+    const placements=[
+      place('origem',null,0,0,320,200,'region',[groups[0]]),
+      place('parede',null,520,-80,320,360,'room',[]),
+      place('destino',null,1200,0,320,200,'npc',[groups[0]]),
+      place('par-a',null,0,620,320,200,'clue',[]),
+      place('par-b',null,940,620,320,200,'item',[]),
+      place('longe',null,-760,-520,320,200,'event',[]),
+    ];
+    const links=[
+      link('rota-1','origem','destino','triggers','Atravessa a parede',true),
+      link('par-1','par-a','par-b','knows','Sussurra',false),
+      link('par-2','par-a','par-b','enemy','Teme',true),
+      link('par-3','par-a','par-b','protects','Protege',false),
+      link('longo','origem','longe','knows','Uma inscricao longa para medir a capsula',false),
+    ];
     return{board,groups,placements,links};
   }
   push(place('cidade',null,0,0,320,220,'region',[groups[0]]));
@@ -85,15 +105,55 @@ ${advance ? "window.__visuals=ARCHIVE_RELATION_VISUALS;" : "window.__visuals=nul
 window.__labels=NARRATIVE_RELATION_LABELS;
 window.__relations=NARRATIVE_RELATIONS;
 window.__writes=0;window.__paintTimes=[];window.__issues=[];window.__watch=false;window.__paints=0;
+window.__parsePath=d=>{
+  if(!d||d[0]!=='M')return null;
+  const tokens=d.match(/[MLQ]|-?\\d+(?:\\.\\d+)?/g)||[];
+  let i=0;
+  if(tokens[i++]!=='M')return null;
+  const num=()=>Number(tokens[i++]);
+  const points=[],bad=[];
+  let point={x:num(),y:num()};
+  points.push(point);
+  let stretch=point;
+  while(i<tokens.length){
+    const kind=tokens[i++];
+    if(kind==='L'){
+      const next={x:num(),y:num()};
+      const dx=Math.abs(next.x-stretch.x),dy=Math.abs(next.y-stretch.y);
+      if(dx>0.05||dy>0.05){
+        const axis=dx<0.05||dy<0.05;
+        const diagonal=Math.abs(dx-dy)<Math.max(0.05,Math.min(dx,dy)*0.002);
+        if(!axis&&!diagonal)bad.push({dx:+dx.toFixed(2),dy:+dy.toFixed(2)});
+      }
+      points.push(next);stretch=next;
+    }else if(kind==='Q'){
+      num();num();
+      const next={x:num(),y:num()};
+      points.push(next);stretch=next;
+    }else return null;
+  }
+  return {from:points[0],to:points[points.length-1],points,bad};
+};
+window.__distanceToPoints=(x,y,points)=>{
+  let best=Infinity;
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i];
+    const dx=b.x-a.x,dy=b.y-a.y,len=dx*dx+dy*dy;
+    const t=len<1e-9?0:Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/len));
+    const d=Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy));
+    if(d<best)best=d;
+  }
+  return best;
+};
 window.__checkLinks=()=>{
   const issues=[];const groupsEl=[...document.querySelectorAll('svg.archive-lines g[data-link]')];
   for(const g of groupsEl){
     const main=g.querySelector('path.archive-link:not(.is-temporary)');
     const d=main&&main.getAttribute('d');
-    const m=d&&/^M([-\\d.e+]+),([-\\d.e+]+) Q([-\\d.e+]+),([-\\d.e+]+) ([-\\d.e+]+),([-\\d.e+]+)$/.exec(d);
-    if(!m){issues.push({kind:'bad-path',id:g.dataset.link,d});continue}
-    const from={x:+m[1],y:+m[2]},ctrl={x:+m[3],y:+m[4]},to={x:+m[5],y:+m[6]};
-    const mid={x:(from.x+2*ctrl.x+to.x)/4,y:(from.y+2*ctrl.y+to.y)/4};
+    const parsed=window.__parsePath(d);
+    if(!parsed){issues.push({kind:'bad-path',id:g.dataset.link,d});continue}
+    const from=parsed.from,to=parsed.to;
+    if(parsed.bad.length)issues.push({kind:'non-angular',id:g.dataset.link,segments:parsed.bad.slice(0,2)});
     const sheath=g.querySelector('.archive-link-sheath');
     if(sheath&&sheath.getAttribute('d')!==d)issues.push({kind:'sheath-desync',id:g.dataset.link});
     const marker=main.getAttribute('marker-end')||'';
@@ -114,10 +174,31 @@ window.__checkLinks=()=>{
     if(!label)issues.push({kind:'label-missing',id:g.dataset.link});
     else{
       const t=label.getAttribute('transform')||'';
-      const tm=t?/^translate\\(([-\\d.e+]+) ([-\\d.e+]+)\\)$/.exec(t):['',0,0];
-      if(!tm)issues.push({kind:'label-transform',id:g.dataset.link,t});
-      const px=+label.dataset.originX+(tm?+tm[1]:0),py=+label.dataset.originY+(tm?+tm[2]:0);
-      if(Math.abs(px-mid.x)>1.5||Math.abs(py-mid.y)>1.5)issues.push({kind:'label-offset',id:g.dataset.link,px,py,mid});
+      const shift=(t.match(/-?\\d+(?:\\.\\d+)?/g)||[0,0]).map(Number);
+      const px=+label.dataset.originX+(shift[0]||0),py=+label.dataset.originY+(shift[1]||0);
+      // O rótulo precisa estar sobre o próprio trajeto e fora dos cards.
+      // Distância ao path real (linhas e arcos), não à corda do canto.
+      const total=main.getTotalLength();
+      const steps=Math.min(1400,Math.max(24,Math.ceil(total/2)));
+      let distance=Infinity;
+      for(let s=0;s<=steps;s++){
+        const q=main.getPointAtLength((total*s)/steps);
+        const dd=Math.hypot(q.x-px,q.y-py);
+        if(dd<distance)distance=dd;
+      }
+      if(distance>1.6)issues.push({kind:'label-off-route',id:g.dataset.link,distance:+distance.toFixed(2)});
+      const animating=[...document.querySelectorAll('article[data-motion]')].some(card=>card.dataset.motion!=='rest');
+      const ctm=main.getScreenCTM();
+      if(ctm&&!animating){
+        const screen=new DOMPoint(px,py).matrixTransform(ctm);
+        const over=[...document.querySelectorAll('article.archive-card')].find(card=>{
+          const motion=card.dataset.motion;
+          if(motion==='move'||motion==='entry'||motion==='exit')return false;
+          const r=card.getBoundingClientRect();
+          return screen.x>r.left+3&&screen.x<r.right-3&&screen.y>r.top+3&&screen.y<r.bottom-3;
+        });
+        if(over)issues.push({kind:'label-on-card',id:g.dataset.link,card:over.dataset.placement});
+      }
       const plates=label.querySelectorAll('rect.archive-relation-plate');
       if(plates.length!==1)issues.push({kind:'label-plates',id:g.dataset.link,count:plates.length});
       else{
@@ -174,6 +255,20 @@ createRoot(document.getElementById('root')).render(<App/>);
         const req = createRequire(path.join(root, "client/package.json"));
         b.onResolve({ filter: /^react(-dom)?(\/.*)?$/ }, (a) => ({
           path: req.resolve(a.path),
+        }));
+      },
+    },
+    {
+      name: "sonda-de-rotas",
+      setup(b) {
+        b.onLoad({ filter: /archiveLinkRouting\.ts$/ }, (a) => ({
+          loader: "ts",
+          contents: fs
+            .readFileSync(a.path, "utf8")
+            .replace(
+              /export function planArchiveLinkRoutes\(input: ArchiveRouteInput\): ArchiveRoutePlanSet \{/,
+              "export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePlanSet { (globalThis as any).__routePlans=((globalThis as any).__routePlans??0)+1;",
+            ),
         }));
       },
     },
@@ -519,6 +614,20 @@ if (labelPoint.inside) {
     }),
     labelPoint.id,
   );
+  const under = await page.evaluate((point) => {
+    const element = document.elementFromPoint(point.x, point.y);
+    return {
+      tag: element?.tagName,
+      cls: element?.getAttribute?.("class"),
+      link: element?.closest?.("g[data-link]")?.dataset.link,
+      expected: point.id,
+      hovered: document
+        .querySelector(`g[data-link="${point.id}"] .archive-relation-label`)
+        ?.matches(":hover"),
+    };
+  }, labelPoint);
+  if (under.link !== under.expected)
+    console.log("diagnóstico hover do rótulo:", under);
   check(after.fill !== before.fill, "hover no rótulo realça a cápsula");
   check(after.width > before.width, "hover no rótulo também realça a linha");
   await page.mouse.move(5, 5);
@@ -792,12 +901,97 @@ const paintStats = await page.evaluate(() => {
   };
 });
 
+// 23. Roteamento angular: quadro sintético dedicado, com card intermediário.
+await page.goto(`${base}/?routing=1`);
+await page.waitForFunction(() => window.__toggle);
+await page.waitForTimeout(400);
+await page.evaluate(() => window.__fit());
+await page.waitForTimeout(300);
+const routingState = await page.evaluate(() => {
+  const g = document.querySelector('g[data-link="rota-1"]');
+  const main = g.querySelector("path.archive-link");
+  const parsed = window.__parsePath(main.getAttribute("d"));
+  const wall = document.querySelector('[data-placement="parede"]').getBoundingClientRect();
+  const ctm = main.getScreenCTM();
+  const length = main.getTotalLength();
+  let insideCard = 0;
+  for (let i = 0; i <= 240; i++) {
+    const point = main.getPointAtLength((length * i) / 240);
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(ctm);
+    if (
+      screen.x > wall.left + 3 &&
+      screen.x < wall.right - 3 &&
+      screen.y > wall.top + 3 &&
+      screen.y < wall.bottom - 3
+    )
+      insideCard++;
+  }
+  const plates = [...document.querySelectorAll('g[data-link^="par-"] .archive-relation-plate')].map(
+    (plate) => plate.getBoundingClientRect(),
+  );
+  let overlaps = 0;
+  for (let i = 0; i < plates.length; i++)
+    for (let j = i + 1; j < plates.length; j++) {
+      const a = plates[i], b = plates[j];
+      if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom)
+        overlaps++;
+    }
+  return {
+    strategy: g.dataset.route,
+    fallback: g.dataset.routeFallback ?? null,
+    angular: parsed.bad.length,
+    insideCard,
+    issues: window.__checkLinks(),
+    overlaps,
+    plans: window.__routePlans ?? 0,
+    paths: [...document.querySelectorAll("svg.archive-lines g[data-link] path.archive-link")].map(
+      (path) => path.getAttribute("d"),
+    ),
+  };
+});
+check(routingState.strategy && routingState.strategy !== "direct", `desvio usa estratégia angular (${routingState.strategy})`);
+check(routingState.fallback === null, "desvio não é fallback de obstáculo");
+check(routingState.angular === 0, `trajeto só com eixos e 45 graus (${routingState.angular})`);
+check(routingState.insideCard === 0, `trajeto não atravessa o card intermediário (${routingState.insideCard})`);
+check(
+  routingState.issues.length === 0,
+  `encaixes, rótulos e trajetos coerentes no quadro de roteamento (${JSON.stringify(routingState.issues.slice(0, 2))})`,
+);
+check(routingState.overlaps === 0, "rótulos paralelos separados no quadro de roteamento");
+check(routingState.plans > 0, `planejador executado e instrumentado (${routingState.plans})`);
+await page.screenshot({ path: path.join(dir, "roteamento.png") });
+await page.mouse.move(420, 300);
+await page.mouse.wheel(0, -260);
+await page.waitForTimeout(300);
+const routedAfterZoom = await page.evaluate(() => ({
+  plans: window.__routePlans ?? 0,
+  camera: JSON.stringify(window.__cameraValue),
+  paths: [...document.querySelectorAll("svg.archive-lines g[data-link] path.archive-link")].map(
+    (path) => path.getAttribute("d"),
+  ),
+}));
+check(
+  routedAfterZoom.plans === routingState.plans,
+  `zoom não recalcula rotas (${routingState.plans} -> ${routedAfterZoom.plans})`,
+);
+check(
+  JSON.stringify(routedAfterZoom.paths) === JSON.stringify(routingState.paths),
+  "zoom preserva exatamente os trajetos",
+);
+await page.screenshot({ path: path.join(dir, "roteamento-zoom.png") });
+
+const routingPaintStats = await page.evaluate(() => ({
+  paints: window.__paints,
+  nodes: document.querySelectorAll("svg.archive-lines *").length,
+}));
+
 check(pageErrors.length === 0, `sem erros de página (${pageErrors.slice(0, 2).join(" | ")})`);
 
 const failed = checks.filter((c) => !c.ok);
 console.log(
   `Relações Chromium: ${checks.length} verificações; ${failed.length} falhas; ${paintStats.paints} pinturas; ${paintStats.nodes} nós SVG; pintura mediana ${paintStats.median.toFixed(2)} ms / p95 ${paintStats.p95.toFixed(2)} ms. Evidências: ${dir}`,
 );
+if (routingPaintStats) console.log(`Quadro de roteamento: ${routingPaintStats.nodes} nós SVG.`);
 for (const f of failed) console.log(" -", f.label);
 await browser.close();
 server.close();
