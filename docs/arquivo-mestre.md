@@ -2062,3 +2062,38 @@ Aceite de **19/20** em 26/11/2026, sem registro de 20/20. O item aberto era a
 abertura de informações ao selecionar relação; a seleção visual foi confirmada e
 a Consulta Relacional transferida à 8.5.4.3.
 
+## 8.5.4.2.1 — Hardening do roteamento relacional
+
+Microfase de correção e custo sobre a 8.5.4.2, sem reescrever o roteador e sem
+tocar identidade visual, layout, dados ou backend.
+
+- **Diagnóstico**: `state` (`verified-clear`, `intersects`, `unverified`)
+  separado de `fallbackReason` (`budget`, `no-corridor`), de `budget` e de
+  `reused`; `data-route-state` no DOM. Rota não verificada nunca é anunciada
+  como livre.
+- **Verificação final**: o caminho suavizado e com portas já distribuídas é
+  validado contra o índice espacial completo — trechos retos por inteiro e arcos
+  amostrados apenas onde há obstáculo na caixa do canto (erro < 1 unidade).
+- **Rótulo**: `offset` explícito no plano, aplicado na avaliação e no render;
+  a cápsula permanece centrada no trajeto (tolerância de 1,6 unidade da suíte
+  instrumentada) e o índice espacial de rótulos remove o custo quadrático.
+- **Orçamento**: trabalho total em unidades determinísticas (candidatos,
+  cruzamentos, rótulos, verificação), com parada efetiva e fallback explícito.
+- **Níveis**: saída antecipada na primeira alternativa limpa e fiel aos eixos/45°;
+  exploração limitada só quando há obstáculo; vínculos acima de 1 800 unidades
+  sem desvios caros.
+- **Reutilização**: planos anteriores preservados quando a mudança não alcança as
+  pontas nem a caixa do trajeto; invalidação conservadora.
+- **Medições**: 29–769 ms em 100–1 000 vínculos esparsos/densos/paralelos (todos
+  verificados), 1,59 s em 995 vínculos multi-núcleo, 1,85 s no hub de 499 (317
+  fallbacks) e ~5,5 s no extremo de 995 vínculos que cruzam o quadro inteiro.
+  Atualizações locais: 52–90 ms com 110–116 de 120 rotas reutilizadas; pan e zoom
+  não replanejam.
+- **Testes**: 28 verificações puras de roteamento, 17 de hardening, 143 em
+  Chromium, 221 sondas de estabilidade, 2 357 invariantes espaciais
+  (718 layout, 25 projeção, 16 câmera, 479 reserva, 723 animação, 396
+  multinível), 802 de filtros e 7 de identidade visual; build isolado aprovado.
+- **Pendências**: custo do extremo de núcleos muito distantes, fallback do hub
+  único e replanejamento conservador na remoção de relação. A 8.5.4.2 continua
+  **não publicada**; a 8.5.4.3 não foi iniciada.
+

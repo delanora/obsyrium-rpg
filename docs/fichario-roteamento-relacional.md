@@ -241,3 +241,81 @@ confirmou que a **seleção visual funciona** e que a abertura de informações
 relacionais não fazia parte da implementação existente. O responsável autorizou
 encerrar a 8.5.4.1 no escopo visual e transferir a Consulta Relacional para a
 8.5.4.3.
+
+## 17. Hardening (8.5.4.2.1)
+
+Microfase de correção e custo sobre o roteador existente. Nada foi reescrito: a
+representação de rota, as portas, a geometria angular, os corredores, os pesos e
+a identidade visual permanecem.
+
+### 17.1 Problemas confirmados e correções
+
+| Problema | Correção |
+| --- | --- |
+| Diagnóstico binário (`fallback` + residual) não distinguia rota livre de rota nunca verificada | `state`: `verified-clear` / `intersects` / `unverified`, mais `fallbackReason` (`budget`, `no-corridor`), `budget` e `reused` separados |
+| `evaluateRoute` devolvia residual vazio ao esgotar o orçamento (parecia rota livre) | retorno com `verified: false`; a rota nunca é classificada como livre sem verificação |
+| A validação final usava só os ≤40 obstáculos do planejamento | verificação final independente do caminho **suavizado**, consultando o índice espacial completo; trechos retos testados por inteiro e arcos amostrados só onde existe obstáculo na caixa do canto (passo 4, erro < 1 unidade) |
+| `plan.label` guardava apenas `segment`/`at`; o deslocamento escolhido se perdia e o render recalculava outra posição | `ArchiveRouteLabel.offset` explícito, usado na avaliação, no plano, no render e no teste de invariante |
+| Distribuição posterior das portas não era revalidada | a validação final acontece **depois** da distribuição de portas, corredor e suavização |
+| Orçamento cobria só testes de obstáculo | orçamento de trabalho total em unidades determinísticas: candidatos, cruzamentos, rótulos e verificação final; ao esgotar, a exploração para e o vínculo vira `unverified` com motivo |
+| Planejamento global síncrono com custo alto | nível 1 com saída antecipada na primeira alternativa limpa e angularmente fiel; nível 2 só quando há obstáculo; nível 3 (fallback) com orçamento esgotado; vínculos acima de 1 800 unidades usam a estratégia simplificada, sem desvios caros |
+| Toda mudança geométrica replanejava o quadro inteiro | reutilização localizada: o plano anterior é preservado quando nem as pontas nem a caixa do trajeto são alcançadas pelas alterações (`placements` do plano anterior); qualquer dúvida invalida |
+| Rótulos comparados com todos os anteriores (custo quadrático) | grade espacial dos rótulos já posicionados |
+
+### 17.2 Contrato do rótulo
+
+O rótulo é posicionado **sobre o trajeto**: a suíte instrumentada exige distância
+≤ 1,6 unidade entre a cápsula e o path real (linhas e arcos). O deslocamento
+perpendicular existe no contrato (`offset`), é avaliado e aplicado no render,
+mas permanece em 0 — a correção de sobreposição vem de amostragem mais densa ao
+longo do próprio trajeto, não de afastar a cápsula da conexão. A segunda passada
+densa (15 posições nos 6 trechos mais longos) só roda quando o melhor candidato
+ainda cai sobre um card e a rota tem menos de 1 200 unidades.
+
+### 17.3 Orçamentos
+
+`ARCHIVE_LINK_ROUTING`: `maxWorkUnits 1 200 000`, `minWorkUnits 150 000`,
+`workPerLink 900`, `unitsPerBuild 6`, `unitsPerLabelCandidate 6`,
+`maxValidateChecks 900 000`, `validateStep 16`, `longLinkDistance 1 800`,
+`maxBuildsPerLink 40`, `maxCandidatesPerLink 64`, `maxNearbyRouted 16`,
+`maxDetourObstacles 4`.
+
+O teto de trabalho é determinístico (unidades, nunca relógio): mesma entrada e
+mesmo plano anterior produzem o mesmo resultado. Esgotado o orçamento, os
+vínculos restantes recebem fallback angular e ficam `unverified` — nunca
+"livres".
+
+### 17.4 Reutilização e invalidação
+
+`ArchiveRoutePlanSet.placements` guarda a geometria usada no plano. No ciclo
+seguinte, cada vínculo é reutilizado quando: existe plano anterior verificado,
+nenhum dos dois cards mudou de posição/tamanho, e a caixa do trajeto (inflada em
+`clearance + labelGap + 8`) não toca nenhum retângulo alterado. Mudanças no
+conjunto de vínculos (criar/remover relação) invalidam o plano inteiro de forma
+conservadora.
+
+### 17.5 Resultados medidos (Node, sem DOM)
+
+- esparsa/densa/paralelas: 29 ms (100 vínculos) a 769 ms (1 000), todas
+  `verified-clear`, zero interseções e zero rótulos sobrepostos;
+- vários núcleos: 48 ms a 1 588 ms (995 vínculos), 875 verificadas e 120 com
+  interseção confirmada;
+- hub único: 162 ms (49), 301 ms (99), 363 ms (199) e 1 847 ms (499, com 317
+  fallbacks por orçamento);
+- núcleos muito distantes: 89 ms (95) a 5 522 ms (995) — o pior caso restante;
+- atualizações: mover card 83 ms (114 de 120 rotas reutilizadas), redimensionar
+  90 ms, criar relação 52 ms (116 reutilizadas), remover relação 55 ms (replan
+  conservador), mover obstáculo 56 ms; pan e zoom não replanejam nada.
+
+### 17.6 Limitações registradas
+
+- O cenário de 995 vínculos atravessando o quadro inteiro ainda custa ~5,5 s: o
+  trabalho é limitado, mas o custo por vínculo (cruzamentos e rótulos) segue
+  alto nesse extremo; não é recomendado abrir quadros dessa escala sem
+  particionamento.
+- Remoção de relação invalida o plano inteiro (conservador por decisão).
+- O hub único mantém fallback frequente: é limite físico de portas, não defeito
+  de diagnóstico.
+- `intersects` é diagnóstico, não um erro: a relação continua visível,
+  selecionável e com rótulo.
+

@@ -22,6 +22,7 @@ import {
   archiveLinkPointOnPolyline,
   archiveLinkPolylineLength,
   archiveLinkPort,
+  sampleArchiveLinkPath,
   archiveRectsIntersect,
   inflateArchiveRect,
   offsetArchiveLinkLane,
@@ -32,6 +33,11 @@ import {
 import { archiveRelationLabelBox } from "./archiveRelationMetrics";
 
 export type ArchiveRouteStrategy = "direct" | "elbow" | "diagonal" | "detour";
+
+/** Diagnóstico explícito do trajeto efetivamente apresentado. */
+export type ArchiveRouteState = "verified-clear" | "intersects" | "unverified";
+/** Motivo da degradação, quando o planejador não seguiu o caminho pleno. */
+export type ArchiveFallbackReason = "budget" | "density" | "no-corridor";
 
 /** Menor contrato aceito pelo roteador; o DTO do Arquivo é estruturalmente compatível. */
 export interface ArchiveRouteNode extends ArchiveRect {
@@ -51,6 +57,8 @@ export interface ArchiveRouteLabel {
   segment: number;
   /** Posição normalizada dentro desse segmento. */
   at: number;
+  /** Deslocamento perpendicular curto: mesma posição no plano e no render. */
+  offset: number;
 }
 export interface ArchiveLinkRoutePlan {
   sides: [ArchiveLinkSide, ArchiveLinkSide];
@@ -63,26 +71,48 @@ export interface ArchiveLinkRoutePlan {
   /** Diagnóstico do corredor: lados, estratégia e variante. */
   corridor: string;
   cost: number;
-  /** Cards cujo interior a rota ainda atravessa (vazio = rota livre). */
+  /** Cards cujo interior o trajeto final ainda atravessa. */
   residual: string[];
   /** Verdadeiro quando o orçamento de cálculo esgotou antes da checagem. */
   budget: boolean;
+  /** Trajeto final livre verificado, com interseção ou não verificado. */
+  state: ArchiveRouteState;
+  /** Motivo da degradação; nulo quando a rota foi planejada plenamente. */
+  fallbackReason: ArchiveFallbackReason | null;
+  /** Plano preservado do ciclo anterior por invalidação localizada. */
+  reused: boolean;
+  /** Caixa do trajeto final, usada na invalidação localizada. */
+  bounds: ArchiveRect;
   label: ArchiveRouteLabel | null;
   labelOverlap: boolean;
 }
 export interface ArchiveRouteStats {
   links: number;
   planned: number;
+  /** Rotas preservadas do ciclo anterior por invalidação localizada. */
+  reused: number;
   candidates: number;
   obstacleTests: number;
-  fallbacks: number;
+  /** Testes da verificação final do caminho suavizado. */
+  checkTests: number;
+  /** Candidatos de rótulo avaliados. */
+  labelTests: number;
+  /** Trabalho total consumido (unidades determinísticas, não relógio). */
+  work: number;
+  maxWork: number;
   crossings: number;
+  verified: number;
+  intersects: number;
+  unverified: number;
+  fallbacks: number;
   budgetExceeded: boolean;
   maxTests: number;
 }
 export interface ArchiveRoutePlanSet {
   routes: Map<string, ArchiveLinkRoutePlan>;
   stats: ArchiveRouteStats;
+  /** Geometria usada neste plano: base da invalidação localizada. */
+  placements?: Map<string, ArchiveRect>;
 }
 export interface ArchiveLinkRoute {
   from: ArchivePoint;
@@ -95,7 +125,10 @@ export interface ArchiveLinkRoute {
   length: number;
   lane: number;
   strategy: ArchiveRouteStrategy;
+  /** Degradação: a rota não foi planejada plenamente. */
   fallback: boolean;
+  state: ArchiveRouteState;
+  fallbackReason: ArchiveFallbackReason | null;
   residual: string[];
 }
 
@@ -110,6 +143,18 @@ export const ARCHIVE_LINK_ROUTING = {
   maxSegmentTests: 600_000,
   segmentTestsPerLink: 4_000,
   maxAbsoluteSegmentTests: 6_000_000,
+  /** Orçamento determinístico de trabalho total (nunca timeout de relógio). */
+  maxWorkUnits: 1_200_000,
+  minWorkUnits: 150_000,
+  workPerLink: 900,
+  unitsPerBuild: 6,
+  unitsPerLabelCandidate: 6,
+  unitsPerCrossingTest: 1,
+  /** Verificação final do caminho suavizado (todos os obstáculos). */
+  maxValidateChecks: 900_000,
+  validateStep: 16,
+  /** Acima deste comprimento o vínculo usa a estratégia simplificada. */
+  longLinkDistance: 1_800,
   labelHeight: 26,
   labelGap: 4,
 } as const;
@@ -142,6 +187,14 @@ export const ARCHIVE_ROUTE_WEIGHTS = {
 } as const;
 
 const EPS = 1e-6;
+/** Ordem fixa das estratégias do nível 1 (determinismo do desempate). */
+const ARCHIVE_ROUTE_STRATEGIES: [ArchiveRouteStrategy, number][] = [
+  ["direct", 0],
+  ["elbow", 0],
+  ["elbow", 1],
+  ["diagonal", 0],
+  ["diagonal", 1],
+];
 const pairKey = (link: ArchiveRouteLink) =>
   [link.sourceId, link.targetId].sort().join("|");
 const byId = (a: { id: string }, b: { id: string }) =>
@@ -226,6 +279,8 @@ interface Candidate {
 interface Evaluation {
   residual: string[];
   clearance: number;
+  /** Falso quando o orçamento acabou antes de concluir a checagem. */
+  verified: boolean;
 }
 
 /** Ângulo entre a normal da porta e a direção do outro card (0 = encaixe ideal). */
@@ -292,7 +347,7 @@ function evaluateRoute(
 ): Evaluation {
   const residual = new Set<string>();
   let clearanceHits = 0;
-  if (!obstacles.length) return { residual: [], clearance: 0 };
+  if (!obstacles.length) return { residual: [], clearance: 0, verified: true };
   let minX = Number.POSITIVE_INFINITY,
     minY = Number.POSITIVE_INFINITY,
     maxX = Number.NEGATIVE_INFINITY,
@@ -318,9 +373,10 @@ function evaluateRoute(
       if (!archiveRectsIntersect(node, band)) continue;
       if (stats.obstacleTests >= stats.maxTests) {
         stats.budgetExceeded = true;
-        return { residual: [], clearance: 0 };
+        return { residual: [], clearance: 0, verified: false };
       }
       stats.obstacleTests++;
+      stats.work++;
       const own = node.id === sourceId || node.id === targetId;
       if (segmentCrossesArchiveRect(a, b, node, 1)) residual.add(node.id);
       else if (
@@ -330,7 +386,7 @@ function evaluateRoute(
         clearanceHits++;
     }
   }
-  return { residual: [...residual], clearance: clearanceHits };
+  return { residual: [...residual], clearance: clearanceHits, verified: true };
 }
 
 /**
@@ -523,7 +579,7 @@ export function archiveLinkRouteGeometry(
         points,
         label.segment,
         label.at,
-        (label as { offset?: number }).offset ?? 0,
+        label.offset,
       )
     : archiveLinkPointOnPolyline(
         points,
@@ -542,7 +598,11 @@ export function archiveLinkRouteGeometry(
     length: archiveLinkPolylineLength(points),
     lane: plan?.lane ?? 0,
     strategy: plan?.strategy ?? "direct",
-    fallback: !!plan?.residual.length,
+    fallback: plan
+      ? plan.fallbackReason !== null || plan.state !== "verified-clear"
+      : true,
+    state: plan?.state ?? "unverified",
+    fallbackReason: plan?.fallbackReason ?? null,
     residual: plan?.residual ?? [],
   };
 }
@@ -615,6 +675,38 @@ function routeSegmentIndex(
   };
 }
 
+/**
+ * Grade dos rótulos já posicionados: evita comparar cada candidato com
+ * TODOS os rótulos anteriores (custo quadrático em quadros grandes).
+ */
+function labelRectIndex(cell = 480) {
+  const buckets = new Map<string, ArchiveRect[]>();
+  const cells = (rect: ArchiveRect) => {
+    const x0 = Math.floor(rect.x / cell),
+      x1 = Math.floor((rect.x + rect.width) / cell),
+      y0 = Math.floor(rect.y / cell),
+      y1 = Math.floor((rect.y + rect.height) / cell);
+    const out: string[] = [];
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) out.push(`${x}:${y}`);
+    return out;
+  };
+  return {
+    add(rect: ArchiveRect) {
+      for (const key of cells(rect)) {
+        const list = buckets.get(key);
+        if (list) list.push(rect);
+        else buckets.set(key, [rect]);
+      }
+    },
+    query(rect: ArchiveRect): ArchiveRect[] {
+      const found = new Set<ArchiveRect>();
+      for (const key of cells(rect))
+        for (const entry of buckets.get(key) ?? []) found.add(entry);
+      return [...found];
+    },
+  };
+}
+
 interface LabelPlacement {
   segment: number;
   at: number;
@@ -633,9 +725,11 @@ function placeLabel(
   points: readonly ArchivePoint[],
   text: string,
   index: ReturnType<typeof obstacleIndex>,
-  placed: readonly ArchiveRect[],
+  placed: ReturnType<typeof labelRectIndex>,
   lines: ReturnType<typeof routeSegmentIndex>,
   linkId: string,
+  stats?: ArchiveRouteStats,
+  charge?: (units: number) => boolean,
 ): LabelPlacement {
   const box = archiveRelationLabelBox(text);
   const segments: { index: number; length: number; arc: number }[] = [];
@@ -653,14 +747,17 @@ function placeLabel(
     .slice(0, 10)
     .sort((left, right) => left.index - right.index);
   const pool = long.length ? long : segments;
-  const shift = box.height / 2 + 6;
+  // A cápsula aprovada fica centrada no trajeto (tolerância de 1,6 unidade na
+  // suíte instrumentada). O deslocamento perpendicular existe no contrato, mas
+  // é mantido em zero: a correção de sobreposição vem da amostragem densa.
+  const shift = 0;
   let best: LabelPlacement | null = null;
 
   const evaluate = (
     segment: { index: number; length: number; arc: number },
     at: number,
     offset: number,
-  ): LabelPlacement => {
+  ): LabelPlacement | null => {
     const base = archiveLinkPointOnPolyline(points, segment.index, at);
     const head = points[segment.index],
       tail = points[segment.index + 1];
@@ -694,6 +791,9 @@ function placeLabel(
         cost += ARCHIVE_ROUTE_WEIGHTS.labelCorner;
         break;
       }
+    stats && stats.labelTests++;
+    if (charge && !charge(ARCHIVE_LINK_ROUTING.unitsPerLabelCandidate))
+      return null;
     let overlap = false,
       cardHit = false;
     for (const node of index.query(rect))
@@ -702,7 +802,7 @@ function placeLabel(
         cardHit = true;
         break;
       }
-    for (const other of placed)
+    for (const other of placed.query(inflateArchiveRect(rect, ARCHIVE_LINK_ROUTING.labelGap)))
       if (
         archiveRectsIntersect(rect, inflateArchiveRect(other, ARCHIVE_LINK_ROUTING.labelGap))
       ) {
@@ -728,22 +828,46 @@ function placeLabel(
     if (!best || placement.cost < best.cost - 1e-9) best = placement;
   };
 
-  for (const segment of pool)
-    for (const at of [0.5, 0.34, 0.66, 0.2, 0.8, 0.42, 0.58])
-      for (const offset of [0, shift, -shift]) keep(evaluate(segment, at, offset));
+  let outOfBudget = false;
+  for (const segment of pool) {
+    for (const at of [0.5, 0.34, 0.66, 0.2, 0.8]) {
+      for (const offset of [0, shift, -shift]) {
+        const candidate = evaluate(segment, at, offset);
+        if (!candidate) {
+          outOfBudget = true;
+          break;
+        }
+        keep(candidate);
+      }
+      if (outOfBudget) break;
+    }
+    if (outOfBudget) break;
+  }
 
   // Segunda passada, só quando o melhor ainda cai sobre um card: amostragem mais
   // densa e deslocamentos maiores, ainda limitada e determinística.
-  if (best && (best as LabelPlacement).cardHit) {
+  // Trajetos muito extensos raramente encontram posição livre melhor: a
+  // segunda passada densa fica restrita a rotas curtas/médias.
+  if (!outOfBudget && best && (best as LabelPlacement).cardHit && total < 1_200) {
     const dense = segments
       .slice()
       .sort((left, right) => right.length - left.length)
       .slice(0, 6)
       .sort((left, right) => left.index - right.index);
-    for (const segment of dense)
-      for (let step = 1; step <= 9; step++)
-        for (const offset of [0, shift, -shift, shift * 2, -shift * 2])
-          keep(evaluate(segment, step / 10, offset));
+    for (const segment of dense) {
+      for (let step = 1; step <= 15; step++) {
+        for (const offset of [0]) {
+          const candidate = evaluate(segment, step / 12, offset);
+          if (!candidate) {
+            outOfBudget = true;
+            break;
+          }
+          keep(candidate);
+        }
+        if (outOfBudget) break;
+      }
+      if (outOfBudget) break;
+    }
   }
   if (best) return best;
   return {
@@ -756,6 +880,188 @@ function placeLabel(
     cardHit: false,
     cost: 0,
   };
+}
+
+
+/**
+ * Nível 1: candidato limpo (sem travessia, folga ou cruzamento) E fiel à
+ * geometria angular — eixos ou 45° exatos. Um trajeto direto desalinhado não
+ * encerra a exploração, porque a identidade visual exige o encaixe angular.
+ */
+function isLevelOneCandidate(candidate: {
+  residual: string[];
+  clearance: number;
+  crossings: number;
+  points: readonly ArchivePoint[];
+  strategy: ArchiveRouteStrategy;
+}): boolean {
+  return (
+    candidate.residual.length === 0 &&
+    candidate.clearance === 0 &&
+    candidate.crossings === 0 &&
+    alignmentPenalty(candidate.points) === 0 &&
+    !(candidate.strategy === "direct" && bodyDeviation(candidate.points) > 0.05)
+  );
+}
+
+/** Caixa do trajeto final, base da invalidação localizada. */
+function pointsBounds(points: readonly ArchivePoint[]): ArchiveRect {
+  if (!points.length) return { x: 0, y: 0, width: 0, height: 0 };
+  let minX = Number.POSITIVE_INFINITY,
+    minY = Number.POSITIVE_INFINITY,
+    maxX = Number.NEGATIVE_INFINITY,
+    maxY = Number.NEGATIVE_INFINITY;
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/** Cards novos, movidos, redimensionados ou removidos desde o plano anterior. */
+function changedPlacements(
+  previous: ArchiveRoutePlanSet | null | undefined,
+  nodes: readonly ArchiveRouteNode[],
+): { rects: ArchiveRect[]; ids: Set<string> } {
+  const rects: ArchiveRect[] = [],
+    ids = new Set<string>();
+  const before = previous?.placements;
+  if (!before) return { rects, ids };
+  const current = new Map(nodes.map((node) => [node.id, node]));
+  for (const node of nodes) {
+    const old = before.get(node.id);
+    if (
+      !old ||
+      old.x !== node.x ||
+      old.y !== node.y ||
+      old.width !== node.width ||
+      old.height !== node.height
+    ) {
+      ids.add(node.id);
+      if (old) rects.push({ ...old });
+      rects.push({ x: node.x, y: node.y, width: node.width, height: node.height });
+    }
+  }
+  for (const [id, rect] of before)
+    if (!current.has(id)) {
+      ids.add(id);
+      rects.push({ ...rect });
+    }
+  return { rects, ids };
+}
+
+/**
+ * Plano anterior reaproveitável: a mudança não alcança as pontas nem o trajeto
+ * já calculado. Na dúvida, invalida (conservador).
+ */
+function reusablePlan(
+  previous: ArchiveRoutePlanSet | null | undefined,
+  link: ArchiveRouteLink,
+  a: ArchiveRouteNode,
+  b: ArchiveRouteNode,
+  changed: { rects: ArchiveRect[]; ids: Set<string> },
+): ArchiveLinkRoutePlan | null {
+  if (!previous || !changed.rects.length) return null;
+  const plan = previous.routes.get(link.id);
+  if (!plan || plan.state === "unverified" || !plan.bounds) return null;
+  if (changed.ids.has(a.id) || changed.ids.has(b.id)) return null;
+  const margin =
+    ARCHIVE_LINK_GEOMETRY.clearance + ARCHIVE_LINK_ROUTING.labelGap + 8;
+  const reach = inflateArchiveRect(plan.bounds, margin);
+  if (changed.rects.some((rect) => archiveRectsIntersect(reach, rect))) return null;
+  return { ...plan, reused: true };
+}
+
+/** Nível 3: caminho angular simples, finito e selecionável. */
+function fallbackPlan(
+  a: ArchiveRouteNode,
+  b: ArchiveRouteNode,
+  lane: number,
+  reason: ArchiveFallbackReason,
+): ArchiveLinkRoutePlan {
+  const mode = fallbackMode(a, b);
+  const points = archiveLinkRoutePoints(mode, a, b, lane);
+  return {
+    sides: [mode.sides[0], mode.sides[1]],
+    slots: [0, 0],
+    lane,
+    strategy: mode.strategy,
+    variant: 0,
+    via: [],
+    corridor: `${mode.sides[0]}${mode.sides[1]}:fallback`,
+    cost: 0,
+    residual: [],
+    budget: true,
+    state: "unverified",
+    fallbackReason: reason,
+    reused: false,
+    bounds: pointsBounds(points),
+    label: null,
+    labelOverlap: false,
+  };
+}
+
+/**
+ * Verificação final do caminho efetivamente apresentado (suavizado), contra
+ * todos os obstáculos consultáveis pelo índice — não apenas os do planejamento.
+ * A amostragem usa passo curto e testa os segmentos entre amostras, então a
+ * tolerância fica abaixo da folga de roteamento (26).
+ */
+function validateFinalPath(
+  points: readonly ArchivePoint[],
+  index: ReturnType<typeof obstacleIndex>,
+  stats: ArchiveRouteStats,
+  charge: (units: number) => boolean,
+): { residual: string[]; verified: boolean } {
+  const residual = new Set<string>();
+  const test = (a: ArchivePoint, b: ArchivePoint) => {
+    if (archiveLinkDistance(a, b) < 0.5) return true;
+    for (const node of index.query(segmentBounds(a, b))) {
+      if (!charge(1)) return false;
+      stats.checkTests++;
+      if (segmentCrossesArchiveRect(a, b, node, 1)) residual.add(node.id);
+    }
+    return true;
+  };
+  // Trechos retos: teste exato de segmento contra retângulo, sem amostragem.
+  for (let i = 1; i < points.length; i++)
+    if (!test(points[i - 1], points[i]))
+      return { residual: [...residual], verified: false };
+  // Cantos arredondados: só onde há obstáculo na caixa do arco, com passo 4
+  // (erro abaixo de 1 unidade, muito abaixo da folga de 26).
+  const radius = ARCHIVE_LINK_GEOMETRY.radius;
+  for (let i = 1; i < points.length - 1; i++) {
+    const vertex = points[i];
+    const box = {
+      x: vertex.x - radius - 2,
+      y: vertex.y - radius - 2,
+      width: radius * 2 + 4,
+      height: radius * 2 + 4,
+    };
+    if (!index.query(box).length) continue;
+    const inLength = archiveLinkDistance(points[i - 1], vertex),
+      outLength = archiveLinkDistance(vertex, points[i + 1]);
+    const before = archiveLinkPointOnPolyline(
+      points,
+      i - 1,
+      1 - Math.min(1, radius / Math.max(1, inLength)),
+    );
+    const after = archiveLinkPointOnPolyline(
+      points,
+      i,
+      Math.min(1, radius / Math.max(1, outLength)),
+    );
+    const arc = sampleArchiveLinkPath(
+      archiveLinkPathCommands([before, vertex, after]),
+      4,
+    );
+    for (let k = 1; k < arc.length; k++)
+      if (!test(arc[k - 1], arc[k]))
+        return { residual: [...residual], verified: false };
+  }
+  return { residual: [...residual], verified: true };
 }
 
 /**
@@ -775,10 +1081,18 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
   const stats: ArchiveRouteStats = {
     links: links.length,
     planned: 0,
+    reused: 0,
     candidates: 0,
     obstacleTests: 0,
-    fallbacks: 0,
+    checkTests: 0,
+    labelTests: 0,
+    work: 0,
+    maxWork: ARCHIVE_LINK_ROUTING.maxWorkUnits,
     crossings: 0,
+    verified: 0,
+    intersects: 0,
+    unverified: 0,
+    fallbacks: 0,
     budgetExceeded: false,
     maxTests: ARCHIVE_LINK_ROUTING.maxSegmentTests,
   };
@@ -809,7 +1123,9 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
   const routedByCard = new Map<string, Set<string>>();
   const routedPoints = new Map<string, ArchivePoint[]>();
   const usage = new Map<string, string[]>();
-  const exhausted = usable.length > ARCHIVE_LINK_ROUTING.maxLinks;
+  // Limite absoluto de vínculos: acima dele o planejamento degrada de forma
+  // explícita (estado não verificado), nunca silenciosa.
+  if (usable.length > ARCHIVE_LINK_ROUTING.maxLinks) stats.budgetExceeded = true;
   // Orçamento explícito e proporcional: um quadro denso não pode cair todo
   // em fallback apenas porque a contagem de vínculos cresceu.
   stats.maxTests = Math.min(
@@ -819,11 +1135,44 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
       usable.length * ARCHIVE_LINK_ROUTING.segmentTestsPerLink,
     ),
   );
+  // Orçamento de TRABALHO total (determinístico): candidatos, cruzamentos,
+  // rótulos e verificação final. Não é timeout de relógio.
+  stats.maxWork = Math.min(
+    ARCHIVE_LINK_ROUTING.maxWorkUnits,
+    Math.max(
+      ARCHIVE_LINK_ROUTING.minWorkUnits,
+      usable.length * ARCHIVE_LINK_ROUTING.workPerLink,
+    ),
+  );
+  const spend = (units: number) => {
+    if (stats.work + units > stats.maxWork) {
+      stats.budgetExceeded = true;
+      return false;
+    }
+    stats.work += units;
+    return true;
+  };
 
+  const changed = changedPlacements(input.previous, nodes);
   for (const link of usable) {
     const a = nodeById.get(link.sourceId)!,
       b = nodeById.get(link.targetId)!;
     const lane = laneOf.get(link.id) ?? 0;
+
+    // Nível de reutilização: mudança localizada preserva rotas independentes.
+    const reusable = reusablePlan(input.previous, link, a, b, changed);
+    if (reusable) {
+      routes.set(link.id, reusable);
+      stats.reused++;
+      continue;
+    }
+
+    // Nível 3: orçamento esgotado encerra a exploração cara imediatamente.
+    if (stats.budgetExceeded) {
+      routes.set(link.id, fallbackPlan(a, b, lane, "budget"));
+      continue;
+    }
+
     const obstacles = relevantObstacles(a, b, index);
     const previous = input.previous?.routes.get(link.id);
     const nearby: ArchivePoint[][] = [];
@@ -841,6 +1190,7 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
     const push = (candidate: Candidate) => {
       if (consider.length < ARCHIVE_LINK_ROUTING.maxCandidatesPerLink)
         consider.push(candidate);
+      return candidate;
     };
     const build = (
       sideA: ArchiveLinkSide,
@@ -851,7 +1201,9 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
     ) => {
       // Teto de construções por vínculo: desvios em excesso não entram na
       // disputa e não devem custar avaliação de obstáculos.
-      if (builds >= ARCHIVE_LINK_ROUTING.maxBuildsPerLink) return;
+      if (stats.budgetExceeded || builds >= ARCHIVE_LINK_ROUTING.maxBuildsPerLink)
+        return null;
+      if (!spend(ARCHIVE_LINK_ROUTING.unitsPerBuild)) return null;
       builds++;
       const points = archiveLinkRoutePoints(
         { sides: [sideA, sideB], slots: [0, 0], strategy, variant, via },
@@ -859,14 +1211,20 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
         b,
         lane,
       );
-      const evaluation = exhausted
-        ? { residual: [], clearance: 0 }
+      const evaluation = stats.budgetExceeded
+        ? { residual: [], clearance: 0, verified: false }
         : evaluateRoute(points, a.cardId, b.cardId, obstacles, stats);
       const turns = Math.max(0, points.length - 2);
       const angle =
         portAngle(a, sideA, archiveLinkCenter(b)) +
         portAngle(b, sideB, archiveLinkCenter(a));
-      const crossing = countCrossings(points, nearby);
+      // Cruzamentos só são contados quando o orçamento permite: sem isso a
+      // rota perderia a métrica, nunca a validade.
+      const crossing = spend(
+        ARCHIVE_LINK_ROUTING.unitsPerCrossingTest * Math.max(1, nearby.length),
+      )
+        ? countCrossings(points, nearby)
+        : 0;
       const switched = previous
         ? previous.sides[0] !== sideA || previous.sides[1] !== sideB
           ? ARCHIVE_ROUTE_WEIGHTS.sideSwitch
@@ -892,7 +1250,7 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
         switched +
         (strategy === "detour" ? ARCHIVE_ROUTE_WEIGHTS.detour : 0) +
         (strategy === "diagonal" ? ARCHIVE_ROUTE_WEIGHTS.diagonal : 0);
-      push({
+      return push({
         sides: [sideA, sideB],
         strategy,
         variant,
@@ -911,13 +1269,15 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
     const sidePairs: [ArchiveLinkSide, ArchiveLinkSide][] = [];
     for (const sideA of facingA)
       for (const sideB of facingB) sidePairs.push([sideA, sideB]);
+    // Nível 1: para na primeira alternativa sem travessia, sem folga violada
+    // e sem cruzamento. Evita avaliar dezenas de candidatos equivalentes.
     const explore = (pairs: [ArchiveLinkSide, ArchiveLinkSide][]) => {
       for (const [sideA, sideB] of pairs) {
-        build(sideA, sideB, "direct", 0, []);
-        build(sideA, sideB, "elbow", 0, []);
-        build(sideA, sideB, "elbow", 1, []);
-        build(sideA, sideB, "diagonal", 0, []);
-        build(sideA, sideB, "diagonal", 1, []);
+        for (const [strategy, variant] of ARCHIVE_ROUTE_STRATEGIES) {
+          const candidate = build(sideA, sideB, strategy, variant, []);
+          if (!candidate) return;
+          if (isLevelOneCandidate(candidate)) return;
+        }
       }
     };
     explore(sidePairs);
@@ -935,8 +1295,14 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
       );
     let best = bestOf();
 
+    // Vínculo muito extenso usa a estratégia simplificada: o desvio custa
+    // caro, raramente melhora a leitura e não deve consumir o orçamento das
+    // relações locais.
+    const longLink =
+      archiveLinkDistance(archiveLinkCenter(a), archiveLinkCenter(b)) >
+      ARCHIVE_LINK_ROUTING.longLinkDistance;
     // Só procura desvios quando o caminho simples ainda encosta em obstáculos.
-    if (best && (best.residual.length || best.clearance > 0)) {
+    if (!longLink && best && (best.residual.length || best.clearance > 0)) {
       const near = index
         .query(
           inflateArchiveRect(segmentBounds(a, b), ARCHIVE_LINK_GEOMETRY.clearance * 3),
@@ -991,6 +1357,10 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
       cost: best.cost,
       residual: best.residual,
       budget: stats.budgetExceeded,
+      state: "unverified",
+      fallbackReason: longLink && best.residual.length ? "no-corridor" : null,
+      reused: false,
+      bounds: pointsBounds(best.points),
       label: null,
       labelOverlap: false,
     };
@@ -1043,22 +1413,28 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
       b = nodeById.get(link.targetId)!;
     const points = archiveLinkRoutePoints(plan, a, b, plan.lane);
     finalPoints.set(link.id, points);
-    if (!exhausted) {
-      const evaluation = evaluateRoute(
-        points,
-        a.cardId,
-        b.cardId,
-        relevantObstacles(a, b, index),
-        stats,
-      );
-      plan.residual = evaluation.residual;
+    plan.bounds = pointsBounds(points);
+    if (plan.fallbackReason === "budget" || stats.budgetExceeded) {
+      // Não verificado não significa livre: o estado precisa dizer isso.
+      plan.state = "unverified";
+      plan.fallbackReason = plan.fallbackReason ?? "budget";
+    } else {
+      const validation = validateFinalPath(points, index, stats, spend);
+      plan.residual = validation.residual;
+      plan.state = validation.verified
+        ? validation.residual.length
+          ? "intersects"
+          : "verified-clear"
+        : "unverified";
+      if (!validation.verified)
+        plan.fallbackReason = plan.fallbackReason ?? "budget";
     }
     plan.budget = stats.budgetExceeded;
   }
   const lines = routeSegmentIndex(
     [...finalPoints].map(([id, points]) => ({ id, points })),
   );
-  const placedLabels: ArchiveRect[] = [];
+  const placedLabels = labelRectIndex();
   for (const link of usable) {
     const plan = routes.get(link.id);
     const points = finalPoints.get(link.id);
@@ -1070,15 +1446,32 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
       placedLabels,
       lines,
       link.id,
+      stats,
+      spend,
     );
-    plan.label = { segment: label.segment, at: label.at };
+    plan.label = {
+      segment: label.segment,
+      at: label.at,
+      offset: label.offset,
+    };
     plan.labelOverlap = label.overlap;
-    placedLabels.push({ ...label.rect });
+    placedLabels.add({ ...label.rect });
   }
-  stats.fallbacks = [...routes.values()].filter(
-    (plan) => plan.residual.length || plan.budget,
-  ).length;
-  return { routes, stats };
+  const plans = [...routes.values()];
+  stats.fallbacks = plans.filter((plan) => plan.fallbackReason !== null).length;
+  stats.verified = plans.filter((plan) => plan.state === "verified-clear").length;
+  stats.intersects = plans.filter((plan) => plan.state === "intersects").length;
+  stats.unverified = plans.filter((plan) => plan.state === "unverified").length;
+  return {
+    routes,
+    stats,
+    placements: new Map(
+      nodes.map((node) => [
+        node.id,
+        { x: node.x, y: node.y, width: node.width, height: node.height },
+      ]),
+    ),
+  };
 }
 
 /**

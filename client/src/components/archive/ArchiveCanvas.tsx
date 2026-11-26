@@ -223,7 +223,10 @@ const GraphContent = memo(function GraphContent({
               data-link={link.id}
               data-relation={link.relation}
               data-route={route.strategy}
-              data-route-fallback={route.residual.length || undefined}
+              data-route-state={route.state}
+              data-route-fallback={
+                route.fallback || route.residual.length || undefined
+              }
               data-filter-hidden={
                 (filter?.active &&
                   filter.mode === "isolate" &&

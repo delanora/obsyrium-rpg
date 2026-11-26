@@ -364,8 +364,83 @@ for (const topology of topologies) {
       labelOverlapsAngular: nextResult.labelOverlaps,
       pathCharsBaseline: baseResult.characters,
       pathCharsAngular: nextResult.characters,
+      verified: nextResult.stats.verified,
+      intersects: nextResult.stats.intersects,
+      unverified: nextResult.stats.unverified,
+      reused: nextResult.stats.reused,
+      work: nextResult.stats.work,
+      maxWork: nextResult.stats.maxWork,
+      labelTests: nextResult.stats.labelTests,
+      checkTests: nextResult.stats.checkTests,
     });
   }
+}
+// Atualizações: quanto o planejamento realmente recalcula em cada mudança.
+{
+  const updateRows: Record<string, unknown>[] = [];
+  const base = board("densa", 60);
+  const first = planArchiveLinkRoutes({
+    placements: base.nodes,
+    links: base.links,
+  });
+  const measure = (
+    kind: string,
+    placements: ArchiveRouteNode[],
+    links: ArchiveRouteLink[],
+    previous: typeof first,
+  ) => {
+    const started = performance.now();
+    const next = planArchiveLinkRoutes({ placements, links, previous });
+    updateRows.push({
+      scenario: "atualizacao",
+      kind,
+      ms: +(performance.now() - started).toFixed(2),
+      links: links.length,
+      reused: next.stats.reused,
+      planned: links.length - next.stats.reused,
+      verified: next.stats.verified,
+      intersects: next.stats.intersects,
+      unverified: next.stats.unverified,
+      work: next.stats.work,
+    });
+    return next;
+  };
+  const moved = base.nodes.map((item, index) =>
+    index === 5 ? { ...item, x: item.x + 220, y: item.y + 160 } : item,
+  );
+  const afterMove = measure("mover-card", moved, base.links, first);
+  const resized = base.nodes.map((item, index) =>
+    index === 9
+      ? { ...item, width: item.width + 120, height: item.height + 60 }
+      : item,
+  );
+  const afterResize = measure("redimensionar-card", resized, base.links, afterMove);
+  const added: ArchiveRouteLink[] = [
+    ...base.links,
+    {
+      id: "nova-relacao",
+      sourceId: base.nodes[1].id,
+      targetId: base.nodes[12].id,
+      relation: "related",
+      label: "Nova",
+    },
+  ];
+  const afterAdd = measure("criar-relacao", base.nodes, added, afterResize);
+  measure("remover-relacao", base.nodes, base.links.slice(1), afterAdd);
+  const obstacle = base.nodes.map((item, index) =>
+    index === 20 ? { ...item, x: item.x - 300 } : item,
+  );
+  measure("mover-obstaculo", obstacle, base.links, afterMove);
+  updateRows.push({
+    scenario: "atualizacao",
+    kind: "pan-zoom",
+    ms: 0,
+    links: base.links.length,
+    reused: base.links.length,
+    planned: 0,
+    note: "câmera fora da assinatura: nenhum replanejamento",
+  });
+  for (const row of updateRows) console.log(JSON.stringify(row));
 }
 for (const row of rows) console.log(JSON.stringify(row));
 console.log(

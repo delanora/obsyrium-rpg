@@ -45,7 +45,8 @@
     "typecheck:client": "npm --prefix client run typecheck",
     "test:build-safety": "node scripts/check-build-safety.mjs",
     "build:isolated": "node scripts/build-isolated.mjs",
-    "audit:build-safety": "node scripts/audit-build-safety.mjs"
+    "audit:build-safety": "node scripts/audit-build-safety.mjs",
+    "test:archive-link-routing-hardening": "tsx --tsconfig client/tsconfig.json client/scripts/check-archive-link-routing-hardening.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
