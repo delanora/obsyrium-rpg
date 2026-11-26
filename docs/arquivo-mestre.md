@@ -1912,6 +1912,82 @@ arquivos com bundles antigos preservados para cache):
   `assets/index-Cff_cOhu.css` (`cd21e762…`), com `index.html` correspondente;
 - 24 bundles antigos permanecem apenas no diretório ativo.
 
-A composição candidata é, portanto, o frontend publicado sobreposto pelos dois
-artefatos da 8.5.4.1 — não um build genérico de outra composição. **Nada foi
-publicado**: a troca atômica exige autorização e aceite visual do responsável.
+Este candidato foi, porém, **descartado** na publicação: ele vinha do worktree,
+que contém arquivos alheios modificados. A composição efetivamente publicada foi
+reconstruída de `HEAD` e está registrada na seção de publicação abaixo.
+## Publicação seletiva do frontend da 8.5.4.1 — 26/11/2026
+
+Publicação exclusivamente frontend, autorizada após a validação complementar.
+SHA funcional `bb1c9b7d8899ec2b4738f3de13c03b39bed7309e`; SHA documental de
+validação `d4d35e7502a47ddbe8bd7674de2dbb39662f399d`. Nenhum backend, banco,
+schema, Prisma Client, migration, permissão ou serviço foi alterado, e
+`rpg.service` **não** foi reiniciado (PID `3297180` antes e depois, `NRestarts=0`).
+
+### Reconciliação dos manifests
+
+O candidato anterior (`index-DxB60kYH.js`/`index-Cff_cOhu.css`) foi **descartado**:
+ele fora construído a partir do worktree ativo, que contém 41 arquivos alheios
+modificados, portanto não representava `HEAD`. O candidato publicado foi
+reconstruído de `git archive HEAD` em `/root/val-8541-check`, com
+`npm run build:isolated -- --frontend` (typecheck, build, 51 verificações da
+guarda e manifest de 340 hashes). A árvore arquivada contém a 8.5.4.1 mais o
+commit documental, nada mais.
+
+Comparação completa por caminho relativo e SHA256 contra o frontend então ativo:
+
+| Conjunto | Quantidade |
+| --- | --- |
+| Arquivos no frontend ativo | 362 |
+| Arquivos no candidato/manifest | 340 |
+| Comuns (mesmo caminho) | 338 |
+| Comuns idênticos | 337 |
+| Comuns modificados | 1 (`index.html`, só as referências de bundle) |
+| Novos | 2 (`assets/index-BEp4RUM0.js`, `assets/index-C0vlXmbn.css`) |
+| Existentes só no ativo | 24 (bundles antigos preservados para cache) |
+| Manifest divergente / arquivo sem manifest | 0 / 0 |
+
+Fechamento aritmético: 337 + 1 = 338 comuns; 338 + 2 = 340 no candidato;
+338 + 24 = 362 no ativo. A diferença de contagem é integralmente explicada por
+bundles antigos que permanecem servidos, e o delta publicado é exatamente
+`index.html` + os dois artefatos da 8.5.4.1.
+
+### Artefatos publicados
+
+- `assets/index-BEp4RUM0.js` — `636a31c526926347f586d15eb9bb183380195bb0acb95944e89cba8fa4763177`
+- `assets/index-C0vlXmbn.css` — `139d84c06975009ebbc7ee9d10b3d6944820e15e3f48e4301f638f5abf12dc85`
+- `index.html` — `2b760ae3246c6bb30e1c6599383ab06c6f86c8226660a3b06f73ba4ba3f5c3e3`
+
+Bundles copiados antes da troca atômica do HTML (temp + `mv` no mesmo diretório).
+Os 362 arquivos anteriores foram preservados; nenhum bundle antigo foi removido.
+Composição final: **364 arquivos**.
+
+### Backup e rollback
+
+Backup integral fora do Git em
+`/opt/rpg/backups/fichario-relacoes-8541-20261126T000512Z` (108 MB), com
+`dist/` completo (362 arquivos), `dist.sha256` conferido byte a byte contra a
+origem, `candidate-manifest.json`, `index.candidato.html` e `rollback.sh`
+(restaura o HTML anterior atomicamente, sem apagar bundles). Rollback **não foi
+necessário**.
+
+### Verificações operacionais
+
+- `GET /` → 200 com o HTML publicado e SHA256 servido idêntico ao do arquivo.
+- Novos bundles → 200 com SHA256 servido idêntico ao construído.
+- Bundles anteriores, textura de linho (`archive/card-parts/comuns/fundo.png`) e
+  marca (`brand/obsyrium-icone.png`) → 200.
+- `/api/health` → `{"status":"ok","database":"up"}`; `rpg.service` ativo, sem
+  restart e sem novas entradas de erro no journal no intervalo.
+- 48 WIPs alheios preservados: mesma quantidade e mesmo hash do `git status`
+  (`95df0347f9a8b420…`) de antes da publicação; staging vazio.
+- Diff da composição contra o backup: apenas os dois bundles novos e o
+  `index.html`; nenhuma outra alteração.
+
+### Pendências preservadas
+
+A 8.5.4.1 **não está concluída**: depende do aceite visual do responsável.
+Continuam abertos o custo de renderização em quadros extensos (+982 nós SVG,
++0,9 ms de mediana em 180 relações), a sobreposição de rótulos em zoom afastado
+(8.5.4.2), as falhas antigas das três suítes Chromium neste host, a divergência
+global do Prisma e o isolamento adicional por permissões do sistema operacional.
+A 8.5.4.2 não foi iniciada e seu planejamento não foi alterado.
