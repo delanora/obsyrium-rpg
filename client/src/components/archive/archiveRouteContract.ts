@@ -1,9 +1,14 @@
 /** Contrato serializável entre a thread principal e o worker de rotas.
  *
  * Nada aqui conhece DOM, Prisma ou Socket.io: o pedido leva só geometria de
- * apresentação (cards e vínculos do quadro) e o resultado devolve o plano já
- * calculado pelo roteador puro. O contrato é versionado para que um resultado
- * de protocolo antigo nunca seja aplicado.
+ * apresentação (cards e vínculos do quadro), as larguras de rótulo já medidas e
+ * o plano anterior pertinente. O resultado devolve o plano calculado pelo
+ * roteador puro. O contrato é versionado para que um resultado de protocolo
+ * antigo nunca seja aplicado.
+ *
+ * Os DTOs são construídos campo a campo: objetos recebidos da interface podem
+ * carregar descrições, conteúdo de card ou qualquer propriedade extra, e nada
+ * disso atravessa a fronteira do worker.
  */
 import type { ArchiveRect } from "./archiveCamera";
 import type {
@@ -26,7 +31,29 @@ export const ARCHIVE_ROUTE_QUEUE = {
   maxRestarts: 2,
   /** Resultados obsoletos tolerados antes de forçar substituição. */
   maxDiscards: 8,
+  /** Mensagens fora do protocolo toleradas por voo antes de substituir. */
+  maxInvalid: 2,
 } as const;
+
+/** Card no formato mínimo que o roteador entende. */
+export interface ArchiveRouteNodeDto {
+  id: string;
+  cardId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Vínculo no formato mínimo que o roteador entende. */
+export interface ArchiveRouteLinkDto {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  relation: string;
+  label: string;
+  directed: boolean;
+}
 
 /** Plano pronto para `postMessage`: só arrays e objetos simples. */
 export interface ArchiveRoutePlanDto {
@@ -34,6 +61,7 @@ export interface ArchiveRoutePlanDto {
   stats: ArchiveRouteStats;
   placements: [string, ArchiveRect][];
   topology: [string, string][];
+  provisional: boolean;
 }
 
 export interface ArchiveRouteRequest {
@@ -42,8 +70,10 @@ export interface ArchiveRouteRequest {
   boardId: string;
   generation: number;
   signature: string;
-  placements: ArchiveRouteNode[];
-  links: ArchiveRouteLink[];
+  placements: ArchiveRouteNodeDto[];
+  links: ArchiveRouteLinkDto[];
+  /** Larguras de rótulo medidas na thread principal: `[texto, largura]`. */
+  labels: [string, number][];
   previous: ArchiveRoutePlanDto | null;
 }
 
@@ -65,7 +95,53 @@ export interface ArchiveRouteJob {
   signature: string;
   placements: readonly ArchiveRouteNode[];
   links: readonly ArchiveRouteLink[];
+  /** Larguras de rótulo já medidas (texto → largura em unidades do quadro). */
+  labels?: readonly (readonly [string, number])[];
   previous?: ArchiveRoutePlanSet | null;
+}
+
+export function encodeRouteNode(node: ArchiveRouteNode): ArchiveRouteNodeDto {
+  return {
+    id: String(node.id),
+    cardId: String(node.cardId),
+    x: node.x,
+    y: node.y,
+    width: node.width,
+    height: node.height,
+  };
+}
+
+export function decodeRouteNode(dto: ArchiveRouteNodeDto): ArchiveRouteNode {
+  return {
+    id: dto.id,
+    cardId: dto.cardId,
+    x: dto.x,
+    y: dto.y,
+    width: dto.width,
+    height: dto.height,
+  };
+}
+
+export function encodeRouteLink(link: ArchiveRouteLink): ArchiveRouteLinkDto {
+  return {
+    id: String(link.id),
+    sourceId: String(link.sourceId),
+    targetId: String(link.targetId),
+    relation: typeof link.relation === "string" ? link.relation : "",
+    label: typeof link.label === "string" ? link.label : "",
+    directed: link.directed === true,
+  };
+}
+
+export function decodeRouteLink(dto: ArchiveRouteLinkDto): ArchiveRouteLink {
+  return {
+    id: dto.id,
+    sourceId: dto.sourceId,
+    targetId: dto.targetId,
+    relation: dto.relation || undefined,
+    label: dto.label || undefined,
+    directed: dto.directed,
+  };
 }
 
 export function encodeRoutePlan(
@@ -77,9 +153,10 @@ export function encodeRoutePlan(
     stats: { ...plan.stats },
     placements: [...(plan.placements ?? new Map())].map(([id, rect]) => [
       id,
-      { ...rect },
+      { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
     ]),
     topology: [...(plan.topology ?? new Map())].map(([id, value]) => [id, value]),
+    provisional: plan.provisional === true,
   };
 }
 
@@ -94,19 +171,40 @@ export function decodeRoutePlan(
     stats: { ...dto.stats },
     placements: new Map(dto.placements.map(([id, rect]) => [id, { ...rect }])),
     topology: new Map(dto.topology),
+    provisional: dto.provisional === true,
   };
 }
 
 /** Cópia profunda o bastante: nenhum plano anterior é mutado por engano. */
 export function cloneRoutePlan(plan: ArchiveLinkRoutePlan): ArchiveLinkRoutePlan {
   return {
-    ...plan,
     sides: [plan.sides[0], plan.sides[1]],
     slots: [plan.slots[0], plan.slots[1]],
+    lane: plan.lane,
+    strategy: plan.strategy,
+    variant: plan.variant,
     via: plan.via.map((point) => ({ x: point.x, y: point.y })),
+    corridor: plan.corridor,
+    cost: plan.cost,
     residual: [...plan.residual],
-    bounds: { ...plan.bounds },
-    label: plan.label ? { ...plan.label } : null,
+    budget: plan.budget,
+    state: plan.state,
+    fallbackReason: plan.fallbackReason,
+    reused: plan.reused,
+    bounds: {
+      x: plan.bounds.x,
+      y: plan.bounds.y,
+      width: plan.bounds.width,
+      height: plan.bounds.height,
+    },
+    label: plan.label
+      ? {
+          segment: plan.label.segment,
+          at: plan.label.at,
+          offset: plan.label.offset,
+        }
+      : null,
+    labelOverlap: plan.labelOverlap,
   };
 }
 
@@ -121,8 +219,9 @@ export function encodeRouteRequest(
     boardId: job.boardId,
     generation,
     signature: job.signature,
-    placements: job.placements.map((node) => ({ ...node })),
-    links: job.links.map((link) => ({ ...link })),
+    placements: job.placements.map(encodeRouteNode),
+    links: job.links.map(encodeRouteLink),
+    labels: (job.labels ?? []).map(([text, width]) => [String(text), width]),
     previous: encodeRoutePlan(job.previous),
   };
 }

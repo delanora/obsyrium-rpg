@@ -77,7 +77,10 @@ export interface ArchiveLinkRoutePlan {
   /** Diagnóstico do corredor: lados, estratégia e variante. */
   corridor: string;
   cost: number;
-  /** Cards cujo interior o trajeto final ainda atravessa. */
+  /**
+   * Cards cujo interior o trajeto final atravessa além da folga declarada
+   * (`ARCHIVE_PATH_CLEARANCE`). Contato de borda não entra aqui.
+   */
   residual: string[];
   /** Verdadeiro quando o orçamento de cálculo esgotou antes da checagem. */
   budget: boolean;
@@ -627,8 +630,27 @@ export function archiveLinkRouteGeometry(
 export interface ArchiveRouteInput {
   placements: readonly ArchiveRouteNode[];
   links: readonly ArchiveRouteLink[];
+  /**
+   * Largura de cada rótulo, medida na thread principal. O worker não tem DOM
+   * nem a medição do render: sem isto a caixa avaliada divergiria da cápsula
+   * apresentada assim que a fonte carregasse.
+   */
+  labelWidth?: (label: string) => number;
   /** Plano anterior: preserva portas quando a mudança não justifica troca. */
   previous?: ArchiveRoutePlanSet | null;
+}
+
+/** Caixa do rótulo usada no planejamento: largura informada, altura do render. */
+function labelBoxOf(
+  label: string,
+  widthOf: ((label: string) => number) | undefined,
+): { width: number; height: number } {
+  const box = archiveRelationLabelBox(label);
+  const width = widthOf ? widthOf(label) : box.width;
+  return {
+    width: Number.isFinite(width) && width > 0 ? width : box.width,
+    height: box.height,
+  };
 }
 
 /** Índice esparso dos trechos já roteados, para o rótulo não cair sobre outra linha. */
@@ -745,10 +767,11 @@ function placeLabel(
   placed: ReturnType<typeof labelRectIndex>,
   lines: ReturnType<typeof routeSegmentIndex>,
   linkId: string,
+  widthOf: ((label: string) => number) | undefined,
   stats?: ArchiveRouteStats,
   charge?: (units: number) => boolean,
 ): LabelPlacement {
-  const box = archiveRelationLabelBox(text);
+  const box = labelBoxOf(text, widthOf);
   const segments: { index: number; length: number; arc: number }[] = [];
   let total = 0,
     prefix = 0;
@@ -982,6 +1005,7 @@ function reusablePlan(
   changed: { rects: ArchiveRect[]; ids: Set<string> },
   lane: number,
   topologyChanged: boolean,
+  widthOf?: (label: string) => number,
 ): ArchiveLinkRoutePlan | null {
   // Criar/remover relação muda a população de cada lado: invalida em bloco.
   if (!previous || topologyChanged || !changed.rects.length) return null;
@@ -1005,7 +1029,7 @@ function reusablePlan(
       plan.label.at,
       plan.label.offset,
     );
-    const box = archiveRelationLabelBox(archiveLinkLabel(link));
+    const box = labelBoxOf(archiveLinkLabel(link), widthOf);
     const labelRect = {
       x: point.x - box.width / 2,
       y: point.y - box.height / 2,
@@ -1092,6 +1116,7 @@ function validateFinalPath(
  * sempre o mesmo plano (ordem por `id`, candidatos e desempates fixos).
  */
 export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePlanSet {
+  const labelWidthOf = input.labelWidth;
   const links = [...input.links].sort(byId);
   const nodes = [...input.placements].filter(
     (node) =>
@@ -1204,6 +1229,7 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
       changed,
       lane,
       topologyChanged,
+      labelWidthOf,
     );
     if (reusable) {
       routes.set(link.id, reusable);
@@ -1520,7 +1546,7 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
         plan.label.at,
         plan.label.offset,
       );
-      const box = archiveRelationLabelBox(archiveLinkLabel(link));
+      const box = labelBoxOf(archiveLinkLabel(link), labelWidthOf);
       placedLabels.add({
         x: point.x - box.width / 2,
         y: point.y - box.height / 2,
@@ -1541,6 +1567,7 @@ export function planArchiveLinkRoutes(input: ArchiveRouteInput): ArchiveRoutePla
       placedLabels,
       lines,
       link.id,
+      labelWidthOf,
       stats,
       spend,
     );

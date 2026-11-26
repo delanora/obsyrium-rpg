@@ -35,6 +35,11 @@ import {
 } from "./archiveFilters";
 import type { ArchiveLayout } from "./archiveLayout";
 import {
+  archiveRelationLabelSignature,
+  archiveRelationMeasuredWidths,
+  onArchiveRelationLabelWidthsChange,
+} from "./archiveRelationMetrics";
+import {
   archiveLinkRouteGeometry,
   archiveRouteSignature,
   provisionalArchiveRoutePlan,
@@ -42,6 +47,7 @@ import {
 } from "./archiveLinkRouting";
 import {
   ArchiveRoutePlanner,
+  archiveRouteApplyPolicy,
   type ArchiveRouteWorkerFactory,
 } from "./archiveRoutePlanner";
 import {
@@ -605,9 +611,25 @@ export function ArchiveCanvas({
   );
   const motionRef = useRef(motion);
   motionRef.current = motion;
-  const routeSignature = useMemo(
-    () => archiveRouteSignature(motion.graph),
+  // Larguras de rótulo: a medição vive na cápsula (DOM), o plano no worker.
+  const [labelRevision, setLabelRevision] = useState(0);
+  useEffect(
+    () =>
+      onArchiveRelationLabelWidthsChange(() =>
+        setLabelRevision((value) => value + 1),
+      ),
+    [],
+  );
+  const labelTexts = useMemo(
+    () => motion.graph.links.map((link) => link.label ?? "").filter(Boolean),
     [motion.graph],
+  );
+  const routeSignature = useMemo(
+    () =>
+      `${archiveRouteSignature(motion.graph)}||${archiveRelationLabelSignature(
+        labelTexts,
+      )}`,
+    [motion.graph, labelTexts, labelRevision],
   );
   const boardId = motion.graph.board?.id ?? "";
   // Plano anterior (definitivo ou provisório): base do reuso localizado.
@@ -631,29 +653,38 @@ export function ArchiveCanvas({
     if (!next) return;
     pendingApply.current = null;
     if (
-      next.signature !== currentRequest.current.signature ||
-      next.boardId !== currentRequest.current.boardId
+      archiveRouteApplyPolicy({
+        inGesture: false,
+        current: currentRequest.current,
+        result: next,
+      }) !== "apply"
     )
       return;
     previousRoutes.current = next.plan;
     setPlanned(next);
   }, []);
+  // Outro quadro: nada do anterior serve (nem plano nem resultado guardado).
+  useEffect(() => {
+    previousRoutes.current = null;
+    pendingApply.current = null;
+  }, [boardId]);
   // Planejamento fora da thread principal: um worker, um trabalho em voo.
   useEffect(() => {
     const instance = new ArchiveRoutePlanner({
       factory: routeWorker,
       onResult: (plan, meta) => {
-        if (
-          meta.signature !== currentRequest.current.signature ||
-          meta.boardId !== currentRequest.current.boardId
-        )
-          return;
         const next = {
           signature: meta.signature,
           boardId: meta.boardId,
           plan,
         };
-        if (gesture.current) {
+        const decision = archiveRouteApplyPolicy({
+          inGesture: gesture.current !== null,
+          current: currentRequest.current,
+          result: next,
+        });
+        if (decision === "drop") return;
+        if (decision === "defer") {
           // Durante o gesto o traço não muda: aplica quando ele termina.
           pendingApply.current = next;
           return;
@@ -674,9 +705,10 @@ export function ArchiveCanvas({
       signature: routeSignature,
       placements: motion.graph.placements,
       links: motion.graph.links,
+      labels: archiveRelationMeasuredWidths(labelTexts),
       previous: previousRoutes.current,
     });
-  }, [routeSignature, boardId]);
+  }, [routeSignature, boardId, labelTexts]);
   // Primeira apresentação: forma anterior adaptada, nunca anunciada
   // como verificada. Custo linear e sem consulta a obstáculos.
   const provisional = useMemo(

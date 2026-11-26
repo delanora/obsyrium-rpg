@@ -18,8 +18,67 @@ export function rememberArchiveRelationLabelWidth(
   width: number,
 ): void {
   if (!Number.isFinite(width) || width <= 0) return;
+  const next = Math.max(88, Math.round(width));
+  const previous = widths.get(label);
   if (widths.size >= 512) widths.clear();
-  widths.set(label, Math.max(88, Math.round(width)));
+  widths.set(label, next);
+  if (previous === next) return;
+  for (const listener of listeners) listener();
+}
+
+/**
+ * Inscritos avisados quando uma largura medida muda. O canvas usa isto para
+ * reavaliar a assinatura do plano — com tolerância, não a cada medição.
+ */
+const listeners = new Set<() => void>();
+
+export function onArchiveRelationLabelWidthsChange(
+  listener: () => void,
+): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Larguras já medidas para os textos pedidos (sem estimativas). */
+export function archiveRelationMeasuredWidths(
+  labels: Iterable<string>,
+): [string, number][] {
+  const out: [string, number][] = [];
+  const seen = new Set<string>();
+  for (const label of labels) {
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    const width = widths.get(label);
+    if (width !== undefined) out.push([label, width]);
+  }
+  return out.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+}
+
+/** Passo de quantização: oscilações menores não replanejam o quadro. */
+export const ARCHIVE_RELATION_LABEL_WIDTH_STEP = 8;
+
+/**
+ * Assinatura das larguras de rótulo, quantizada. Entra na assinatura do plano
+ * para que uma mudança relevante (fonte carregada, texto novo) replaneje, e
+ * uma oscilação de poucos pixels não.
+ */
+export function archiveRelationLabelSignature(
+  labels: Iterable<string>,
+): string {
+  const parts: string[] = [];
+  const seen = new Set<string>();
+  for (const label of labels) {
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    const width = Math.round(
+      estimateArchiveRelationLabelWidth(label) /
+        ARCHIVE_RELATION_LABEL_WIDTH_STEP,
+    );
+    parts.push(`${label}:${width}`);
+  }
+  return parts.sort().join("|");
 }
 
 export interface ArchiveRelationLabelBox {

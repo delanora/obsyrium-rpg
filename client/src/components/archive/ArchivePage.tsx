@@ -39,6 +39,7 @@ import {
   type SceneRadialOption,
 } from "../master/SceneEditorRadialMenu";
 import "../master/scenes.css";
+import type { ArchiveRouteWorkerFactory } from "./archiveRoutePlanner";
 import {
   ArchiveCanvas,
   CATEGORY_ICONS,
@@ -221,7 +222,12 @@ function ArchiveDialog({
     document.body,
   );
 }
-export function ArchivePage() {
+export function ArchivePage({
+  routeWorker,
+}: {
+  /** Dublê injetado por fixtures compiladas; em produção fica indefinido. */
+  routeWorker?: ArchiveRouteWorkerFactory;
+} = {}) {
   const reader = useRef<ArchiveReaderHandle>(null);
   const presentation = useRef<ArchivePresentation | null>(null);
   const consult = useCallback((id: string) => reader.current?.consult(id), []);
@@ -1306,6 +1312,7 @@ export function ArchivePage() {
           />
           <ArchiveCanvas
             key={graph.board.id}
+            routeWorker={routeWorker}
             graph={previewGraph!}
             layout={layout!}
             snapshot={graph}

@@ -5,35 +5,58 @@
  * arco por amostragem) provava outra curva. Aqui cada comando é testado como
  * será pintado:
  *
- * - `L`: teste exato de segmento contra retângulo (Liang–Barsky);
+ * - `L`: teste exato de segmento contra retângulo (Liang–Barsky), inclusive
+ *   segmentos degenerados (comprimento zero viram teste de ponto);
  * - `Q`: subdivisão de De Casteljau. Enquanto a corda do sub-arco, inflada pelo
  *   desvio máximo da curva em relação à corda (`|P0 − 2C + P2| / 4`), não toca o
- *   retângulo, a ausência de interseção é **demonstrada**, não amostrada. Ao
- *   chegar à tolerância, o toque é reportado como interseção (falso positivo
- *   máximo da ordem da tolerância, nunca falso negativo); se a subdivisão
- *   esgotar o orçamento, o resultado é inconclusivo e a rota fica `unverified`.
+ *   retângulo, a ausência de interseção é **demonstrada**, não amostrada; se a
+ *   subdivisão esgotar o orçamento, o resultado é inconclusivo e a rota fica
+ *   `unverified`.
+ *
+ * Categorias, explícitas:
+ * - `hit` — o traço entra mais de `clearance` unidades no interior de um card
+ *   (interseção real; vira `residual` e estado `intersects`);
+ * - `touch` — o traço encosta na caixa ou entra até `clearance` unidades:
+ *   folga visual declarada (borda, arredondamento de duas casas, porta do
+ *   próprio vínculo). Não é interseção, mas também não é "ausência de contato";
+ * - `conclusive === false` — região não verificada (orçamento/profundidade):
+ *   nunca é reportada como livre.
+ *
+ * `verified-clear` significa, portanto: nenhum comando desenhado entra mais de
+ * `clearance` unidades no interior de nenhum card próximo, e nenhuma região
+ * ficou sem verificação.
  */
 import type { ArchivePoint, ArchiveRect } from "./archiveCamera";
 import {
-  archiveLinkDistance,
   inflateArchiveRect,
   segmentCrossesArchiveRect,
   type ArchiveLinkCommand,
 } from "./archiveLinkGeometry";
 
+/** Folga visual declarada entre o traço e o interior de um card. */
+export const ARCHIVE_PATH_CLEARANCE = 0.5;
+
 export interface ArchivePathProbe {
-  /** Interseção conclusiva com o interior do retângulo. */
+  /** Interseção conclusiva com o interior além da folga declarada. */
   hit: boolean;
+  /** Contato de borda/folga: encosta, mas não atravessa o interior. */
+  touch: boolean;
   /** A varredura terminou dentro do orçamento. */
   conclusive: boolean;
   tests: number;
+  /** Folga usada nesta varredura (diagnóstico e testes). */
+  clearance: number;
 }
 
 export interface ArchivePathProbeOptions {
+  /** Folga visual descontada do card antes do teste. */
+  clearance?: number;
   /** Desvio máximo aceito antes de reportar toque. */
   tolerance?: number;
   /** Profundidade máxima de subdivisão (limite de segurança). */
   maxDepth?: number;
+  /** Conta o contato de borda (custa uma segunda varredura por comando). */
+  trackTouch?: boolean;
   /** Consome orçamento; `false` interrompe e torna o resultado inconclusivo. */
   spend?: () => boolean;
 }
@@ -45,13 +68,30 @@ export function archivePathProbe(
   rect: ArchiveRect,
   options: ArchivePathProbeOptions = {},
 ): ArchivePathProbe {
+  const clearance = options.clearance ?? ARCHIVE_PATH_CLEARANCE;
   const tolerance = options.tolerance ?? 0.1;
   const maxDepth = options.maxDepth ?? 14;
+  const trackTouch = options.trackTouch ?? true;
   const spend = options.spend ?? (() => true);
+  const inner =
+    clearance > 0 ? inflateArchiveRect(rect, -clearance) : { ...rect };
   let tests = 0;
   let hit = false;
+  let touch = false;
   let conclusive = true;
   let current: ArchivePoint = { x: 0, y: 0 };
+
+  /** Testa a corda inflada pelo raio de desvio: toque aqui é interseção. */
+  const crosses = (start: ArchivePoint, end: ArchivePoint, radius: number) =>
+    segmentCrossesArchiveRect(
+      start,
+      end,
+      inflateArchiveRect(inner, radius),
+      0,
+    );
+
+  const grazes = (start: ArchivePoint, end: ArchivePoint, radius: number) =>
+    segmentCrossesArchiveRect(start, end, inflateArchiveRect(rect, radius), 0);
 
   const visit = (
     start: ArchivePoint,
@@ -68,17 +108,15 @@ export function archivePathProbe(
     if (deviation <= tolerance) {
       if (!spend()) return false;
       tests++;
-      if (
-        archiveLinkDistance(start, end) < 0.5 ||
-        !segmentCrossesArchiveRect(
-          start,
-          end,
-          inflateArchiveRect(rect, deviation),
-          0,
-        )
-      )
+      if (crosses(start, end, deviation)) {
+        hit = true;
         return true;
-      hit = true;
+      }
+      if (trackTouch && !touch) {
+        if (!spend()) return false;
+        tests++;
+        if (grazes(start, end, deviation)) touch = true;
+      }
       return true;
     }
     if (depth >= maxDepth) {
@@ -112,11 +150,17 @@ export function archivePathProbe(
         break;
       }
       tests++;
-      if (
-        archiveLinkDistance(current, target) >= 0.5 &&
-        segmentCrossesArchiveRect(current, target, rect, 1)
-      )
+      // Sem descartar segmentos curtos: comprimento zero cai no teste de ponto.
+      if (crosses(current, target, 0)) {
         hit = true;
+      } else if (trackTouch && !touch) {
+        if (!spend()) {
+          conclusive = false;
+          break;
+        }
+        tests++;
+        if (grazes(current, target, 0)) touch = true;
+      }
       current = target;
       continue;
     }
@@ -126,7 +170,7 @@ export function archivePathProbe(
     }
     current = target;
   }
-  return { hit, conclusive, tests };
+  return { hit, touch, conclusive, tests, clearance };
 }
 
 /** Caixa de um único comando, a partir do ponto corrente do path. */

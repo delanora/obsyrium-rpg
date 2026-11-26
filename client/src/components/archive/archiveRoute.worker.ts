@@ -5,12 +5,11 @@
  * scheduler de animação. Cada resposta carrega o pedido de origem; a interface
  * decide se ainda é válida.
  */
-import {
-  planArchiveLinkRoutes,
-  type ArchiveRouteNode,
-} from "./archiveLinkRouting";
+import { planArchiveLinkRoutes } from "./archiveLinkRouting";
 import {
   ARCHIVE_ROUTE_PROTOCOL,
+  decodeRouteLink,
+  decodeRouteNode,
   decodeRoutePlan,
   encodeRoutePlan,
   type ArchiveRouteRequest,
@@ -37,10 +36,14 @@ scope.onmessage = (event) => {
       error,
       elapsed: Date.now() - started,
     });
+  // Larguras medidas na thread principal: o worker não tem DOM nem a
+  // medição do render, e a caixa avaliada precisa ser a cápsula apresentada.
+  const widths = new Map(request.labels);
   try {
     const plan = planArchiveLinkRoutes({
-      placements: request.placements as ArchiveRouteNode[],
-      links: request.links,
+      placements: request.placements.map(decodeRouteNode),
+      links: request.links.map(decodeRouteLink),
+      labelWidth: (label) => widths.get(label) ?? 0,
       previous: decodeRoutePlan(request.previous),
     });
     respond(encodeRoutePlan(plan), null);

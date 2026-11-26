@@ -194,20 +194,25 @@ Tempos medidos em Node, sem DOM: são custo de cálculo + `path`, não FPS.
 
 Resultados completos ficam no relatório da fase; em resumo:
 
-- 100 a 1 000 vínculos, topologias esparsa/densa/paralelas: **0 interseções**
-  de interior de card (a 8.5.4.1 chegava a 574) e **0 rótulos sobrepostos**
-  (até 960 antes), sem fallback; custo de 58 ms a 1,06 s;
-- vários núcleos distantes: interseções caem de 574 para 124 e de 225 para 40,
-  sem fallback; custo de 81 ms a 2,34 s (995 vínculos);
-- hub único (radial) é o pior caso: as conexões partem das mesmas portas, o
-  desvio é pouco viável e há fallback registrado (354 de 499) com custo de até
-  3,9 s; é diagnóstico, não sucesso de desvio;
-- núcleos muito distantes (995 vínculos atravessando o quadro inteiro): custo
-  de 6,6 s e 437 interseções contra 449 da 8.5.4.1 — o caso em que o ganho é
-  pequeno e o custo não é desprezível;
-- cruzamentos residuais aumentam em quadros de núcleos distantes: contornar
-  cards concentra trajetos em corredores, e a ausência absoluta de cruzamentos
-  não é requisito.
+Os números pertencem a commits diferentes e **não devem ser cruzados**. A
+tabela anterior desta seção associou tempos do roteador angular (8.5.4.2) aos da
+geometria publicada (8.5.4.1); a associação correta é:
+
+| medição | hub 499 | distantes 995 | núcleos 995 | densa 1 000 |
+| --- | --- | --- | --- | --- |
+| 8.5.4.1 publicada (curva quadrática, baseline do benchmark) | 25,9 ms | 104,4 ms | 98,5 ms | 50,5 ms |
+| 8.5.4.2 roteador angular inicial (`cba77a9`) | 3,9 s | 6,6 s | 2,34 s | 1,06 s |
+| 8.5.4.2.1 hardening (`fd0ce85`) | 1,847 s | 5,522 s | 1,588 s | 0,60–0,77 s |
+| 8.5.4.2.2/3 assíncrono (`b04e6be` + esta microfase) | 1,414 s | 5,768 s | 1,745 s | 0,567 s |
+
+A baseline da 8.5.4.1 é **rápida porque atravessa os cards** (até 960 rótulos
+sobrepostos e 574 interseções): ela é referência de custo, não de qualidade. Nas
+topologias esparsa/densa/paralelas o roteador angular mantém **0 interseções** e
+**0 rótulos sobrepostos**; nos núcleos distantes as interseções caem de 574 para
+120 (995 vínculos). O hub único continua sendo o pior caso — portas
+compartilhadas, desvio pouco viável, orçamento esgotado e fallback registrado —
+e é diagnóstico, não sucesso de desvio. Contornar cards concentra trajetos em
+corredores: a ausência absoluta de cruzamentos não é requisito.
 
 ## 14. Testes
 
@@ -466,3 +471,111 @@ remover relação 67,0 ms (idem), mover obstáculo 13,7 ms (106), pan/zoom 0.
 - O worker é único por canvas; não há pool. Falhas são recuperadas no máximo
   duas vezes antes de a interface ficar em modo provisório.
 
+
+## 19. Hardening final da integração assíncrona (8.5.4.2.3)
+
+Microfase de integração: a arquitetura de worker da 8.5.4.2.2 não foi refeita e
+não houve nova rodada de otimização de quadros extremos.
+
+### 19.1 Ciclo de vida do worker
+
+- O vigia cobre a **fila inteira**: quando o prazo expira sem pendente, o voo é
+  marcado como travado; um pedido que chega depois substitui o worker na hora,
+  em vez de esperar outro prazo inteiro. Antes, esse pedido ficava esperando um
+  worker mudo sem vigilância.
+- Cada instância de worker responde pela **própria identidade**
+  (`worker !== this.worker` ⇒ descarte), então resposta atrasada de worker
+  substituído não toca o voo atual, mesmo reenviando o mesmo `requestId`.
+- Mensagem fora do protocolo é contada por voo; na segunda, o worker é
+  substituído (limite `maxInvalid`). `messageerror`, exceção de fábrica e erro do
+  worker seguem o mesmo caminho de falha de transporte — o controlador nunca fica
+  permanentemente ocupado.
+- A substituição **recoloca o voo na fila** quando não há pendente mais novo: um
+  worker trocado por estalo de protocolo não faz o quadro perder o planejamento.
+- `retry()` reenvia a última geometria com `requestId`/`generation` novos (antes a
+  resposta seria descartada como geração vencida). Recuperação automática só por
+  mudança relevante de contexto (outro quadro); repetir o mesmo pedido não gera
+  tentativas infinitas.
+
+### 19.2 Contrato mínimo
+
+`encodeRouteRequest` monta DTOs campo a campo: card = `id`, `cardId`, `x`, `y`,
+`width`, `height`; vínculo = `id`, `sourceId`, `targetId`, `relation`, `label`,
+`directed`; plano anterior idem. Nada de `...spread` de objeto recebido: título,
+resumo, conteúdo, descrição ou grupos de card não atravessam a fronteira do
+worker. O teste usa objetos deliberadamente sujos e compara as chaves exatas.
+
+### 19.3 Métricas de rótulo
+
+O worker não tem DOM nem a medição do render, então as larguras medidas vão
+**explicitamente** no pedido (`labels: [texto, largura]`) e o roteador aceita
+`labelWidth`, usando a mesma caixa que a cápsula apresenta. A assinatura do plano
+inclui as larguras **quantizadas em 8 unidades**: oscilação de poucos pixels não
+replaneja, mudança relevante (fonte carregada, texto novo) replaneja. A medição
+avisa no máximo uma vez por largura nova, então não há laço
+medição → planejamento → render. O offset perpendicular continua zero.
+
+### 19.4 Validação geométrica: categorias explícitas
+
+- `hit` — o traço entra mais de `ARCHIVE_PATH_CLEARANCE` (0,5 unidade) no
+  interior de um card: vira `residual` e estado `intersects`;
+- `touch` — encosta na caixa ou entra até a folga: contato de borda, porta do
+  próprio vínculo e arredondamento de duas casas do path. **Não** é ausência de
+  contato, e não é interseção;
+- inconclusivo — orçamento ou profundidade esgotados: nunca vira
+  `verified-clear`.
+
+`verified-clear` passa a significar: nenhum comando desenhado entra mais de 0,5
+unidade no interior de nenhum card próximo **e** nenhuma região ficou sem
+verificação. Segmentos menores que 0,5 unidade deixaram de ser ignorados
+(comprimento zero vira teste de ponto); o `inset` de 1 unidade dos segmentos
+retos foi substituído pela folga única, aplicada igual a retas e arcos.
+
+### 19.5 Integração com o canvas
+
+- Troca de quadro limpa plano anterior **e** resultado guardado.
+- A decisão de aplicar é uma regra pura (`archiveRouteApplyPolicy`): `drop` para
+  assinatura/quadro antigos, `defer` durante gesto, `apply` fora dele.
+- Rotas provisórias continuam `unverified`/`provisional`; o scheduler de
+  animação não foi alterado e não há segundo motor.
+
+### 19.6 Testes
+
+- `npm run test:archive-async-routing` — **41** verificações: ciclo de vida
+  (estouro sem pendente, worker mudo, resposta inválida, `messageerror`,
+  resultado de worker substituído, recuperação, troca de quadro, cancelamento,
+  desmontagem), DTO sem extras, larguras de rótulo, assinatura com tolerância,
+  ausência de laço de medição, segmentos curtos/degenerados, curvas na borda,
+  inconclusivo e aplicação durante gesto.
+- Referências preservadas: 28 de roteamento puro, 17 de hardening, 53 de
+  Chromium assíncrono, 143 de relações em Chromium, 221 sondas de estabilidade,
+  2.357 invariantes espaciais, 802 de filtros, 7 de identidade e 51 da guarda
+  operacional.
+- `check-archive-radial-browser.mjs` recebeu **só infraestrutura**: dublê do
+  worker injetado no fixture (via `routeWorker` da `ArchivePage`) e diagnóstico
+  real de falha. Ele avança até o clique em "Editar card" na Consulta narrativa e
+  a página é encerrada pelo Chromium (`Target page, context or browser has been
+  closed`, sem evento `crash` nem `pageerror`); `check-archive-browser.mjs`
+  falha esperando o aviso de falha simulada de salvamento e
+  `check-archive-groups-browser.mjs` cai na captura de falha. As três falham
+  **identicamente na árvore exportada de `b04e6be`**: são pré-existentes e não
+  foram declaradas aprovadas.
+
+### 19.7 Desempenho (sem rodada nova de otimização)
+
+Chromium (fixtures sintéticas, worker real): 50 cards 215 ms de plano / 0 long
+task do planejador; 100 → 397 ms; 200 → 570 ms; 500 → 1 448 ms; 995 distantes →
+2 523 ms; falha do worker → 113 rotas provisórias, zero planejamento síncrono.
+Envio 0,1–1,6 ms, recepção 0,6–5,6 ms. Node: 5,768 s em distantes 995, 1,745 s
+em núcleos 995, 0,567 s em densa 1 000 e 1,414 s no hub. Atualizações: mover
+card 23,0 ms (114 reutilizadas), redimensionar 20,9 ms (109), mover obstáculo
+13,2 ms (106), criar relação 76,1 ms, remover 61,5 ms, pan/zoom 0. O custo extra
+da folga única e do contato de borda é de poucos milissegundos.
+
+### 19.8 Limitações preservadas
+
+Montagem inicial de 500 cards, repintura de centenas de relações, seleção em
+quadros com ~1 000 vínculos, hubs extremamente conectados e custo computacional
+do planejamento distante continuam dívidas do hardening geral do Fichário. As
+três suítes Chromium históricas seguem falhando por infraestrutura do host.
+Nada foi publicado nesta microfase e a 8.5.4.3 não foi iniciada.

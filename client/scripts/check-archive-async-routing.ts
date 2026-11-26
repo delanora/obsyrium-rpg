@@ -26,6 +26,7 @@ import {
 } from "../src/components/archive/archiveRouteContract";
 import {
   ArchiveRoutePlanner,
+  archiveRouteApplyPolicy,
   type ArchiveRouteWorkerLike,
 } from "../src/components/archive/archiveRoutePlanner";
 import {
@@ -33,6 +34,11 @@ import {
   archivePathProbe,
 } from "../src/components/archive/archiveRouteValidation";
 import { archiveLinkPathCommands } from "../src/components/archive/archiveLinkGeometry";
+import {
+  archiveRelationLabelSignature,
+  onArchiveRelationLabelWidthsChange,
+  rememberArchiveRelationLabelWidth,
+} from "../src/components/archive/archiveRelationMetrics";
 
 let total = 0;
 const ok = (message: string) => {
@@ -77,6 +83,7 @@ class FakeWorker implements ArchiveRouteWorkerLike {
   terminated = 0;
   onmessage: ((event: { data: unknown }) => void) | null = null;
   onerror: ((event: unknown) => void) | null = null;
+  onmessageerror?: ((event: unknown) => void) | null;
   postMessage(message: ArchiveRouteRequest): void {
     this.requests.push(message);
   }
@@ -611,6 +618,432 @@ const job = (
     "toda rota tem exatamente um estado",
   );
   ok("estados e motivo de fallback continuam separados e completos");
+}
+
+
+// 26 — estouro sem pendente, depois novo pedido
+{
+  const workers: FakeWorker[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 10,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  await sleep(40);
+  assert.equal(workers.length, 1, "voo silencioso não é trocado sem motivo");
+  assert.equal(planner.status().inFlight, true, "voo continua ocupado");
+  planner.request(job("s2"));
+  assert.equal(workers.length, 2, "pedido posterior substitui o voo travado");
+  assert.equal(workers[0].terminated, 1, "worker travado é encerrado");
+  assert.equal(workers[1].requests[0].signature, "s2", "pendente mais novo vence");
+  ok("pedido que chega depois do estouro sem pendente recebe worker novo");
+}
+
+// 27 — worker mudo com pendente
+{
+  const workers: FakeWorker[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 10,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  planner.request(job("s2"));
+  await sleep(40);
+  assert.equal(workers.length, 2, "worker que não responde é substituído");
+  assert.equal(workers[1].requests[0].signature, "s2", "o pendente assume");
+  ok("worker que não responde não bloqueia indefinidamente o planejamento");
+}
+
+// 28 — resposta inválida não deixa o controlador ocupado
+{
+  const workers: FakeWorker[] = [];
+  let applied = 0;
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    onResult: () => applied++,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  workers[0].onmessage?.({ data: { hello: "mundo" } });
+  assert.equal(planner.status().inFlight, true, "primeira mensagem não derruba");
+  workers[0].onmessage?.({ data: [1, 2, 3] });
+  assert.equal(workers.length, 2, "protocolo inválido repetido substitui o worker");
+  assert.equal(workers[1].requests[0].signature, "s1", "o voo é reenviado");
+  workers[1].deliver(0);
+  assert.equal(applied, 1, "planejamento volta a fluir");
+  ok("mensagens fora do protocolo não deixam o controlador ocupado");
+}
+
+// 29 — messageerror
+{
+  const workers: FakeWorker[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  workers[0].onmessageerror?.({ reason: "clonagem" });
+  assert.equal(workers.length, 2, "messageerror substitui o worker");
+  assert.equal(workers[1].requests[0].requestId, workers[0].requests[0].requestId, "mesma identidade");
+  ok("messageerror é tratado como falha de transporte, com reenvio");
+}
+
+// 30 — resultado atrasado de worker substituído
+{
+  const workers: FakeWorker[] = [];
+  let applied = 0;
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 10,
+    onResult: () => applied++,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  planner.request(job("s2"));
+  await sleep(40);
+  workers[1].deliver(0);
+  assert.equal(applied, 1, "resultado do worker atual é aplicado");
+  workers[0].deliver(0);
+  assert.equal(applied, 1, "resposta do worker substituído não é aplicada");
+  assert.ok(planner.status().discarded >= 1, "descarte contabilizado");
+  ok("resultado de worker substituído nunca afeta a instância atual");
+}
+
+// 31 — recuperação após falha definitiva
+{
+  const workers: FakeWorker[] = [];
+  const errors: string[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    maxRestarts: 1,
+    onError: (message) => errors.push(message),
+    onResult: () => void 0,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  workers[0].onerror?.(new Error("queda"));
+  workers[1].onerror?.(new Error("queda de novo"));
+  assert.equal(planner.status().failed, true, "falha declarada");
+  assert.equal(errors.length, 1, "diagnóstico não se repete");
+  const before = workers.length;
+  planner.request(job("s2"));
+  assert.equal(workers.length, before, "mesmo quadro não dispara tentativas infinitas");
+  planner.retry();
+  const live = workers[workers.length - 1];
+  assert.equal(live.requests.length, 1, "retry reenvia a última geometria");
+  live.deliver(0);
+  assert.equal(planner.status().applied, 1, "planejamento retoma depois do retry");
+  assert.equal(planner.status().failed, false, "falha limpa");
+  ok("recuperação controlada restaura o planejamento depois de falha definitiva");
+}
+
+// 32 — mudança de quadro recupera sozinha
+{
+  const workers: FakeWorker[] = [];
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    maxRestarts: 0,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  workers[0].onerror?.(new Error("queda"));
+  assert.equal(planner.status().failed, true, "falha declarada");
+  planner.request(job("s2", board(), "quadro-b"));
+  const live = workers[workers.length - 1];
+  assert.equal(live.requests.length, 1, "outro quadro replaneja");
+  live.deliver(0);
+  assert.equal(planner.status().applied, 1, "plano aplicado no quadro novo");
+  ok("outro quadro é mudança de contexto suficiente para recuperar");
+}
+
+// 33 — cancelamento invalida o voo
+{
+  const workers: FakeWorker[] = [];
+  let applied = 0;
+  const planner = new ArchiveRoutePlanner({
+    stallMs: 500,
+    onResult: () => applied++,
+    factory: () => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker;
+    },
+  });
+  planner.request(job("s1"));
+  planner.cancel();
+  workers[0].deliver(0);
+  assert.equal(applied, 0, "resultado cancelado não é aplicado");
+  assert.ok(planner.status().discarded >= 1, "descarte contabilizado");
+  ok("cancelamento invalida o trabalho anterior sem aplicar nada");
+}
+
+// 34 — DTO sem propriedades extras
+{
+  const dirtyNode = {
+    ...node("a", 0, 0),
+    description: "texto longo que não deve viajar",
+    content: { markdown: "x".repeat(500) },
+    title: "Templo",
+  } as unknown as ArchiveRouteNode;
+  const dirtyLink = {
+    ...link("l1", "a", "b", "knows", "Reconhece"),
+    excerpt: "descrição inteira do vínculo",
+    meta: { pinned: true },
+  } as unknown as ArchiveRouteLink;
+  const request = encodeRouteRequest(
+    { ...job("s"), placements: [dirtyNode], links: [dirtyLink] },
+    1,
+    1,
+  );
+  assert.deepEqual(Object.keys(request.placements[0]).sort(), [
+    "cardId",
+    "height",
+    "id",
+    "width",
+    "x",
+    "y",
+  ]);
+  assert.deepEqual(Object.keys(request.links[0]).sort(), [
+    "directed",
+    "id",
+    "label",
+    "relation",
+    "sourceId",
+    "targetId",
+  ]);
+  assert.ok(
+    !JSON.stringify(request).includes("texto longo que não deve viajar"),
+    "conteúdo de card não atravessa a fronteira",
+  );
+  assert.ok(
+    !JSON.stringify(request).includes("descrição inteira"),
+    "descrição de vínculo não atravessa a fronteira",
+  );
+  ok("DTO do pedido leva só o necessário, mesmo com objetos sujos");
+}
+
+// 35 — métricas de rótulo transmitidas
+{
+  const request = encodeRouteRequest(
+    { ...job("s"), labels: [["Reconhece", 240], ["Teme", 96]] },
+    1,
+    1,
+  );
+  assert.deepEqual(request.labels, [
+    ["Reconhece", 240],
+    ["Teme", 96],
+  ]);
+  const data = board();
+  const normal = planArchiveLinkRoutes(data);
+  const wide = planArchiveLinkRoutes({ ...data, labelWidth: () => 2400 });
+  const fingerprint = (plan: typeof normal) =>
+    [...plan.routes]
+      .map(([id, route]) => `${id}:${route.label?.segment}:${route.label?.at}`)
+      .join("|");
+  assert.ok(
+    [...normal.routes.values()].some((route) => route.label),
+    "plano padrão posiciona rótulos",
+  );
+  assert.notEqual(
+    fingerprint(wide),
+    fingerprint(normal),
+    "largura informada muda a caixa avaliada e a posição do rótulo",
+  );
+  ok("larguras medidas entram no pedido e governam a caixa do rótulo");
+}
+
+// 36 — assinatura de rótulo com tolerância
+{
+  const text = "Rótulo-assinatura-xyz";
+  rememberArchiveRelationLabelWidth(text, 200);
+  const base = archiveRelationLabelSignature([text]);
+  rememberArchiveRelationLabelWidth(text, 203);
+  assert.equal(
+    archiveRelationLabelSignature([text]),
+    base,
+    "oscilação de 3 px não replaneja",
+  );
+  rememberArchiveRelationLabelWidth(text, 240);
+  assert.notEqual(
+    archiveRelationLabelSignature([text]),
+    base,
+    "mudança relevante replaneja",
+  );
+  ok("assinatura de rótulo ignora oscilações e reage a mudança relevante");
+}
+
+// 37 — sem laço de medição → planejamento
+{
+  const text = "Rótulo-loop-xyz";
+  let events = 0;
+  const stop = onArchiveRelationLabelWidthsChange(() => events++);
+  rememberArchiveRelationLabelWidth(text, 180);
+  rememberArchiveRelationLabelWidth(text, 180);
+  assert.equal(events, 1, "medida repetida não avisa de novo");
+  stop();
+  rememberArchiveRelationLabelWidth(text, 320);
+  assert.equal(events, 1, "inscrição removida não é chamada");
+  ok("medição não gera aviso repetido (sem laço medição → plano → render)");
+}
+
+// 38 — segmentos muito curtos
+{
+  const rect = { x: 0, y: 0, width: 100, height: 100 };
+  const short = archivePathProbe(
+    [
+      { kind: "M", x: 1, y: 50 },
+      { kind: "L", x: 1.02, y: 50 },
+    ],
+    rect,
+  );
+  assert.equal(short.hit, true, "segmento de 0,02 dentro do card é interseção");
+  const degenerate = archivePathProbe(
+    [
+      { kind: "M", x: 50, y: 50 },
+      { kind: "L", x: 50, y: 50 },
+    ],
+    rect,
+  );
+  assert.equal(degenerate.hit, true, "segmento degenerado dentro do card conta");
+  const outside = archivePathProbe(
+    [
+      { kind: "M", x: 120, y: 50 },
+      { kind: "L", x: 120, y: 50 },
+    ],
+    rect,
+  );
+  assert.equal(outside.hit, false, "degenerado fora do card não conta");
+  ok("segmentos muito curtos e degenerados são testados, não ignorados");
+}
+
+// 39 — curvas e retas próximas das bordas
+{
+  const rect = { x: 0, y: 0, width: 100, height: 100 };
+  const deepArc = archivePathProbe(
+    [
+      { kind: "M", x: 50, y: -20 },
+      { kind: "Q", cx: 50, cy: 50, x: 50, y: 120 },
+    ],
+    rect,
+  );
+  assert.equal(deepArc.hit, true, "arco que corta o miolo é interseção");
+  const graze = archivePathProbe(
+    [
+      { kind: "M", x: -10, y: 0.3 },
+      { kind: "L", x: 110, y: 0.3 },
+    ],
+    rect,
+  );
+  assert.equal(graze.hit, false, "0,3 dentro é folga declarada, não interseção");
+  assert.equal(graze.touch, true, "contato de folga é reportado como toque");
+  const tangent = archivePathProbe(
+    [
+      { kind: "M", x: -10, y: 0 },
+      { kind: "L", x: 110, y: 0 },
+    ],
+    rect,
+  );
+  assert.equal(tangent.hit, false, "tangente não é interseção");
+  assert.equal(tangent.touch, true, "tangência é contato, não ausência");
+  // Arco que só roça a borda: o ponto mais fundo fica 0,2 dentro do card.
+  const borderArc = archivePathProbe(
+    [
+      { kind: "M", x: -40, y: -20 },
+      { kind: "Q", cx: 30, cy: 20.4, x: 100, y: -20 },
+    ],
+    rect,
+  );
+  assert.equal(borderArc.hit, false, "arco na folga declarada não invade");
+  assert.equal(borderArc.touch, true, "arco encostado é contato, não ausência");
+  ok("curvas e retas próximas das bordas ficam na folga declarada");
+}
+
+// 40 — verificação inconclusiva
+{
+  const rect = { x: 0, y: 0, width: 100, height: 100 };
+  let budget = 2;
+  const probe = archivePathProbe(
+    [
+      { kind: "M", x: 50, y: -200 },
+      { kind: "Q", cx: 400, cy: 50, x: 50, y: 300 },
+    ],
+    rect,
+    { spend: () => budget-- > 0, maxDepth: 20 },
+  );
+  assert.equal(probe.conclusive, false, "orçamento esgotado é inconclusivo");
+  assert.equal(probe.hit, false, "inconclusivo não afirma interseção");
+  const depth = archivePathProbe(
+    [
+      { kind: "M", x: 50, y: -200 },
+      { kind: "Q", cx: 400, cy: 50, x: 50, y: 300 },
+    ],
+    rect,
+    { maxDepth: 0, tolerance: 0.0001 },
+  );
+  assert.equal(depth.conclusive, false, "profundidade máxima é inconclusivo");
+  ok("região não verificada nunca é reportada como livre");
+}
+
+
+// 41 — aplicação durante gesto
+{
+  const current = { signature: "s1", boardId: "quadro-a" };
+  assert.equal(
+    archiveRouteApplyPolicy({ inGesture: false, current, result: current }),
+    "apply",
+    "fora do gesto o resultado entra",
+  );
+  assert.equal(
+    archiveRouteApplyPolicy({ inGesture: true, current, result: current }),
+    "defer",
+    "durante o gesto o traço não muda",
+  );
+  assert.equal(
+    archiveRouteApplyPolicy({
+      inGesture: false,
+      current,
+      result: { signature: "s0", boardId: "quadro-a" },
+    }),
+    "drop",
+    "assinatura antiga é descartada",
+  );
+  assert.equal(
+    archiveRouteApplyPolicy({
+      inGesture: false,
+      current,
+      result: { signature: "s1", boardId: "quadro-b" },
+    }),
+    "drop",
+    "resultado de outro quadro é descartado",
+  );
+  ok("resultado durante gesto é adiado; fora dele, aplicado se ainda for atual");
 }
 
 console.log(`\n${total} verificações de planejamento assíncrono das relações.`);

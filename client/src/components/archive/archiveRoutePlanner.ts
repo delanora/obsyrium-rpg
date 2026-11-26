@@ -1,14 +1,18 @@
 /** Fila e ciclo de vida do worker de rotas.
  *
- * Regras (documentadas na microfase 8.5.4.2.2):
+ * Regras (documentadas nas microfases 8.5.4.2.2 e 8.5.4.2.3):
  * - no máximo UM trabalho em execução e UM pendente (o mais recente vence);
- * - resultado só é aplicado se `requestId`, `generation`, `signature` e
- *   `boardId` corresponderem ao estado atual — resposta atrasada é descartada,
- *   nunca "desfaz" uma mudança;
- * - worker que trava com pendente mais novo, ou que acumula descartes, é
- *   substituído de forma controlada (nunca um worker por vínculo/frame);
+ * - resultado só é aplicado se o worker for o atual e `requestId`, `generation`,
+ *   `signature` e `boardId` corresponderem ao estado atual — resposta atrasada de
+ *   worker substituído é descartada, nunca "desfaz" uma mudança;
+ * - o vigia acompanha a fila inteira: um pedido que chega depois do primeiro
+ *   estouro encontra o voo marcado como travado e o substitui na hora;
+ * - mensagem fora do protocolo, `messageerror`, exceção de fábrica e erro do
+ *   worker contam como falha de transporte e nunca deixam o controlador ocupado;
  * - falha do worker nunca volta ao planejamento síncrono pesado: a interface
- *   continua com o plano provisório e o diagnóstico de não verificado.
+ *   continua com o plano provisório e o diagnóstico de não verificado;
+ * - recuperação só por ação controlada (`retry`) ou mudança relevante de
+ *   contexto (outro quadro) — nunca tentativas infinitas.
  */
 import {
   ARCHIVE_ROUTE_PROTOCOL,
@@ -27,6 +31,7 @@ export interface ArchiveRouteWorkerLike {
   terminate(): void;
   onmessage: ((event: { data: unknown }) => void) | null;
   onerror: ((event: unknown) => void) | null;
+  onmessageerror?: ((event: unknown) => void) | null;
 }
 
 export type ArchiveRouteWorkerFactory = () => ArchiveRouteWorkerLike;
@@ -38,6 +43,27 @@ export function createArchiveRouteWorker(): ArchiveRouteWorkerLike {
     { type: "module" },
   );
   return worker as unknown as ArchiveRouteWorkerLike;
+}
+
+/** Decisão de aplicação de um resultado que chegou da fila. */
+export type ArchiveRouteApply = "apply" | "defer" | "drop";
+
+/**
+ * Um resultado só entra se for do quadro e da assinatura atuais; durante um
+ * gesto ele é guardado (o traço não muda no meio do arrasto) e aplicado depois.
+ * Regra pura para poder ser verificada sem DOM.
+ */
+export function archiveRouteApplyPolicy(input: {
+  inGesture: boolean;
+  current: { signature: string; boardId: string };
+  result: { signature: string; boardId: string };
+}): ArchiveRouteApply {
+  if (
+    input.result.signature !== input.current.signature ||
+    input.result.boardId !== input.current.boardId
+  )
+    return "drop";
+  return input.inGesture ? "defer" : "apply";
 }
 
 export interface ArchiveRouteResultMeta {
@@ -69,6 +95,7 @@ export interface ArchiveRoutePlannerOptions {
   stallMs?: number;
   maxRestarts?: number;
   maxDiscards?: number;
+  maxInvalid?: number;
   now?: () => number;
   onResult?: (plan: ArchiveRoutePlanSet, meta: ArchiveRouteResultMeta) => void;
   onError?: (message: string) => void;
@@ -77,6 +104,10 @@ export interface ArchiveRoutePlannerOptions {
 interface Flight {
   request: ArchiveRouteRequest;
   sentAt: number;
+  /** O vigia expirou sem pendente: o próximo pedido substitui na hora. */
+  stalled: boolean;
+  /** Mensagens fora do protocolo recebidas neste voo. */
+  invalid: number;
 }
 
 export class ArchiveRoutePlanner {
@@ -91,6 +122,7 @@ export class ArchiveRoutePlanner {
   private requestId = 0;
   private disposed = false;
   private failed = false;
+  private failedBoardId = "";
   private restarts = 0;
   private counts = {
     dispatched: 0,
@@ -108,6 +140,12 @@ export class ArchiveRoutePlanner {
   /** Registra um pedido. A geração nova invalida tudo o que estava em voo. */
   request(job: ArchiveRouteJob): number {
     if (this.disposed) return this.generation;
+    if (this.failed) {
+      // Só outro quadro (mudança relevante de contexto) reabilita sozinho;
+      // repetir o mesmo pedido não gera tentativas infinitas.
+      if (job.boardId === this.failedBoardId) return this.generation;
+      this.recover();
+    }
     this.generation++;
     const request = encodeRouteRequest(job, ++this.requestId, this.generation);
     if (this.pending) this.counts.superseded++;
@@ -122,14 +160,20 @@ export class ArchiveRoutePlanner {
     this.generation++;
   }
 
-  /** Tenta de novo depois de uma falha declarada. */
+  /** Ação controlada de recuperação depois de uma falha declarada. */
   retry(): void {
     if (this.disposed || !this.failed) return;
-    this.failed = false;
-    this.restarts = 0;
-    this.counts.errors = 0;
-    // O último pedido volta para a fila: recuperar não perde a geometria atual.
-    if (!this.pending && this.current) this.pending = this.current;
+    this.recover();
+    if (this.current) {
+      // Reenvia a última geometria com identidade nova: a antiga seria
+      // descartada como geração vencida.
+      this.generation++;
+      this.pending = {
+        ...this.current,
+        requestId: ++this.requestId,
+        generation: this.generation,
+      };
+    }
     this.pump();
   }
 
@@ -154,42 +198,78 @@ export class ArchiveRoutePlanner {
     this.worker = null;
   }
 
+  private recover(): void {
+    this.failed = false;
+    this.failedBoardId = "";
+    this.restarts = 0;
+    this.counts.errors = 0;
+  }
+
   private ensureWorker(): ArchiveRouteWorkerLike | null {
     if (this.worker) return this.worker;
     try {
       const worker = this.factory();
-      worker.onmessage = (event) => this.receive(event.data);
-      worker.onerror = (event) => this.fail(errorMessage(event));
+      // Cada instância responde pela sua própria identidade: mensagem de worker
+      // substituído nunca toca o voo atual.
+      worker.onmessage = (event) => this.receive(worker, event.data);
+      worker.onerror = (event) => this.fail(worker, errorMessage(event));
+      worker.onmessageerror = () =>
+        this.fail(worker, "mensagem ilegível do worker de rotas");
       this.worker = worker;
       return worker;
     } catch (error) {
-      this.fail(errorMessage(error));
+      this.fail(null, errorMessage(error));
       return null;
     }
   }
 
   private pump(): void {
-    if (this.disposed || this.failed || this.flight || !this.pending) return;
+    if (this.disposed || this.failed || !this.pending) return;
+    if (this.flight) {
+      // Já existe voo: o pendente espera — mas nunca sem vigia. Se o prazo
+      // anterior expirou sem pendente, a substituição é imediata.
+      if (this.flight.stalled) this.replaceWorker("estouro");
+      else this.armTimer();
+      return;
+    }
     const worker = this.ensureWorker();
     if (!worker) return;
     const request = this.pending;
     this.pending = null;
     this.counts.dispatched++;
-    this.flight = { request, sentAt: this.now() };
+    this.flight = { request, sentAt: this.now(), stalled: false, invalid: 0 };
     this.current = request;
     this.armTimer();
     try {
       worker.postMessage(request);
     } catch (error) {
-      this.fail(errorMessage(error));
+      this.fail(worker, errorMessage(error));
     }
   }
 
-  private receive(data: unknown): void {
-    if (this.disposed || !isArchiveRouteResponse(data)) return;
-    const response = data as ArchiveRouteResponse;
+  private receive(worker: ArchiveRouteWorkerLike, data: unknown): void {
+    if (this.disposed) return;
+    if (worker !== this.worker) {
+      // Chegou de um worker já substituído: não afeta a instância atual.
+      this.counts.discarded++;
+      return;
+    }
     const flight = this.flight;
-    if (!flight || flight.request.requestId !== response.requestId) {
+    if (!flight) {
+      this.counts.discarded++;
+      return;
+    }
+    if (!isArchiveRouteResponse(data)) {
+      this.counts.errors++;
+      flight.invalid++;
+      const limit =
+        this.options.maxInvalid ?? ARCHIVE_ROUTE_QUEUE.maxInvalid;
+      if (flight.invalid >= limit) this.replaceWorker("protocolo");
+      else this.armTimer();
+      return;
+    }
+    const response = data as ArchiveRouteResponse;
+    if (flight.request.requestId !== response.requestId) {
       this.counts.discarded++;
       return;
     }
@@ -197,7 +277,7 @@ export class ArchiveRoutePlanner {
     this.clearTimer();
     if (response.error) {
       this.counts.errors++;
-      this.fail(response.error);
+      this.fail(worker, response.error);
       return;
     }
     const stale =
@@ -214,7 +294,7 @@ export class ArchiveRoutePlanner {
     const plan = decodeRoutePlan(response.plan);
     if (!plan) {
       this.counts.errors++;
-      this.fail("plano vazio");
+      this.fail(worker, "plano vazio");
       return;
     }
     this.counts.applied++;
@@ -239,29 +319,40 @@ export class ArchiveRoutePlanner {
   /** Substituição controlada: o pendente mais novo assume o worker novo. */
   private replaceWorker(reason: string): void {
     const limit = this.options.maxRestarts ?? ARCHIVE_ROUTE_QUEUE.maxRestarts;
+    const flight = this.flight;
     this.worker?.terminate();
     this.worker = null;
     this.flight = null;
-    this.current = null;
     this.clearTimer();
     if (this.restarts >= limit) {
+      this.current = null;
       this.declareFailed(`worker substituído demais (${reason})`);
       return;
     }
     this.restarts++;
+    // O trabalho que estava em voo não se perde: sem pendente mais novo, ele
+    // volta para a fila e o worker novo assume (nunca fica sem planejamento).
+    if (!this.pending && flight && flight.request.generation === this.generation)
+      this.pending = flight.request;
+    this.current = flight?.request ?? null;
     this.pump();
   }
 
   private armTimer(): void {
     this.clearTimer();
     const stall = this.options.stallMs ?? ARCHIVE_ROUTE_QUEUE.stallMs;
+    const flight = this.flight;
+    if (!flight) return;
+    const remaining = Math.max(0, flight.sentAt + stall - this.now());
     this.timer = setTimeout(() => {
       this.timer = null;
       if (this.disposed || !this.flight) return;
       // Só substitui quando existe trabalho mais novo esperando: um plano
-      // legítimo e demorado não deve ser interrompido.
+      // legítimo e demorado não deve ser interrompido. Sem pendente, o voo
+      // fica marcado como travado e o próximo pedido substitui imediatamente.
       if (this.pending) this.replaceWorker("estouro");
-    }, stall);
+      else this.flight.stalled = true;
+    }, remaining);
   }
 
   private clearTimer(): void {
@@ -270,11 +361,16 @@ export class ArchiveRoutePlanner {
     this.timer = null;
   }
 
-  private fail(message: string): void {
+  private fail(worker: ArchiveRouteWorkerLike | null, message: string): void {
     if (this.disposed) return;
+    if (worker && worker !== this.worker) return;
     const limit = this.options.maxRestarts ?? ARCHIVE_ROUTE_QUEUE.maxRestarts;
     this.worker?.terminate();
     this.worker = null;
+    const kept =
+      this.current && this.current.generation === this.generation
+        ? this.current
+        : null;
     this.flight = null;
     this.clearTimer();
     if (this.restarts >= limit) {
@@ -284,12 +380,13 @@ export class ArchiveRoutePlanner {
     this.restarts++;
     // Reenvia o último pedido (mesma identidade) em um worker novo; se havia
     // um mais novo esperando, ele vence.
-    if (!this.pending && this.current) this.pending = this.current;
+    if (!this.pending && kept) this.pending = kept;
     this.pump();
   }
 
   private declareFailed(message: string): void {
     this.failed = true;
+    this.failedBoardId = this.current?.boardId ?? "";
     this.pending = null;
     this.options.onError?.(message);
   }

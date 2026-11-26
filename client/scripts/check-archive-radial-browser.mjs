@@ -9,9 +9,23 @@ const { chromium } = await import(
 );
 const root = process.cwd(),
   temp = fs.mkdtempSync(path.join(os.tmpdir(), "arquivo-radial-browser-"));
+const fixtureWorker = {
+  name: "fixture-worker",
+  setup(plugin) {
+    plugin.onResolve({ filter: /^fixture-worker$/ }, () => ({
+      path: "fixture-worker",
+      namespace: "fixture",
+    }));
+    plugin.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
+      loader: "js",
+      resolveDir: path.join(root, "client"),
+      contents: `import{planArchiveLinkRoutes as __plan}from"./src/components/archive/archiveLinkRouting";import{encodeRoutePlan as __enc,decodeRoutePlan as __dec}from"./src/components/archive/archiveRouteContract";window.__routeWorker=()=>{let h=null;return{onerror:null,set onmessage(f){h=f},get onmessage(){return h},postMessage(r){setTimeout(()=>{try{const plan=__plan({placements:r.placements,links:r.links,labelWidth:(l)=>new Map(r.labels).get(l)??0,previous:__dec(r.previous)});h&&h({data:{...r,plan:__enc(plan),error:null,elapsed:0}})}catch(error){h&&h({data:{...r,plan:null,error:String(error)}})}},0)},terminate(){}}};`,
+    }));
+  },
+};
 await build({
   stdin: {
-    contents: `import React from 'react';import{createRoot}from'react-dom/client';import{ArchivePage}from'${root}/client/src/components/archive/ArchivePage';createRoot(document.getElementById('root')).render(<div className="app-shell theme-master"><header className="app-header" style={{height:48}}>Obsyrium</header><nav className="tabs tabs-inline master-navigation"><button className="tab">Início</button><button className="tab">Fichário</button></nav><main className="app-main app-main-wide"><ArchivePage/></main></div>);`,
+    contents: `import"fixture-worker";import React from 'react';import{createRoot}from'react-dom/client';import{ArchivePage}from'${root}/client/src/components/archive/ArchivePage';createRoot(document.getElementById('root')).render(<div className="app-shell theme-master"><header className="app-header" style={{height:48}}>Obsyrium</header><nav className="tabs tabs-inline master-navigation"><button className="tab">Início</button><button className="tab">Fichário</button></nav><main className="app-main app-main-wide"><ArchivePage routeWorker={window.__routeWorker}/></main></div>);`,
     loader: "tsx",
     resolveDir: path.join(root, "client"),
   },
@@ -19,7 +33,7 @@ await build({
   jsx: "automatic",
   outfile: path.join(temp, "app.js"),
   external: ["/archive/*", "/creation/*"],
-  plugins: [
+  plugins: [fixtureWorker,
     {
       name: "medicao-isolada",
       setup(b) {
@@ -198,6 +212,11 @@ const context = await browser.newContext({
 const page = await context.newPage(),
   errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
+page.on("crash", () => console.log("DIAGNÓSTICO: renderer da página caiu (crash)"));
+page.on("console", (message) => {
+  if (message.type() === "error")
+    console.log("DIAGNÓSTICO console.error:", message.text().slice(0, 200));
+});
 let archivedPaints = 0;
 const archivedDiscontinuities = [];
 const originalReload = page.reload.bind(page);
@@ -1276,8 +1295,14 @@ try {
   console.log("Amostras de cálculo no navegador:", recordedLayoutTimes);
   console.log("Evidências:", temp);
 } catch (e) {
-  await shot("falha");
-  console.log("Diálogos:", await page.locator("dialog").allTextContents());
+  // A captura de falha não pode esconder o erro original (página encerrada).
+  console.log("Falha original:", String(e));
+  try {
+    await shot("falha");
+    console.log("Diálogos:", await page.locator("dialog").allTextContents());
+  } catch (diagnosticError) {
+    console.log("Diagnóstico indisponível:", String(diagnosticError));
+  }
   console.log("Evidências:", temp);
   throw e;
 } finally {

@@ -2130,3 +2130,35 @@ Intervenção focada em responsividade; o roteador puro não foi reescrito.
   ao criar/remover relação e fallback do hub único. A 8.5.4.2 continua **não
   publicada**; a 8.5.4.3 não foi iniciada.
 
+## 8.5.4.2.3 — Hardening final da integração assíncrona
+
+Fechamento da integração do worker, sem refazer a arquitetura e sem nova rodada
+de otimização.
+
+- **Ciclo de vida**: o vigia acompanha a fila inteira; voo travado sem pendente
+  é substituído na chegada do próximo pedido; mensagem fora do protocolo,
+  `messageerror` e falha de fábrica não deixam o controlador ocupado; resposta de
+  worker substituído é descartada pela identidade da instância; substituição não
+  perde o trabalho em voo; `retry` reenvia com identidade nova e recuperação
+  automática só ocorre na troca de quadro (nunca em laço).
+- **Contrato mínimo**: DTOs explícitos de card e vínculo — nada de conteúdo,
+  título, resumo ou descrição atravessa o `postMessage`; teste com objetos sujos
+  compara as chaves exatas.
+- **Rótulos**: larguras medidas viajam no pedido, o roteador usa `labelWidth` e a
+  assinatura quantiza a largura em 8 unidades; uma medição avisa no máximo uma
+  vez, sem laço medição → planejamento → render. Offset perpendicular continua 0.
+- **Validação**: folga única de 0,5 unidade para retas e arcos, com categorias
+  explícitas `hit` / `touch` / inconclusivo; segmentos curtos e degenerados são
+  testados; `verified-clear` significa "nada além da folga e nada sem verificar".
+- **Canvas**: troca de quadro limpa plano e resultado guardado; a aplicação passa
+  por uma regra pura (`drop`/`defer`/`apply`) sem tocar no scheduler existente.
+- **Testes**: 41 verificações assíncronas (16 novas), 28 de roteamento puro, 17 de
+  hardening, 53 em Chromium com worker real, 143 de relações, 221 de estabilidade,
+  2.357 invariantes espaciais, 802 de filtros, 7 de identidade e 51 da guarda
+  operacional. As três suítes Chromium históricas continuam falhando por
+  infraestrutura do host — inclusive na árvore exportada de `b04e6be`.
+- **Desempenho**: nenhuma regressão relevante; long tasks do planejador seguem
+  zero em Chromium e as dívidas de montagem/repintura/seleção/hub distante ficam
+  registradas para o hardening geral.
+- A 8.5.4.2 continua **não publicada**; a 8.5.4.3 não foi iniciada.
+
