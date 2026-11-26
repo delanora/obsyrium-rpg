@@ -2097,3 +2097,36 @@ tocar identidade visual, layout, dados ou backend.
   único e replanejamento conservador na remoção de relação. A 8.5.4.2 continua
   **não publicada**; a 8.5.4.3 não foi iniciada.
 
+## 8.5.4.2.2 — Planejamento assíncrono das relações
+
+Intervenção focada em responsividade; o roteador puro não foi reescrito.
+
+- **Worker de módulo** (`archiveRoute.worker.ts`) executa `planArchiveLinkRoutes`
+  fora da thread principal; contrato versionado e serializável
+  (`archiveRouteContract.ts`), fila com um trabalho em voo e um pendente
+  (`archiveRoutePlanner.ts`), substituição controlada do worker e falha
+  declarada sem voltar ao planejamento síncrono.
+- **Resultado obsoleto** é descartado por `requestId`, `generation`, assinatura
+  geométrica e `boardId` — na fila e no canvas. Desmontagem termina o worker.
+- **Primeira apresentação** usa plano provisório (forma anterior adaptada +
+  caminho angular), sempre `unverified` com motivo `provisional` e
+  `data-route-plan` no viewport. Resultado que chega durante gesto é aplicado
+  ao terminar; pan/zoom não replanejam.
+- **Validação geométrica** passou a testar os comandos SVG realmente desenhados:
+  linhas exatas e arcos por subdivisão de De Casteljau com limite demonstrável
+  (`|P0 − 2C + P2| / 4`); inconclusivo nunca vira `verified-clear`.
+- **Reutilização** com cópia profunda, topologia estável, lane e texto iguais,
+  caixa do trajeto **e do rótulo** intocadas, portas preservadas e contabilizadas,
+  rótulos não recalculados.
+- **Orçamento** cobre índice, consultas, cruzamentos, rótulos e validação, com
+  parada efetiva.
+- **Chromium real**: 53 verificações (50/100/200/500 cards, 995 relações
+  distantes, falha do worker); zero long task do planejador na thread principal,
+  p95 de gesto 15–115 ms, envio 0,2–2,3 ms, recepção 0,5–3,8 ms, worker
+  21–1 182 ms. Node: 29–5 972 ms conforme topologia (custo de cálculo fora da
+  thread).
+- **Pendências**: custo de montagem/renderização inicial de quadros grandes,
+  re-render de seleção, repintura de pan em 995 relações, replanejamento total
+  ao criar/remover relação e fallback do hub único. A 8.5.4.2 continua **não
+  publicada**; a 8.5.4.3 não foi iniciada.
+

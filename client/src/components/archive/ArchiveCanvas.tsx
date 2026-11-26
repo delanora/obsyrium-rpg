@@ -37,9 +37,13 @@ import type { ArchiveLayout } from "./archiveLayout";
 import {
   archiveLinkRouteGeometry,
   archiveRouteSignature,
-  planArchiveLinkRoutes,
+  provisionalArchiveRoutePlan,
   type ArchiveRoutePlanSet,
 } from "./archiveLinkRouting";
+import {
+  ArchiveRoutePlanner,
+  type ArchiveRouteWorkerFactory,
+} from "./archiveRoutePlanner";
 import {
   ARCHIVE_RELATION_MARKERS,
   ARCHIVE_RELATION_VISUALS,
@@ -98,6 +102,8 @@ interface Props {
   onConnect: (from: string, to: string) => void;
   busy: boolean;
   onInteraction: (active: boolean) => void;
+  /** Fábrica do worker; só os fixtures instrumentados substituem. */
+  routeWorker?: ArchiveRouteWorkerFactory;
 }
 interface Gesture {
   pointer: number;
@@ -583,6 +589,7 @@ export function ArchiveCanvas({
   onConnect,
   busy,
   onInteraction,
+  routeWorker,
 }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   // O mesmo plano alimenta a pintura estática e o loop de animação.
@@ -602,21 +609,90 @@ export function ArchiveCanvas({
     () => archiveRouteSignature(motion.graph),
     [motion.graph],
   );
+  const boardId = motion.graph.board?.id ?? "";
+  // Plano anterior (definitivo ou provisório): base do reuso localizado.
   const previousRoutes = useRef<ArchiveRoutePlanSet | null>(null);
-  // Recalcula só quando geometria/topologia mudam: pan, zoom e opacidade não.
-  const routes = useMemo(
+  const [planned, setPlanned] = useState<{
+    signature: string;
+    boardId: string;
+    plan: ArchiveRoutePlanSet;
+  } | null>(null);
+  const planner = useRef<ArchiveRoutePlanner | null>(null);
+  const pendingApply = useRef<{
+    signature: string;
+    boardId: string;
+    plan: ArchiveRoutePlanSet;
+  } | null>(null);
+  const currentRequest = useRef({ signature: routeSignature, boardId });
+  currentRequest.current = { signature: routeSignature, boardId };
+  /** Aplica o resultado guardado durante um gesto, se ainda for o atual. */
+  const flushPending = useCallback(() => {
+    const next = pendingApply.current;
+    if (!next) return;
+    pendingApply.current = null;
+    if (
+      next.signature !== currentRequest.current.signature ||
+      next.boardId !== currentRequest.current.boardId
+    )
+      return;
+    previousRoutes.current = next.plan;
+    setPlanned(next);
+  }, []);
+  // Planejamento fora da thread principal: um worker, um trabalho em voo.
+  useEffect(() => {
+    const instance = new ArchiveRoutePlanner({
+      factory: routeWorker,
+      onResult: (plan, meta) => {
+        if (
+          meta.signature !== currentRequest.current.signature ||
+          meta.boardId !== currentRequest.current.boardId
+        )
+          return;
+        const next = {
+          signature: meta.signature,
+          boardId: meta.boardId,
+          plan,
+        };
+        if (gesture.current) {
+          // Durante o gesto o traço não muda: aplica quando ele termina.
+          pendingApply.current = next;
+          return;
+        }
+        previousRoutes.current = plan;
+        setPlanned(next);
+      },
+    });
+    planner.current = instance;
+    return () => {
+      instance.dispose();
+      planner.current = null;
+    };
+  }, [routeWorker]);
+  useEffect(() => {
+    planner.current?.request({
+      boardId,
+      signature: routeSignature,
+      placements: motion.graph.placements,
+      links: motion.graph.links,
+      previous: previousRoutes.current,
+    });
+  }, [routeSignature, boardId]);
+  // Primeira apresentação: forma anterior adaptada, nunca anunciada
+  // como verificada. Custo linear e sem consulta a obstáculos.
+  const provisional = useMemo(
     () =>
-      planArchiveLinkRoutes({
+      provisionalArchiveRoutePlan({
         placements: motion.graph.placements,
         links: motion.graph.links,
         previous: previousRoutes.current,
       }),
     [routeSignature],
   );
+  const routes =
+    planned && planned.signature === routeSignature && planned.boardId === boardId
+      ? planned.plan
+      : provisional;
   routesRef.current = routes;
-  useEffect(() => {
-    previousRoutes.current = routes;
-  }, [routes]);
   const gesture = useRef<Gesture | null>(null);
   const suppressConsultUntil = useRef(0);
   const lastTap = useRef<{
@@ -670,6 +746,7 @@ export function ArchiveCanvas({
     if (g.mode !== "pan") state.current.onVisual({});
     setTemporary(null);
     motionRef.current.resume();
+    flushPending();
     if (viewport.current?.hasPointerCapture(g.pointer))
       viewport.current.releasePointerCapture(g.pointer);
   };
@@ -764,6 +841,7 @@ export function ArchiveCanvas({
     <div
       ref={viewport}
       className="archive-viewport"
+      data-route-plan={routes.provisional ? "provisional" : "definitive"}
       tabIndex={0}
       aria-label="Quadro narrativo. Arraste o fundo para navegar e use a roda para ampliar."
       onContextMenu={(event) => {
@@ -904,7 +982,10 @@ export function ArchiveCanvas({
               };
           }
         }
-        if (g.mode !== "pan") motionRef.current.resume();
+        if (g.mode !== "pan") {
+          motionRef.current.resume();
+          flushPending();
+        }
       }}
     >
       <ArchiveBackground camera={camera} />

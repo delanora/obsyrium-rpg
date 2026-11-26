@@ -319,3 +319,150 @@ conservadora.
 - `intersects` é diagnóstico, não um erro: a relação continua visível,
   selecionável e com rótulo.
 
+## 18. Planejamento assíncrono (8.5.4.2.2)
+
+Microfase focada em **responsividade**, não em reduzir o custo de cálculo. O
+roteador puro continua sendo o único algoritmo: ele só deixou de rodar na
+thread principal.
+
+### 18.1 Arquitetura
+
+- `archiveRoute.worker.ts` — worker de módulo (Vite) que importa
+  `planArchiveLinkRoutes`; não conhece DOM, câmera, cards persistidos ou dados
+  de campanha. Recebe geometria de apresentação, devolve plano serializado.
+- `archiveRouteContract.ts` — contrato versionado (`ARCHIVE_ROUTE_PROTOCOL`):
+  quadro (`boardId`), `requestId`, `generation`, assinatura geométrica,
+  placements, vínculos, plano anterior serializável e o plano de resposta com
+  diagnóstico/métricas. Arrays de pares chave-valor, nada de `Map` no
+  `postMessage`. Sem `SharedArrayBuffer`.
+- `archiveRoutePlanner.ts` — fila e ciclo de vida na thread principal: um
+  trabalho em voo, um pendente (o mais recente substitui o anterior), descarte
+  por geração/assinatura/quadro, substituição controlada do worker
+  (`stallMs 4 000`, `maxRestarts 2`, `maxDiscards 8`) e falha declarada.
+- `archiveRouteValidation.ts` — verificação geométrica dos comandos SVG reais.
+- `ArchiveCanvas.tsx` — pede o plano quando a assinatura muda, mantém o plano
+  provisório visível e aplica o resultado somente se ainda for o atual.
+
+A thread principal continua dona de apresentação, interação, câmera, gestos,
+scheduler de animação (um único `useArchiveMotion`) e da aplicação do plano.
+Nenhum worker é criado por vínculo, por quadro ou por frame.
+
+### 18.2 Resultados obsoletos
+
+Um resultado só é aplicado quando `requestId` é o do trabalho em voo **e**
+`generation`, `signature` e `boardId` coincidem com o estado atual — checado na
+fila e de novo no canvas. Cobrem troca de quadro, mover/redimensionar, expandir/
+recolher, remover card, remover relação, atualização de snapshot e desmontagem
+(que descarta e termina o worker). Resposta atrasada nunca restaura conexão
+removida nem mistura planos de quadros diferentes; cada descarte é contado em
+`discarded`.
+
+### 18.3 Primeira apresentação
+
+Enquanto o worker trabalha, o quadro mostra `provisionalArchiveRoutePlan`:
+reaproveita a **forma** do plano anterior (lados, corredor, estratégia, rótulo)
+e, para vínculos novos, um caminho angular direto. Custo linear, sem consulta a
+obstáculos. Toda rota provisória sai `unverified` com `fallbackReason:
+"provisional"`; o viewport expõe `data-route-plan="provisional|definitive"`.
+Nada é escondido, nenhum controle é bloqueado e não há indicador de carregamento.
+
+Aplicação: se um resultado chega durante arraste/redimensionamento/conexão, ele
+fica guardado e é aplicado quando o gesto termina (`flushPending`) — o traço não
+muda no meio do gesto. Traço, bainha, hit area, encaixes, marcadores, rótulos,
+seleção, hover e filtros continuam vindo do mesmo plano.
+
+### 18.4 Validação geométrica dos comandos reais
+
+`validateFinalPath` passou a validar `archiveLinkPathCommands(pontos)` — os
+comandos que o SVG desenha, já arredondados em duas casas:
+
+- `L`: teste exato de segmento contra retângulo (Liang–Barsky);
+- `Q`: subdivisão de De Casteljau. Enquanto a corda do sub-arco, inflada pelo
+  desvio máximo da curva à corda (`|P0 − 2C + P2| / 4`), não toca o retângulo, a
+  ausência de interseção é **demonstrada** por limite geométrico, não amostrada.
+  Na tolerância (0,1 unidade) o toque é reportado como interseção — falso
+  positivo da ordem da tolerância, nunca falso negativo;
+- subdivisão que estoura profundidade ou orçamento ⇒ **inconclusivo**, e a rota
+  fica `unverified` (nunca "livre").
+
+O índice espacial consulta só a caixa de cada comando, então a verificação
+continua local mesmo com o índice completo.
+
+### 18.5 Reutilização e portas
+
+- `reusablePlan` devolve **cópia profunda** (`cloneRoutePlan`): a distribuição
+  de portas nunca muta o plano anterior.
+- Reutilizar exige: plano anterior verificado, mesma lane, mesmo texto de
+  vínculo (`topology`), conjunto de vínculos inalterado (criar/remover relação
+  invalida em bloco), pontas sem mudança e a caixa do trajeto **e do rótulo**
+  livres das áreas alteradas.
+- Rotas reutilizadas entram na ocupação e nos trajetos já fixados, mantêm o
+  encaixe distribuído (`fixed`) e não são revalidadas nem reposicionadas; o
+  rótulo delas entra na grade de colisão para não ser sobreposto.
+- Sem certificação, invalida. A contagem de reutilizadas caiu onde a topologia
+  mudou (criar/remover relação replaneja tudo) — correção antes de número.
+
+### 18.6 Orçamento
+
+Além de candidatos, construções, rótulos e validação final, passam a ser pagos:
+construção do índice espacial, cada consulta ao índice (proporcional ao número
+de obstáculos devolvidos) e os cruzamentos pelo produto real
+(segmentos × segmentos). Ao esgotar, a exploração para: não se posicionam mais
+rótulos, os vínculos restantes viram fallback angular `unverified` com motivo
+`budget`. Continua determinístico — nada de timeout de relógio.
+
+### 18.7 Chromium real (worker real, fixtures sintéticas)
+
+Seis cenários, Worker de módulo servido como arquivo, entrada real do Chromium
+(`page.mouse`). Long tasks ≥ 50 ms; latência medida na página (evento → próximo
+frame pintado).
+
+| cenário | plano | montagem | planejamento ocioso | interação | aplicação | envio | recepção | worker | p95 wheel/pan | relações |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 50 cards | 211 ms | 115 ms | **0** | 0 | 115 ms | 0,2 ms | 0,5 ms | 21 ms | 16,2 / 16,3 ms | 50 |
+| 100 cards | 353 ms | 190 ms | **0** | 0 | 82 ms | 0,3 ms | 0,5 ms | 41 ms | 15,4 / 15,8 ms | 113 |
+| 200 cards | 560 ms | 353 ms | **0** | 0 | 66 ms | 0,3 ms | 0,9 ms | 60 ms | 16,1 / 31,4 ms | 237 |
+| 500 cards | 1 439 ms | 730 ms | **0** | 1 (315 ms) | 130 ms | 1,4 ms | 2,8 ms | 148 ms | 16,3 / 21,8 ms | 613 |
+| 995 relações distantes | 2 585 ms | 804 ms | **0** | 4 (436 ms) | 163 ms | 2,3 ms | 3,8 ms | 1 182 ms | 16,0 / 115,2 ms | 995 |
+| falha do worker | — | 188 ms | 2 (78 ms) | 4 (108 ms) | — | — | — | — | 16,2 / 30,5 ms | 113 provisórias |
+
+Leitura: o planejador não produz nenhuma long task na thread principal; o que
+aparece durante a interação é repintura dos ~1000 caminhos SVG (custo de
+apresentação pré-existente), não cálculo de rota. Pan/zoom não geram pedidos;
+troca de quadro no meio do plano não deixa vínculo obsoleto; ciclos de expansão/
+recolhimento mantêm o SVG estável; falha do worker mantém as relações visíveis
+em estado provisório, com a interface responsiva e sem planejamento síncrono.
+
+### 18.8 Node (custo de cálculo, sem DOM)
+
+| topologia | 50 | 100 | 200 | 500 cards |
+| --- | --- | --- | --- | --- |
+| esparsa | 28,6 ms | 40,0 ms | 69,2 ms | 225,8 ms (1 000 vínculos) |
+| densa | 47,8 ms | 92,2 ms | 253,7 ms | 570,5 ms (1 000) |
+| paralelas | 36,6 ms | 75,1 ms | 344,2 ms | — |
+| núcleos | 45,6 ms | 116,4 ms | 387,8 ms | 1 750,4 ms (995) |
+| distantes | 85,7 ms | 290,8 ms | 1 149,4 ms | 5 972,3 ms (995) |
+| radial (hub) | 146,5 ms | 145,0 ms | 238,3 ms | 1 521,2 ms (orçamento esgotado) |
+
+O extremo de núcleos distantes ficou ~8 % mais caro que na 8.5.4.2.1 (5 972 ms
+contra 5 522 ms): a validação por comandos reais e as consultas cobradas custam
+mais. É o preço da correção geométrica — e agora roda fora da thread principal.
+
+Atualizações (60 cards / 120 vínculos): mover card 17,6 ms (114 reutilizadas),
+redimensionar 22,2 ms (109), criar relação 74,6 ms (replaneja: topologia mudou),
+remover relação 67,0 ms (idem), mover obstáculo 13,7 ms (106), pan/zoom 0.
+
+### 18.9 Limitações
+
+- Montagem inicial de 500 cards ainda custa ~730 ms de long task (613 vínculos
+  criados de uma vez); é renderização, não planejamento, e não foi otimizada
+  nesta microfase.
+- Selecionar um vínculo em quadro com ~1000 relações custa até ~290 ms de
+  re-render do SVG (pré-existente).
+- Pan em quadro de 995 relações pode custar 100–440 ms por frame de repintura.
+- Criar/remover relação invalida a reutilização em bloco (conservador).
+- O hub único (radial) continua esgotando o orçamento e caindo em fallback: é
+  limite físico de portas.
+- O worker é único por canvas; não há pool. Falhas são recuperadas no máximo
+  duas vezes antes de a interface ficar em modo provisório.
+

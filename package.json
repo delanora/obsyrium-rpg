@@ -46,7 +46,9 @@
     "test:build-safety": "node scripts/check-build-safety.mjs",
     "build:isolated": "node scripts/build-isolated.mjs",
     "audit:build-safety": "node scripts/audit-build-safety.mjs",
-    "test:archive-link-routing-hardening": "tsx --tsconfig client/tsconfig.json client/scripts/check-archive-link-routing-hardening.ts"
+    "test:archive-link-routing-hardening": "tsx --tsconfig client/tsconfig.json client/scripts/check-archive-link-routing-hardening.ts",
+    "test:archive-async-routing": "tsx --tsconfig client/tsconfig.json client/scripts/check-archive-async-routing.ts",
+    "test:archive-async-browser": "node client/scripts/check-archive-async-browser.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

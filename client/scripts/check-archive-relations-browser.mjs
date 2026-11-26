@@ -21,6 +21,23 @@ const root = process.cwd(),
   perfOnly = process.argv.includes("--perf"),
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "arquivo-relacoes-"));
 
+const fixtureWorker = {
+  name: "fixture-worker",
+  setup(plugin) {
+    plugin.onResolve({ filter: /^fixture-worker$/ }, () => ({
+      path: "fixture-worker",
+      namespace: "fixture",
+    }));
+    plugin.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({
+      loader: "js",
+      resolveDir: path.join(source, "client"),
+      contents: advance
+        ? `import{planArchiveLinkRoutes as __plan}from"./src/components/archive/archiveLinkRouting";import{encodeRoutePlan as __enc,decodeRoutePlan as __dec}from"./src/components/archive/archiveRouteContract";window.__routeWorker=()=>{let h=null;return{onerror:null,set onmessage(f){h=f},get onmessage(){return h},postMessage(r){setTimeout(()=>{try{const plan=__plan({placements:r.placements,links:r.links,previous:__dec(r.previous)});h&&h({data:{...r,plan:__enc(plan),error:null,elapsed:0}})}catch(error){h&&h({data:{...r,plan:null,error:String(error)}})}},0)},terminate(){}}};`
+        : `window.__routeWorker=undefined;`,
+    }));
+  },
+};
+
 await build({
   stdin: {
     loader: "tsx",
@@ -36,6 +53,7 @@ import{fitArchive}from'${source}/client/src/components/archive/archiveCamera';
 import{NARRATIVE_RELATIONS,NARRATIVE_RELATION_LABELS}from'${source}/src/modules/shared/narrative';
 ${advance ? `import{ARCHIVE_RELATION_VISUALS}from'${source}/client/src/components/archive/archiveRelationStyle';` : ""}
 import'${source}/client/src/components/archive/archive.css';
+import"fixture-worker";
 
 const stress=new URLSearchParams(location.search).has('stress');
 const routing=new URLSearchParams(location.search).has('routing');
@@ -146,6 +164,9 @@ window.__distanceToPoints=(x,y,points)=>{
   return best;
 };
 window.__checkLinks=()=>{
+  // Estado provisório (primeira apresentação assíncrona): a forma ainda não foi
+  // planejada, então alinhamento e posição do rótulo não são julgáveis aqui.
+  const __provisional=document.querySelector('.archive-viewport')?.dataset.routePlan==='provisional';
   const issues=[];const groupsEl=[...document.querySelectorAll('svg.archive-lines g[data-link]')];
   for(const g of groupsEl){
     const main=g.querySelector('path.archive-link:not(.is-temporary)');
@@ -153,7 +174,7 @@ window.__checkLinks=()=>{
     const parsed=window.__parsePath(d);
     if(!parsed){issues.push({kind:'bad-path',id:g.dataset.link,d});continue}
     const from=parsed.from,to=parsed.to;
-    if(parsed.bad.length)issues.push({kind:'non-angular',id:g.dataset.link,segments:parsed.bad.slice(0,2)});
+    if(!__provisional&&parsed.bad.length)issues.push({kind:'non-angular',id:g.dataset.link,segments:parsed.bad.slice(0,2)});
     const sheath=g.querySelector('.archive-link-sheath');
     if(sheath&&sheath.getAttribute('d')!==d)issues.push({kind:'sheath-desync',id:g.dataset.link});
     const marker=main.getAttribute('marker-end')||'';
@@ -197,7 +218,7 @@ window.__checkLinks=()=>{
           const r=card.getBoundingClientRect();
           return screen.x>r.left+3&&screen.x<r.right-3&&screen.y>r.top+3&&screen.y<r.bottom-3;
         });
-        if(over)issues.push({kind:'label-on-card',id:g.dataset.link,card:over.dataset.placement});
+        if(!__provisional&&over)issues.push({kind:'label-on-card',id:g.dataset.link,card:over.dataset.placement});
       }
       const plates=label.querySelectorAll('rect.archive-relation-plate');
       if(plates.length!==1)issues.push({kind:'label-plates',id:g.dataset.link,count:plates.length});
@@ -238,7 +259,7 @@ function App(){
   window.__setFilter=s=>setFilterState({...EMPTY_ARCHIVE_FILTER,...s});
   window.__fit=()=>{const vp=document.querySelector('.archive-viewport').getBoundingClientRect();setCamera(fitArchive(layout.graph.placements,vp))};
   window.__move=(id,dx,dy)=>{setBusy(true);setTimeout(()=>{setGraph(v=>({...v,placements:v.placements.map(p=>p.id===id?{...p,x:p.x+dx,y:p.y+dy}:p)}));setVisual({});setBusy(false);window.__writes++},120)};
-  return <ArchiveCanvas graph={layout.graph} layout={layout} snapshot={graph} nodes={projection.nodes} filter={filter} onToggle={window.__toggle} onConsult={id=>{window.__consulted=id}} camera={camera} onCamera={setCamera} selected={selected} onSelect={s=>setSelected(s)} onMenu={()=>{}} visual={visual} onVisual={setVisual} onMove={(id,g)=>{window.__writes++;setBusy(true);setTimeout(()=>{setGraph(v=>({...v,placements:v.placements.map(p=>p.id===id?{...p,...g}:p)}));setVisual({});setBusy(false)},150)}} onConnect={()=>{}} busy={busy} onInteraction={()=>{}}/>;
+  return <ArchiveCanvas routeWorker={window.__routeWorker} graph={layout.graph} layout={layout} snapshot={graph} nodes={projection.nodes} filter={filter} onToggle={window.__toggle} onConsult={id=>{window.__consulted=id}} camera={camera} onCamera={setCamera} selected={selected} onSelect={s=>setSelected(s)} onMenu={()=>{}} visual={visual} onVisual={setVisual} onMove={(id,g)=>{window.__writes++;setBusy(true);setTimeout(()=>{setGraph(v=>({...v,placements:v.placements.map(p=>p.id===id?{...p,...g}:p)}));setVisual({});setBusy(false)},150)}} onConnect={()=>{}} busy={busy} onInteraction={()=>{}}/>;
 }
 createRoot(document.getElementById('root')).render(<App/>);
 `,
@@ -247,7 +268,7 @@ createRoot(document.getElementById('root')).render(<App/>);
   jsx: "automatic",
   external: ["/archive/*", "/creation/*"],
   outfile: path.join(dir, "app.js"),
-  plugins: [
+  plugins: [fixtureWorker,
     {
       // Baseline e árvore atual compartilham uma única cópia de React.
       name: "react-unico",
