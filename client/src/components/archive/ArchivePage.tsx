@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { ArchiveBoardSelect } from "./ArchiveBoardSelect";
 import { ArchiveDockHelp } from "./ArchiveDockHelp";
 import type { ArchivePresentation } from "./useArchiveMotion";
 import { createPortal } from "react-dom";
@@ -1412,28 +1413,18 @@ export function ArchivePage({
             >
               <Icon name="flag" size={14} /> Grupos
             </button>
-            <label className="archive-board-select">
+            <div className="archive-board-select">
               <span>Quadro</span>
-              <select
-                aria-label="Quadro narrativo"
+              <ArchiveBoardSelect
+                boards={boards}
                 value={boardId}
                 disabled={guarded || !!editor}
-                onChange={(e) => {
-                  const id = e.target.value;
+                onChange={(id) => {
                   setSelected(null);
                   void refresh(id).catch((e) => setError(e.message));
                 }}
-              >
-                <option value="" disabled>
-                  Selecione
-                </option>
-                {boards.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
             <button
               className="btn"
               type="button"

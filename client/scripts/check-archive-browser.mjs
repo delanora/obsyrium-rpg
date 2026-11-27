@@ -536,7 +536,7 @@ try {
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await page.getByText("Seu quadro está livre.").waitFor();
   assert.equal(boards.length, 2);
-  await page.selectOption('[aria-label="Quadro narrativo"]', boardId);
+  await escolherQuadro(boardId);
   await page.getByRole("article", { name: "Pista nova" }).waitFor();
   await page
     .getByRole("button", { name: "Ações de Card 0", exact: true })
@@ -842,16 +842,12 @@ try {
       .evaluate((el) => el.classList.contains("is-selected")),
   );
   assert.equal(await worldTransform(), beforeExternalCamera);
-  await page
-    .getByLabel("Quadro narrativo", { exact: true })
-    .selectOption(boards[1].id);
+  await escolherQuadro(boards[1].id);
   await page.waitForFunction(
-    (id) => document.querySelector(".archive-toolbar select")?.value === id,
+    (id) => document.querySelector(".archive-board-trigger")?.dataset.boardId === id,
     boards[1].id,
   );
-  await page
-    .getByLabel("Quadro narrativo", { exact: true })
-    .selectOption(boardId);
+  await escolherQuadro(boardId);
   await page
     .getByRole("button", {
       name: "Recolher ramificações de Cidade de Valdoria",
@@ -1387,4 +1383,9 @@ try {
   throw error;
 } finally {
   await browser.close();
+}
+
+async function escolherQuadro(id) {
+  await page.getByRole("button", { name: "Quadro narrativo", exact: true }).click();
+  await page.locator(`[role="option"][data-board-id="${id}"]`).click();
 }

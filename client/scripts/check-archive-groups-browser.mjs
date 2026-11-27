@@ -325,9 +325,7 @@ try {
     .getByRole("checkbox", { name: "Missão Solar", exact: true })
     .check();
   await closeFilters();
-  await page
-    .getByLabel("Quadro narrativo", { exact: true })
-    .selectOption(id(2));
+  await escolherQuadro(id(2));
   await card(5).waitFor({ state: "detached" });
   await openFilters();
   check(
@@ -336,9 +334,7 @@ try {
       .isChecked(),
     false,
   );
-  await page
-    .getByLabel("Quadro narrativo", { exact: true })
-    .selectOption(id(1));
+  await escolherQuadro(id(1));
   await card(0).waitFor();
   check(
     await filters()
@@ -586,4 +582,9 @@ try {
   throw e;
 } finally {
   await browser.close();
+}
+
+async function escolherQuadro(id) {
+  await page.getByRole("button", { name: "Quadro narrativo", exact: true }).click();
+  await page.locator(`[role="option"][data-board-id="${id}"]`).click();
 }

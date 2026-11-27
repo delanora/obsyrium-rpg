@@ -1187,16 +1187,12 @@ try {
   );
   await assertEndpoints();
   const beforeSwitch = await state();
-  await page
-    .getByLabel("Quadro narrativo", { exact: true })
-    .selectOption(uuid(2));
+  await escolherQuadro(uuid(2));
   await page.waitForFunction(
-    (id) => document.querySelector(".archive-toolbar select")?.value === id,
+    (id) => document.querySelector(".archive-board-trigger")?.dataset.boardId === id,
     uuid(2),
   );
-  await page
-    .getByLabel("Quadro narrativo", { exact: true })
-    .selectOption(uuid(1));
+  await escolherQuadro(uuid(1));
   await page
     .getByRole("button", {
       name: `Recolher ramificações de ${names[0]}`,
@@ -1308,4 +1304,9 @@ try {
 } finally {
   await context.close();
   await browser.close();
+}
+
+async function escolherQuadro(id) {
+  await page.getByRole("button", { name: "Quadro narrativo", exact: true }).click();
+  await page.locator(`[role="option"][data-board-id="${id}"]`).click();
 }
