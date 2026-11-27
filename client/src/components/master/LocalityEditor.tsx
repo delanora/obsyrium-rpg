@@ -1,24 +1,25 @@
 import { useState } from 'react';
 import { fileToImagePayload, uploadImage } from '../../api';
-import type { Locality, LocalityPatch } from '../../types';
+import type { Locality, LocalityPatch, Region } from '../../types';
 import { ImageGallery } from './ImageGallery';
 import { InlineField } from '../InlineField';
 import { Section } from '../Section';
 
 interface LocalityEditorProps {
   locality: Locality;
+  /** Regiões da mesa: a localidade pode ficar solta (sem região). */
+  regions: Region[];
   onPatch: (patch: LocalityPatch) => void;
   onDelete: () => void;
 }
 
 /**
- * Detalhes da localidade — etapa 2 do assistente de região.
+ * Detalhes da localidade, abertos pelo card do bloco "Localidades".
  *
- * Cenas e habitantes NÃO ficam aqui: cada um tem a própria etapa numerada. Este
- * componente cuida só da identidade do lugar (nome, descrição e imagens), o que
- * evita a pilha de seções que existia antes.
+ * Cuida só da identidade do lugar (nome, região, descrição e imagens). Cenas e
+ * criaturas vivem nos próprios blocos da Geografia — não aqui.
  */
-export function LocalityEditor({ locality, onPatch, onDelete }: LocalityEditorProps) {
+export function LocalityEditor({ locality, regions, onPatch, onDelete }: LocalityEditorProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +67,21 @@ export function LocalityEditor({ locality, onPatch, onDelete }: LocalityEditorPr
               if (name) onPatch({ name });
             }}
           />
+        </label>
+
+        <label className="field">
+          <span>Região</span>
+          <select
+            value={locality.regionId ?? ''}
+            onChange={(event) => onPatch({ regionId: event.target.value || null })}
+          >
+            <option value="">Sem região</option>
+            {regions.map((region) => (
+              <option key={region.id} value={region.id}>
+                {region.name}
+              </option>
+            ))}
+          </select>
         </label>
 
         <h3 className="subsection-title">Descrição</h3>

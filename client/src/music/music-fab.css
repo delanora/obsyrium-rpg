@@ -1,0 +1,124 @@
+/* ---------------------------------------------------------------------------
+   Barra de som: botão na pilha do Mestre e abertura por CLIQUE
+   A barra de música nasceu como "barra de tarefas que sobe no hover": a área
+   sensível era o rodapé inteiro. Agora ela é um painel explícito, aberto pelo
+   botão da pilha (abaixo de Anotações), com o mesmo comportamento dos outros
+   botões: retraído em combate e expandindo quando o mouse passa por cima.
+--------------------------------------------------------------------------- */
+
+/* A base da pilha passa a ser do botão de som: Anotações, Dados, Log e Duelos
+   sobem um degrau juntos (o painel do log acompanha, pois usa --fab-base). */
+.app-shell.theme-master {
+  --fab-base: calc(1.2rem + var(--fab-step));
+}
+
+.music-fab {
+  position: fixed;
+  left: 1.25rem;
+  bottom: calc(1.2rem + var(--fab-lift));
+  z-index: 56;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.6rem 0.95rem;
+  border: 1px solid var(--gold-deep);
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--leather-2), var(--leather));
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  box-shadow: var(--shadow-deep);
+  transition: transform 0.15s ease, box-shadow 0.18s ease, gap 0.16s ease, padding 0.16s ease;
+}
+
+.music-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-deep), 0 0 18px -4px var(--glow);
+}
+
+.music-fab:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.music-fab.active {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border-color: var(--gold);
+  color: #3a2410;
+}
+
+/* Duelos é montado por portal FORA do app-shell: recebe o mesmo degrau. */
+body:has(.app-shell.theme-master) .combat-duels-launcher.is-master {
+  bottom: calc(1.2rem + 4 * var(--fab-step) + var(--fab-lift));
+}
+
+/* A janela de dados abre acima do botão, que subiu um degrau. */
+.app-shell.theme-master.has-music-bar .dice-window {
+  bottom: calc(5.4rem + var(--fab-step) + var(--music-bar-h));
+}
+
+/* Em combate os atalhos ficam só com o ícone; o rótulo volta no hover/foco. */
+body:has(.app-shell.has-ongoing-combat) .music-fab {
+  gap: 0;
+  padding: 0.6rem;
+}
+
+body:has(.app-shell.has-ongoing-combat) .music-fab .music-fab-label {
+  display: inline-block;
+  max-width: 0;
+  margin-left: 0;
+  padding-inline: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.16s ease, opacity 0.12s ease, margin 0.16s ease, padding 0.16s ease;
+}
+
+body:has(.app-shell.has-ongoing-combat) .music-fab:is(:hover, :focus-visible) {
+  gap: 0.5rem;
+  padding: 0.6rem 0.95rem;
+}
+
+body:has(.app-shell.has-ongoing-combat) .music-fab:is(:hover, :focus-visible) .music-fab-label {
+  max-width: 8rem;
+  opacity: 1;
+}
+
+@media (max-width: 560px) {
+  .music-fab-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:has(.app-shell.has-ongoing-combat) .music-fab,
+  body:has(.app-shell.has-ongoing-combat) .music-fab .music-fab-label {
+    transition: none;
+  }
+}
+
+/* --- Dock: abre por clique, não mais por hover --------------------------- */
+/* A faixa do rodapé deixa de ser área sensível: era ela que abria a barra. */
+.music-dock {
+  pointer-events: none;
+}
+
+.music-bar {
+  pointer-events: auto;
+}
+
+body .music-dock:hover .music-bar {
+  transform: translateY(100%);
+}
+
+body .music-dock.is-open .music-bar {
+  transform: translateY(0);
+}
+
+/* A linha dourada só aparece com a barra aberta: não convida a um hover morto. */
+.music-dock:not(.is-open) .music-dock-line {
+  opacity: 0;
+}

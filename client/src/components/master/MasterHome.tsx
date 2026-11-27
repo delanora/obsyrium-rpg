@@ -86,7 +86,7 @@ export function MasterHome({
     },
     {
       tab: 'creatures',
-      label: 'Criaturas',
+      label: 'Bestiário',
       hint: 'Bestiário: monstros prontos para o combate.',
       icon: 'flame',
       count: creatures,
@@ -102,9 +102,9 @@ export function MasterHome({
     },
     {
       tab: 'regions',
-      label: 'Regiões',
-      hint: 'Regiões, localidades e o mapa do mundo.',
-      icon: 'book',
+      label: 'Geografia',
+      hint: 'Geografia, localidades e o mapa do mundo.',
+      icon: 'earth',
       count: regions,
       unit: 'região(ões)',
     },
@@ -151,7 +151,7 @@ export function MasterHome({
           </li>
           <li>
             <span className="home-stat-value">{creatures}</span>
-            <span className="home-stat-label">Criaturas</span>
+            <span className="home-stat-label">Bestiário</span>
           </li>
           <li>
             <span className="home-stat-value">{npcs}</span>
@@ -159,7 +159,7 @@ export function MasterHome({
           </li>
           <li>
             <span className="home-stat-value">{regions}</span>
-            <span className="home-stat-label">Regiões</span>
+            <span className="home-stat-label">Região</span>
           </li>
           <li>
             <span className="home-stat-value">{localities}</span>

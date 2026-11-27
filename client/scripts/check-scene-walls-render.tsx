@@ -24,7 +24,7 @@ const { wallPointerPosition, translateWall, wallDraftError } = await import('../
 
 let checks = 0;
 function check(label: string, condition: unknown) { assert.ok(condition, label); checks++; console.log(`✔ ${label}`); }
-const baseScene = (): Scene => ({ id: 'cena-fixture', localityId: 'localidade-fixture', name: 'Salão',
+const baseScene = (): Scene => ({ id: 'cena-fixture', localityId: 'localidade-fixture', regionId: null, name: 'Salão',
   spatialConfig: { mode: 'grid-2d', widthFeet: 40, heightFeet: 20, cellSizeFeet: 5 },
   backgroundImageUrl: null, obstacles: [], version: 1, createdAt: 'fixture', updatedAt: 'fixture' });
 const calls: { mutation: SceneWallMutation; version: number; operationId: string }[] = [];

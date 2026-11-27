@@ -22,6 +22,7 @@ export function creatureDraft(
     type: '',
     challengeRating: '',
     localities: [{ id: locality.id, name: locality.name }],
+    regionId: locality.regionId,
     strength: 10,
     dexterity: 10,
     constitution: 10,

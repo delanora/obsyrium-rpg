@@ -90,6 +90,7 @@ const scene = {
   id: 's1',
   name: 'Salão',
   localityId: 'l1',
+  regionId: null,
   spatialConfig: {
     mode: 'grid-2d',
     widthFeet: 60,

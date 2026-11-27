@@ -410,17 +410,6 @@ export function MasterPanel({ user }: { user: SessionUser }) {
 
   const clearFocusCreature = useCallback(() => setFocusCreatureId(null), []);
 
-  /** Cria já vinculado à localidade e abre a ficha nova do habitante. */
-  const createCreatureFromRegion = useCallback(
-    async (localityId: string, kind: CreatureKind): Promise<Creature> => {
-      const creature = await createCreature({ localityIds: [localityId], kind });
-      setFocusCreatureId(creature.id);
-      setTab(kind === 'NPC' ? 'npcs' : 'creatures');
-      return creature;
-    },
-    [createCreature, setTab],
-  );
-
   const patchCreature = useCallback(async (id: string, patch: CreaturePatch) => {
     setCreatures((prev) =>
       prev.map((creature) => (creature.id === id ? { ...creature, ...patch } : creature)),
@@ -477,8 +466,10 @@ export function MasterPanel({ user }: { user: SessionUser }) {
 
   const deleteRegion = useCallback(async (id: string) => {
     setRegions((prev) => prev.filter((region) => region.id !== id));
-    // As localidades dentro dela somem junto (cascade no banco).
-    setLocalities((prev) => prev.filter((locality) => locality.regionId !== id));
+    // Localidades (e cenas/criaturas) sobrevivem: perdem só o vínculo.
+    setLocalities((prev) =>
+      prev.map((locality) => (locality.regionId === id ? { ...locality, regionId: null } : locality)),
+    );
 
     try {
       await api(`/api/regions/${id}`, { method: 'DELETE' });
@@ -488,11 +479,11 @@ export function MasterPanel({ user }: { user: SessionUser }) {
     }
   }, []);
 
-  /** Cria uma localidade já dentro da região aberta. */
-  const createLocality = useCallback(async (regionId: string): Promise<Locality> => {
+  /** Cria uma localidade SOLTA; o vínculo com a região é editado no card. */
+  const createLocality = useCallback(async (): Promise<Locality> => {
     const { locality } = await api<{ locality: Locality }>('/api/localities', {
       method: 'POST',
-      body: { name: 'Nova localidade', regionId },
+      body: { name: 'Nova localidade' },
     });
     setLocalities((prev) =>
       prev.some((item) => item.id === locality.id) ? prev : [...prev, locality].sort(byName),
@@ -876,7 +867,7 @@ export function MasterPanel({ user }: { user: SessionUser }) {
         className={tab === 'regions' ? 'tab active' : 'tab'}
         onClick={() => setTab('regions')}
       >
-        <Icon name="book" size={16} /> Regiões
+        <Icon name="earth" size={16} /> Geografia
       </button>
       <button
         type="button"
@@ -1060,8 +1051,8 @@ export function MasterPanel({ user }: { user: SessionUser }) {
                 onCreateLocality={createLocality}
                 onPatchLocality={patchLocality}
                 onDeleteLocality={deleteLocality}
+                onPatchCreature={patchCreature}
                 onOpenCreature={openCreatureFromRegion}
-                onCreateCreature={createCreatureFromRegion}
               />
             ) : tab === 'config' ? (
               <ConfigTab

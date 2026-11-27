@@ -277,10 +277,26 @@ export function CreatureEditor({
               </select>
             </label>
 
+            <h3 className="subsection-title">Região</h3>
+            <label className="field">
+              <span>Região do bestiário</span>
+              <select
+                value={creature.regionId ?? ''}
+                onChange={(event) => onPatch({ regionId: event.target.value || null })}
+              >
+                <option value="">Sem região</option>
+                {regions.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {region.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <h3 className="subsection-title">Localidades</h3>
             {localities.length === 0 ? (
               <p className="empty-hint">
-                Cadastre uma região e uma localidade nela (aba “Regiões”) para
+                Cadastre uma região e uma localidade nela (aba “Geografia”) para
                 poder vincular.
               </p>
             ) : (

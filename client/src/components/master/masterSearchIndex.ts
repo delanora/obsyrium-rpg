@@ -98,7 +98,7 @@ export function buildSearchGroups(data: MasterSearchData): SearchGroup[] {
     },
     {
       tab: 'creatures',
-      label: 'Criaturas',
+      label: 'Bestiário',
       icon: 'flame',
       hits: creatureHits(creatures, 'creatures'),
     },
@@ -110,8 +110,8 @@ export function buildSearchGroups(data: MasterSearchData): SearchGroup[] {
     },
     {
       tab: 'regions',
-      label: 'Regiões',
-      icon: 'book',
+      label: 'Geografia',
+      icon: 'earth',
       hits: [
         ...regions.map(
           (region): SearchHit => ({
@@ -123,7 +123,7 @@ export function buildSearchGroups(data: MasterSearchData): SearchGroup[] {
           }),
         ),
         ...localities.map((locality): SearchHit => {
-          const regionName = regionNameOf.get(locality.regionId);
+          const regionName = locality.regionId ? regionNameOf.get(locality.regionId) : undefined;
           return {
             id: `locality:${locality.id}`,
             label: locality.name,

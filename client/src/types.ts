@@ -1704,6 +1704,10 @@ export interface Region {
   images: LocalityImage[];
   /** Quantas localidades estão dentro desta região. */
   localityCount: number;
+  /** Criaturas/NPCs anexados diretamente à região. */
+  creatureCount: number;
+  /** Cenas ligadas diretamente à região. */
+  sceneCount: number;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -1722,8 +1726,8 @@ export interface Locality {
   name: string;
   description: string;
   images: LocalityImage[];
-  /** Região dona da localidade. */
-  regionId: string;
+  /** Região dona da localidade (null = localidade solta). */
+  regionId: string | null;
   creatureCount: number;
   version: number;
   createdAt: string;
@@ -1734,7 +1738,8 @@ export interface LocalityPatch {
   name?: string;
   description?: string;
   images?: LocalityImage[];
-  regionId?: string;
+  /** `null` desvincula a localidade da região. */
+  regionId?: string | null;
 }
 
 /** Criatura/NPC cadastrado pelo mestre. */
@@ -1750,6 +1755,8 @@ export interface Creature {
   challengeRating: string;
   /** Localidades vinculadas (uma ou mais). */
   localities: LocalitySummary[];
+  /** Região do bestiário (null = criatura ainda sem região). */
+  regionId: string | null;
 
   strength: number;
   dexterity: number;
@@ -1823,6 +1830,8 @@ export interface CreaturePatch {
   /** Espaços de magia do statblock (6.6C): só o MÁXIMO. */
   spellcastingResources?: Creature['spellcastingResources'];
   localityIds?: string[];
+  /** Região do bestiário; `null` desanexa. */
+  regionId?: string | null;
 
   strength?: number;
   dexterity?: number;
@@ -2382,7 +2391,10 @@ export interface SpatialObstacle {
  */
 export interface Scene {
   id: string;
-  localityId: string;
+  /** Localidade dona (null = cena sem localidade). */
+  localityId: string | null;
+  /** Região dona (null = cena sem região). */
+  regionId: string | null;
   name: string;
   spatialConfig: SpatialScene;
   backgroundImageUrl: string | null;

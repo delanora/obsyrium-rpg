@@ -4,6 +4,8 @@ import { App } from './App';
 import { unlockAudioOnFirstGesture } from './sound';
 import { initTheme } from './theme';
 import './styles.css';
+// Atalhos flutuantes retraídos (Log, Dados, Anotações, Som, Duelos, Inventário).
+import './floating-fabs.css';
 
 // O tema é aplicado antes do primeiro render (o index.html já evita o flash).
 initTheme();

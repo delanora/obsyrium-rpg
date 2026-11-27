@@ -29,6 +29,12 @@ export async function fetchScenes(localityId: string): Promise<Scene[]> {
   return scenes;
 }
 
+/** Todas as cenas da mesa: o bloco "Cenas" da Geografia não é por localidade. */
+export async function fetchAllScenes(): Promise<Scene[]> {
+  const { scenes } = await api<{ scenes: Scene[] }>('/api/scenes');
+  return scenes;
+}
+
 export async function fetchScene(sceneId: string): Promise<Scene> {
   const { scene } = await api<{ scene: Scene }>(`/api/scenes/${sceneId}`);
   return scene;
@@ -47,6 +53,17 @@ export async function createScene(localityId: string, input: CreateSceneInput): 
     method: 'POST',
     body: input,
   });
+  return scene;
+}
+
+/**
+ * Cria a cena SEM exigir localidade: o vínculo com região e/ou localidade é
+ * opcional e decidido pelo mestre na hora de criar.
+ */
+export async function createFreeScene(
+  input: CreateSceneInput & { localityId?: string | null; regionId?: string | null },
+): Promise<Scene> {
+  const { scene } = await api<{ scene: Scene }>('/api/scenes', { method: 'POST', body: input });
   return scene;
 }
 

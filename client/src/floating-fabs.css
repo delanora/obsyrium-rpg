@@ -1,0 +1,155 @@
+/* ---------------------------------------------------------------------------
+   Atalhos flutuantes RETRAÍDOS, abrindo no hover/foco
+   Os botões da pilha inferior esquerda (Log, Dados, Anotações, Som, Duelos e o
+   Inventário da ficha) mostravam o rótulo o tempo todo e ocupavam muito espaço.
+   Aqui a regra vale SEMPRE — fora e dentro do combate: só o ícone, e o rótulo
+   volta quando o mouse passa por cima (ou no foco de teclado).
+
+   Só caixa e opacidade mudam: o rótulo continua no DOM (`max-width: 0`), então
+   o nome acessível do botão nunca some, nenhum handler muda e a área clicável
+   segue confortável. Em combate as regras já existentes dizem o mesmo; elas
+   continuam valendo, com o mesmo resultado visual.
+--------------------------------------------------------------------------- */
+
+body
+  :is(
+    .dice-fab,
+    .notes-fab,
+    .roll-log-fab,
+    .music-fab,
+    .combat-duels-launcher,
+    .inv-fab
+  ) {
+  gap: 0;
+  padding: 0.6rem;
+  transition:
+    gap 0.16s ease,
+    padding 0.16s ease,
+    transform 0.15s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+/* Rótulos e contadores colapsam por `max-width`/`opacity` (nunca `display`). */
+body
+  :is(
+    .dice-fab-label,
+    .notes-fab-label,
+    .roll-log-fab-label,
+    .music-fab-label,
+    .combat-duels-label,
+    .inv-fab-label,
+    .roll-log-count,
+    .inv-fab-count
+  ) {
+  display: inline-block;
+  max-width: 0;
+  margin-left: 0;
+  padding-inline: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    max-width 0.16s ease,
+    opacity 0.12s ease,
+    margin 0.16s ease,
+    padding 0.16s ease;
+}
+
+/* Hover/foco devolve o respiro da pill. */
+body
+  :is(
+    .dice-fab,
+    .notes-fab,
+    .roll-log-fab,
+    .music-fab,
+    .combat-duels-launcher,
+    .inv-fab
+  ):is(:hover, :focus-visible) {
+  gap: 0.5rem;
+  padding: 0.6rem 0.95rem;
+}
+
+body
+  :is(
+    .dice-fab,
+    .notes-fab,
+    .roll-log-fab,
+    .music-fab,
+    .combat-duels-launcher,
+    .inv-fab
+  ):is(:hover, :focus-visible)
+  :is(
+    .dice-fab-label,
+    .notes-fab-label,
+    .roll-log-fab-label,
+    .music-fab-label,
+    .combat-duels-label,
+    .inv-fab-label
+  ) {
+  max-width: 8rem;
+  opacity: 1;
+}
+
+/* Contadores voltam junto, com o respiro próprio de cada um. */
+body .roll-log-fab:is(:hover, :focus-visible) .roll-log-count,
+body .inv-fab:is(:hover, :focus-visible) .inv-fab-count {
+  max-width: 4rem;
+  margin-left: 0.1rem;
+  padding-inline: 0.35rem;
+  opacity: 1;
+}
+
+/* Telas estreitas continuam só com o ícone (não há hover no toque). */
+@media (max-width: 560px) {
+  body
+    :is(
+      .dice-fab-label,
+      .notes-fab-label,
+      .roll-log-fab-label,
+      .music-fab-label,
+      .combat-duels-label,
+      .inv-fab-label
+    ) {
+    display: none;
+  }
+
+  body
+    :is(
+      .dice-fab,
+      .notes-fab,
+      .roll-log-fab,
+      .music-fab,
+      .combat-duels-launcher,
+      .inv-fab
+    ):is(:hover, :focus-visible) {
+    gap: 0;
+    padding: 0.6rem;
+  }
+}
+
+/* Quem pediu menos movimento recebe a MESMA revelação, sem animação. */
+@media (prefers-reduced-motion: reduce) {
+  body
+    :is(
+      .dice-fab,
+      .notes-fab,
+      .roll-log-fab,
+      .music-fab,
+      .combat-duels-launcher,
+      .inv-fab
+    ),
+  body
+    :is(
+      .dice-fab-label,
+      .notes-fab-label,
+      .roll-log-fab-label,
+      .music-fab-label,
+      .combat-duels-label,
+      .inv-fab-label,
+      .roll-log-count,
+      .inv-fab-count
+    ) {
+    transition: none;
+  }
+}
