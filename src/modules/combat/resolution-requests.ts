@@ -296,7 +296,7 @@ export async function resolutionRequestsForCombat(
         ownerUserId: target.ownerUserId,
       },
       title: row.sourceLabel ?? spellDisplayName(spellId) ?? definitionLabel(row.definitionId),
-      shortDescription: inspiration ? 'D20 rolado — decida sobre a Inspiração antes de aplicar o efeito.' : prompt,
+      shortDescription: inspiration ? 'D20 rolado — decida sobre a Inspiração antes de concluir a salvaguarda.' : prompt,
       ability: row.ability as AbilityKey,
       phase: row.phase === 'ongoing' ? 'ongoing' : 'initial',
       optional: row.optional,

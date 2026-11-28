@@ -52,7 +52,7 @@ export function BardicInspirationDialog({ onClose, onCharacter }: { onClose: () 
           <option value="">— escolha —</option>
           {options.targets.map(value => <option key={value.id} value={value.id} disabled={!!value.reason}>{value.name}{value.reason ? ' — indisponível' : ''}</option>)}
         </select></label>
-        <p className="section-note">Outro personagem a até 18 m, capaz de ouvir você. O dado aparece nos efeitos do alvo por até 10 minutos; o consumo é oferecido no registro para testes solicitados e salvaguardas de efeitos. Ataques e os demais testes permanecem assistidos.</p>
+        <p className="section-note">Outro personagem a até 18 m, capaz de ouvir você. O dado aparece nos efeitos do alvo por até 10 minutos; o consumo é oferecido no registro para testes solicitados e salvaguardas de efeitos ou dano. Ataques e os demais testes permanecem assistidos.</p>
         <p className="section-note">Audição através de barreiras, silêncio e uso sem grid exigem resolução assistida.</p>
       </> : !error ? <p role="status">Consultando inspiração…</p> : null}
       {error ? <p role="alert" className="error">{error}</p> : null}

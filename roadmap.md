@@ -200,9 +200,15 @@ Ver `docs/inspiracao-bardo-decisao.md`.
 Inspiração — salvaguardas de efeito: decisão inicial/repetida integrada ao motor
 existente, com checkpoint persistido, consumo compartilhado e barreira multi-alvo
 preservada. 35 verificações HTTP/PostgreSQL, regressões (32/55), Chromium e builds
-isolados aprovados. Sem schema/migration/deploy. Ataques, salvaguardas de dano,
-concentração e testes livres continuam pendentes. Ver
+isolados aprovados. Sem schema/migration/deploy. Salvaguardas de dano evoluem
+na entrega abaixo; os demais resolvedores continuam pendentes. Ver
 `docs/inspiracao-bardo-salvaguardas-efeito.md`.
+Inspiração — salvaguardas de dano: janela pós-d20 integrada a magias e habilidades
+em área executáveis, preservando barreira multi-alvo e dano compartilhado. 37
+verificações HTTP/PostgreSQL, regressões 35/32/55/24/28, Chromium e builds isolados
+aprovados. Replay usa recibo após substituir o checkpoint pelo snapshot de dano.
+Sem schema/migration/deploy. Ataques, concentração e testes livres continuam
+pendentes. Ver `docs/inspiracao-bardo-salvaguardas-dano.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

@@ -622,7 +622,7 @@ async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput, pr
     actor,
     input.pendingEffectSaveId,
   );
-  if (!previewOnly && !pending.creatureAreaUseId && (await pendingCastResolutionKind(pending)) !== 'save-damage') {
+  if (!previewOnly) {
     const deferred = await rollInspiredEffectSave(actor, input, () => rollPendingEffectSave(actor, input, true));
     if (deferred) return deferred;
   }

@@ -173,20 +173,23 @@ export async function resolveSaveDamagePending(
   total: number,
   actorName = 'Sistema',
   options: SaveDamageResolveOptions = {},
+  transaction?: Prisma.TransactionClient,
 ): Promise<SaveDamageResolution> {
   const roll = options.roll ?? rollDie;
-  const initial = await prisma.pendingEffectSave.findUnique({ where: { id: pendingId } });
+  const initial = await (transaction ?? prisma).pendingEffectSave.findUnique({ where: { id: pendingId } });
   if (!initial) throw new HttpError('Aplicação pendente não encontrada.', 404);
   if (initial.status !== 'pending') return replayedResolution(initial);
 
-  return prisma.$transaction(async (db) => {
+  if (!transaction && (initial.resolutionSnapshot as { inspirationSave?: unknown } | null)?.inspirationSave) throw new HttpError('Decida sobre a Inspiração antes de concluir.',409,'INSPIRATION_DECISION_PENDING');
+  const apply = async (db: Prisma.TransactionClient) => {
     // Serializa a resolução da MESMA pendência entre processos/abas: duas
     // resoluções concorrentes não gravam dois resultados.
-    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pendingId}))`;
+    await db.$queryRaw`SELECT id FROM pending_effect_saves WHERE id = ${pendingId} FOR UPDATE`;
 
     const row = await db.pendingEffectSave.findUnique({ where: { id: pendingId } });
     if (!row) throw new HttpError('Aplicação pendente não encontrada.', 404);
     if (row.status !== 'pending') return replayedResolution(row);
+    if (!transaction && (row.resolutionSnapshot as { inspirationSave?: unknown } | null)?.inspirationSave) throw new HttpError('Decida sobre a Inspiração antes de concluir.',409,'INSPIRATION_DECISION_PENDING');
 
     const sourceKind=row.creatureAreaUseId?'creature-ability' as const:'spell' as const;
     const cast=row.creatureAreaUseId?await loadSaveDamageSource(row.creatureAreaUseId,db,sourceKind):row.spellCastId?await loadSaveDamageSource(row.spellCastId,db):null;
@@ -243,7 +246,8 @@ export async function resolveSaveDamagePending(
       concentrationChanged: finalization.concentrationChanged,
       affectedEffects: finalization.affectedEffects,
     } satisfies SaveDamageResolution;
-  });
+  };
+  return transaction ? apply(transaction) : prisma.$transaction(apply);
 }
 
 /**

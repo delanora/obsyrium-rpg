@@ -35,3 +35,5 @@ Fixtures próprias em PostgreSQL descartável na porta 55439 e servidor próprio
 Não restaurar um resolvedor antigo enquanto houver checkpoint pendente: ele poderia ignorar a escolha e rerrolar. Um rollback futuro precisa manter a guarda ou concluir/cancelar essas pendências pelas operações autorizadas; não apagar preferências/dados ou restaurar o banco indiscriminadamente. Os snapshots e recibos preservam o histórico.
 
 Próximas integrações: salvaguardas de dano e ataques. Manter a escolha depois do d20 e antes da decisão, sem duplicar os resolvedores. Roadmaps Git e Drive atualizados; aceite/publicação continuam separados do commit/push.
+
+Continuidade: `docs/inspiracao-bardo-salvaguardas-dano.md` registra a integração seguinte, sem alterar o escopo histórico e as provas desta entrega.
