@@ -168,9 +168,21 @@ sem publicação. A suíte ampla mantém duas falhas anteriores reproduzidas na 
 Mãos Consagradas: primeira entrega de cura variável, com reserva, toque e Ação
 atômicos, diálogo na ficha e Hotbar. 36 verificações HTTP/PostgreSQL, 24 regressões
 de Surto, 22 contratos da Hotbar e Chromium aprovados; build isolado. Fora de combate,
-autoalvo; terceiros sem geometria confiável permanecem assistidos. Doenças/venenos
-não automatizados. Commit/push autorizados em 28/11/2026; sem publicação.
+autoalvo; terceiros sem geometria confiável permanecem assistidos. Neutralização de registros integrada na entrega abaixo; condições legadas seguem
+assistidas. Cura versionada em `02e9ba4`, com push confirmado; sem publicação.
 Ver `docs/maos-consagradas-cura.md`.
+Fundação de afecções por origem implementada localmente: registros de doença/veneno,
+sintomas vinculados e administração do Mestre, sem reclassificar condições legadas.
+19 contratos, 18 verificações HTTP/PostgreSQL, Chromium e build isolado; regressão
+de 36 casos da cura de PV aprovada. A base sustenta a neutralização descrita abaixo.
+Rollback futuro precisa preservar o normalizador do novo campo. Commit/push autorizados e versionados nesta sequência; sem publicação.
+Ver `docs/afeccoes-por-origem.md`.
+Neutralização de Mãos Consagradas integrada localmente: seleção por origem, cinco
+pontos cada, uma Ação e commit atômico. Mestre publica diagnósticos para terceiros;
+privados seguem protegidos. 34 verificações HTTP/PostgreSQL, regressões de cura (36)
+e administração (18), 23 contratos e Chromium aprovados. Build isolado; permanecem
+os limites de toque e conteúdo legado. Extensão versionada nesta sequência autorizada; publicação pendente. Ver
+`docs/maos-consagradas-neutralizacao.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

@@ -1,3 +1,4 @@
+import { publicAfflictionState } from '../shared/conditions.js';
 import { legendaryStateOf, legendaryWindowOf, type LegendaryPoolDto, type LegendaryWindowDto } from '../shared/legendary-actions.js';
 import { surfaceElevation } from './spatial/elevation.js';
 import { planNextTurn } from './turn-order.js';
@@ -559,7 +560,7 @@ export function hideMasterPrivateState(dto: CombatDto): CombatDto {
       // Um NPC público aparece no grid com a imagem real e SEM HP/CA.
       const visible = hasPrivateMechanicalState(combatant.kind)
         ? hideCombatantMechanicalState(combatant)
-        : combatant;
+        : { ...combatant, mechanicalState: publicAfflictionState(combatant.mechanicalState) };
       const projected = projectCombatantSpatialState(visible);
       // Lado é estado do ENCONTRO administrado pelo Mestre: o jogador não
       // recebe o mapa de times. Hostilidades particulares só citam participantes visíveis.
@@ -609,7 +610,7 @@ export function hideCombatantMechanicalState(combatant: CombatantDto): Combatant
     state.concentration && state.concentration.visibility === 'public' ? state.concentration : null;
   const privateState = {
     ...state,
-    conditions,
+    ...publicAfflictionState({ ...state, conditions }),
     concentration,
     pendingConcentrationSaves: [],
   };

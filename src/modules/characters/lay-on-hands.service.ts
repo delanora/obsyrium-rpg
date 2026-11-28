@@ -1,3 +1,4 @@
+import { removeAffliction } from '../mechanical/afflictions.js';
 import { randomUUID, createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
@@ -28,6 +29,11 @@ export const layOnHandsSchema = z.object({
   expectedVersion: z.number().int().nonnegative(), expectedTargetVersion: z.number().int().nonnegative(),
   operationId: z.string().uuid(),
 }).strict();
+export const layOnHandsPurifySchema = layOnHandsSchema.omit({ amount: true }).extend({
+  afflictionIds: z.array(z.string().uuid()).min(1).max(20).refine(ids => new Set(ids).size === ids.length, 'Escolha cada origem uma única vez.'),
+}).strict();
+type HealingInput = z.infer<typeof layOnHandsSchema>;
+type PurifyInput = z.infer<typeof layOnHandsPurifySchema>;
 type Actor = { userId: string; username: string; role: 'MASTER' | 'PLAYER' };
 const TYPE = 'feature.lay-on-hands-heal';
 async function context(db: Prisma.TransactionClient, actor: Actor) {
@@ -72,20 +78,28 @@ export async function layOnHandsOptions(actor: Actor) {
       const target = await loadEntity(ref, db);
       let reason = await touch(db, c.source, target);
       try { await assertLivingHealingTargets({ db, targets: [target] }, 'Mãos Consagradas'); } catch { reason = 'O alvo não pode receber esta cura.'; }
-      options.push({ target: ref, name: target.name, version: target.version, reason });
+      const own = target.entity.kind === 'character' && target.ownerUserId === actor.userId;
+      const afflictions = (target.state.afflictions ?? []).filter(origin => actor.role === 'MASTER' || own || origin.visibility === 'public')
+        .map(origin => ({ id: origin.id, kind: origin.kind, label: origin.label }));
+      options.push({ target: ref, name: target.name, version: target.version, reason, afflictions });
     }
     return { characterVersion: c.character.version, remaining: c.resource.remaining, max: c.resource.max, canUse, targets: options };
   }, { isolationLevel: 'RepeatableRead' });
 }
-/** Primeira entrega: cura variável. Doenças e venenos exigem execução específica. */
-export async function useLayOnHands(actor: Actor, input: z.infer<typeof layOnHandsSchema>) {
+/** As duas opções passam pelo mesmo commit de alvo, reserva e Ação. */
+export const useLayOnHands = (actor: Actor, input: HealingInput) => commitLayOnHands(actor, input);
+export const purifyWithLayOnHands = (actor: Actor, input: PurifyInput) => commitLayOnHands(actor, input);
+async function commitLayOnHands(actor: Actor, input: HealingInput | PurifyInput) {
+  const purify = 'afflictionIds' in input;
+  const amount = purify ? input.afflictionIds.length * 5 : input.amount;
+  const operationType = purify ? 'feature.lay-on-hands-purify' : TYPE;
   const owner = await prisma.character.findUnique({ where: { userId: actor.userId } });
   if (!owner) throw new HttpError('Esta ficha ainda não foi criada.', 404);
   const key = { characterId_operationId: { characterId: owner.id, operationId: input.operationId } };
-  const fingerprint = createHash('sha256').update(JSON.stringify({ target: input.target, amount: input.amount })).digest('hex');
+  const fingerprint = createHash('sha256').update(JSON.stringify(purify ? { target: input.target, afflictionIds: [...input.afflictionIds].sort() } : { target: input.target, amount })).digest('hex');
   const replay = (row: { type: string; requestFingerprint: string; result: unknown }) => {
-    if (row.type !== TYPE || row.requestFingerprint !== fingerprint) throw new HttpError('Chave já utilizada em outra operação.', 409, 'IDEMPOTENCY_KEY_REUSED');
-    return { ...(row.result as { character: ReturnType<typeof toCharacterDto>; healed: number; remaining: number; noEffect: boolean }), replayed: true };
+    if (row.type !== operationType || row.requestFingerprint !== fingerprint) throw new HttpError('Chave já utilizada em outra operação.', 409, 'IDEMPOTENCY_KEY_REUSED');
+    return { ...(row.result as { character: ReturnType<typeof toCharacterDto>; healed: number; remaining: number; noEffect: boolean; purified?: number }), replayed: true };
   };
   const previous = await prisma.characterOperation.findUnique({ where: key });
   if (previous) return replay(previous);
@@ -99,7 +113,7 @@ export async function useLayOnHands(actor: Actor, input: z.infer<typeof layOnHan
       if (previous) return replay(previous);
       const c = await context(db, actor);
       if (c.character.version !== input.expectedVersion) throw new HttpError('A ficha mudou; confira a reserva.', 409, 'CONFLICT');
-      if (input.amount > c.resource.remaining) throw new HttpError('A reserva não tem pontos suficientes.', 409, 'INSUFFICIENT_RESOURCE');
+      if (amount > c.resource.remaining) throw new HttpError('A reserva não tem pontos suficientes.', 409, 'INSUFFICIENT_RESOURCE');
       if (c.source.hpCurrent <= 0 || deriveConditionEffects(c.source.state).incapacitated || deathStateOf(c.character.deathState).dead) throw new HttpError('O personagem não pode usar Mãos Consagradas neste estado.', 409, 'FEATURE_INCAPACITATED');
       if (c.source.combat) {
         const locked = await db.combat.updateMany({ where: { id: c.source.combat.id, status: 'ACTIVE', version: c.source.combat.version }, data: { version: { increment: 1 } } });
@@ -109,6 +123,13 @@ export async function useLayOnHands(actor: Actor, input: z.infer<typeof layOnHan
       if (!visible.some(ref => ref.kind === input.target.kind && ref.id === input.target.id)) throw new HttpError('Alvo indisponível.', 404);
       const target = await loadEntity(input.target, db);
       if (target.version !== input.expectedTargetVersion) throw new HttpError('O alvo mudou; confira antes de curar.', 409, 'CONFLICT');
+      if (purify) {
+        const own = target.entity.kind === 'character' && target.ownerUserId === actor.userId;
+        for (const id of input.afflictionIds) {
+          const origin = target.state.afflictions?.find(value => value.id === id);
+          if (!origin || !(actor.role === 'MASTER' || own || origin.visibility === 'public')) throw new HttpError('Origem indisponível; confira as opções atuais.', 409, 'AFFLICTION_NOT_AVAILABLE');
+        }
+      }
       const blocked = await touch(db, c.source, target);
       if (blocked) throw new HttpError(blocked, 409, 'FEATURE_TOUCH_UNVERIFIED');
       await assertLivingHealingTargets({ db, targets: [target] }, 'Mãos Consagradas');
@@ -118,7 +139,7 @@ export async function useLayOnHands(actor: Actor, input: z.infer<typeof layOnHan
         await commitCastingEconomy(db, turn, 'action');
       }
       const state = normalizeClassState(c.character.classState);
-      state.used['lay-on-hands'] = c.resource.used + input.amount;
+      state.used['lay-on-hands'] = c.resource.used + amount;
       const written = await db.character.updateMany({ where: { id: owner.id, version: input.expectedVersion }, data: { classState: state as unknown as Prisma.InputJsonValue, version: { increment: 1 } } });
       if (written.count !== 1) throw new HttpError('A ficha mudou; nenhum ponto foi gasto.', 409, 'CONFLICT');
 
@@ -135,16 +156,27 @@ export async function useLayOnHands(actor: Actor, input: z.infer<typeof layOnHan
 
       }
       const noEffect = ['undead', 'construct'].includes((await creatureTypeOf(target.entity, db)) ?? '');
-      const healing = noEffect ? null : await resolveHealing(db, { eventId: randomUUID(), source: { kind: 'feature', label: 'Mãos Consagradas' }, target: await damageTargetOf(db, target.entity), amount: input.amount });
-      if (!noEffect && !healing) throw new HttpError('Alvo indisponível; nenhum ponto foi gasto.', 409, 'CONFLICT');
+      const healing = noEffect || purify ? null : await resolveHealing(db, { eventId: randomUUID(), source: { kind: 'feature', label: 'Mãos Consagradas' }, target: await damageTargetOf(db, target.entity), amount });
+      if (!noEffect && !purify && !healing) throw new HttpError('Alvo indisponível; nenhum ponto foi gasto.', 409, 'CONFLICT');
+      let purified = 0;
+      if (purify && !noEffect) {
+        for (const id of input.afflictionIds) removeAffliction(target.state, id);
+        target.state.log = [...target.state.log, { id: `affliction:${randomUUID()}`, actorName: actor.username, message: `Mãos Consagradas neutralizou ${input.afflictionIds.length} origem(ns).`, at: new Date().toISOString() }].slice(-100);
+        const data = { mechanicalState: target.state as unknown as Prisma.InputJsonValue };
+        const changed = target.entity.kind === 'character'
+          ? await db.character.updateMany({ where: { id: target.entity.id, version: input.expectedTargetVersion + 1 }, data: { ...data, version: { increment: 1 } } })
+          : await db.combatant.updateMany({ where: { id: target.entity.id, mechanicalVersion: input.expectedTargetVersion + 1 }, data: { ...data, mechanicalVersion: { increment: 1 } } });
+        if (changed.count !== 1) throw new HttpError('O estado do alvo mudou; nenhum ponto foi gasto.', 409, 'CONFLICT');
+        purified = input.afflictionIds.length;
+      }
       if (healing && healing.finalHealing > 0) {
         const death = await applyHealConsequences(target.entity, healing.hpAfter, db, c.character.name);
         if (death.changed) deathTarget = target.entity;
       }
-      if (turn) await appendCombatJournal({ combatId: turn.combatId, actorName: c.character.name, action: TYPE, message: `Mãos Consagradas — ${input.amount} pontos gastos; ${healing?.finalHealing ?? 0} PV restaurados.` }, db);
+      if (turn) await appendCombatJournal({ combatId: turn.combatId, actorName: c.character.name, action: operationType, message: purify ? `Mãos Consagradas — ${amount} pontos gastos em neutralização.` : `Mãos Consagradas — ${amount} pontos gastos; ${healing?.finalHealing ?? 0} PV restaurados.` }, db);
       const fresh = await db.character.findUniqueOrThrow({ where: { id: owner.id } });
-      const snapshot = { character: toCharacterDto(fresh, actor.username, catalog, await effectModifierSetFor(c.source.entity, db)), healed: healing?.finalHealing ?? 0, remaining: c.resource.remaining - input.amount, noEffect, replayed: false };
-      await db.characterOperation.create({ data: { characterId: owner.id, operationId: input.operationId, type: TYPE, requestFingerprint: fingerprint, result: snapshot as unknown as Prisma.InputJsonValue } });
+      const snapshot = { character: toCharacterDto(fresh, actor.username, catalog, await effectModifierSetFor(c.source.entity, db)), healed: healing?.finalHealing ?? 0, remaining: c.resource.remaining - amount, noEffect, ...(purify ? { purified } : {}), replayed: false };
+      await db.characterOperation.create({ data: { characterId: owner.id, operationId: input.operationId, type: operationType, requestFingerprint: fingerprint, result: snapshot as unknown as Prisma.InputJsonValue } });
       return snapshot;
     });
   } catch (error) {

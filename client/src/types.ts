@@ -3174,7 +3174,9 @@ export interface ConcentrationSave {
   at: string;
 }
 
+export interface Affliction { visibility?: 'public' | 'private'; id: string; kind: 'poison' | 'disease'; label: string; appliedAt: string; appliedBy: string }
 export interface MechanicalState {
+  afflictions?: Affliction[];
   conditions: ConditionInstance[]; exhaustionLevel: number;
   /** Meio confiável de enxergar o invisível (ex.: Ver o Invisível). */
   seesInvisible?: boolean;

@@ -18085,3 +18085,12 @@ body:has(.app-shell.has-ongoing-combat) .roll-log-fab:is(:hover, :focus-visible)
 
 /* Escolha variável da reserva, compartilhada pela ficha e Hotbar. */
 .lay-on-hands-fields { display: grid; gap: var(--space-2); }
+
+/* Administração por origem sem campos ultrapassarem o painel compacto. */
+.affliction-admin-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .5rem; }
+.affliction-admin-form > :is(input, select) { min-width: 0; width: 100%; }
+
+/* Cada origem mantém uma linha legível na seleção de neutralização. */
+.lay-on-hands-origins { display: grid; gap: .6rem; min-width: 0; border: 1px solid var(--gold-hair); padding: .75rem; }
+.lay-on-hands-origins > label { display: flex; align-items: flex-start; gap: .5rem; }
+.lay-on-hands-origins input[type="checkbox"] { flex: none; margin-top: .25rem; }

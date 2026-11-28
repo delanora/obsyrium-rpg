@@ -1,3 +1,5 @@
+import { registerAffliction, removeAffliction } from './afflictions.js';
+import { getMulticlassFeatures, normalizeClassEntries } from '../shared/classes.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
@@ -139,7 +141,23 @@ export async function mutateMechanicalState(actor: CombatActor, input: Mechanica
         Object.assign(loaded, fresh);
       }
       const state = loaded.state;
-      if (input.action === 'apply') {
+      if (input.action === 'affliction-add') {
+        if (input.afflictionKind === 'disease' && loaded.entity.kind === 'character') {
+          const character = await db.character.findUniqueOrThrow({ where: { id: loaded.entity.id } });
+          if (getMulticlassFeatures(normalizeClassEntries(character.classes)).some(feature => feature.id === 'divine-health')) throw new HttpError('Saúde Divina: o personagem é imune a doenças.', 409, 'AFFLICTION_IMMUNE');
+        }
+        const origin = registerAffliction(state, { kind: input.afflictionKind!, label: input.label!, symptoms: input.symptoms ?? [] }, actor.userId);
+        origin.visibility = input.visibility ?? 'private';
+        state.log = [...state.log, { id: `affliction:${randomUUID()}`, actorName: actor.username, message: `${origin.kind === 'poison' ? 'Veneno' : 'Doença'} registrado: ${origin.label}.`, at: new Date().toISOString() }].slice(-100);
+      } else if (input.action === 'affliction-visibility') {
+        const origin = state.afflictions?.find(value => value.id === input.afflictionId);
+        if (!origin) throw new HttpError('Afecção não encontrada.', 409, 'AFFLICTION_NOT_FOUND');
+        origin.visibility = input.visibility!;
+        state.log = [...state.log, { id: `affliction:${randomUUID()}`, actorName: actor.username, message: `Visibilidade de afecção alterada: ${origin.label}.`, at: new Date().toISOString() }].slice(-100);
+      } else if (input.action === 'affliction-remove') {
+        const origin = removeAffliction(state, input.afflictionId!);
+        state.log = [...state.log, { id: `affliction:${randomUUID()}`, actorName: actor.username, message: `Afecção encerrada pelo Mestre: ${origin.label}.`, at: new Date().toISOString() }].slice(-100);
+      } else if (input.action === 'apply') {
         // Regras de bloqueio SEMPRE vêm do helper de domínio, para o Effect
         // Engine não criar um atalho "porque veio de um efeito".
         const blocked = conditionBlockedReason(state, input.condition!);

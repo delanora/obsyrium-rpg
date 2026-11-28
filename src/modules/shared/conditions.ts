@@ -24,8 +24,17 @@ export const conditionInstanceSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 export type ConditionInstance = z.infer<typeof conditionInstanceSchema>;
+/** Registro explícito de uma origem; doença não é uma Condition do PHB. */
+export const afflictionSchema = z.object({
+  id: z.string().uuid(), kind: z.enum(['poison', 'disease']),
+  visibility: z.enum(['public', 'private']).optional(),
+  label: z.string().trim().min(1).max(120), appliedAt: z.string(), appliedBy: z.string(),
+});
+export type Affliction = z.infer<typeof afflictionSchema>;
 export const mechanicalStateSchema = z.object({
   conditions: z.array(conditionInstanceSchema).max(200).default([]),
+  /** Opcional para preservar o formato legado até existir um registro explícito. */
+  afflictions: z.array(afflictionSchema).max(50).optional(),
   exhaustionLevel: z.number().int().min(0).max(6).default(0),
   /**
    * Capacidade CONFIÁVEL de enxergar o invisível (Ver o Invisível, truesight,
@@ -305,4 +314,27 @@ export function conditionAttackMode(
       ...(disadvantage ? ['manual'] : []),
     ],
   );
+}
+
+/** Projeção comum da mesa: somente diagnósticos publicados pelo Mestre. */
+export function publicAfflictionState(state: MechanicalState): MechanicalState {
+  const published = new Set((state.afflictions ?? []).filter(origin => origin.visibility === 'public').map(origin => origin.id));
+  const privateSymptoms = new Set<Condition>();
+  const conditions: ConditionInstance[] = [];
+  for (const instance of state.conditions) {
+    if (instance.sourceType !== 'affliction') { conditions.push(instance); continue; }
+    if (published.has(instance.sourceId ?? '')) {
+      conditions.push({ ...instance, appliedBy: undefined, metadata: undefined });
+    } else if (!privateSymptoms.has(instance.condition)) {
+      // Uma etiqueta mecânica estável por sintoma, sem contar origens privadas.
+      privateSymptoms.add(instance.condition);
+      conditions.push({ id: `private-condition:${instance.condition}`, condition: instance.condition, appliedAt: '' });
+    }
+  }
+  return {
+    ...state,
+    afflictions: published.size ? state.afflictions!.filter(origin => published.has(origin.id)).map(origin => ({ ...origin, appliedBy: '', appliedAt: '' })) : undefined,
+    log: state.log.filter(entry => !entry.id.startsWith('affliction:')),
+    conditions,
+  };
 }

@@ -1,4 +1,4 @@
-import { layOnHandsSchema, layOnHandsOptions, useLayOnHands } from './lay-on-hands.service.js';
+import { layOnHandsSchema, layOnHandsPurifySchema, layOnHandsOptions, useLayOnHands, purifyWithLayOnHands } from './lay-on-hands.service.js';
 import { actionSurgeSchema, useActionSurge } from './action-surge.service.js';
 import { breathOptionsSchema, breathPreviewSchema, breathUseSchema, breathOptions, previewBreath, useBreath, assertBreathManualUseAllowed } from './dragonborn-breath.service.js';
 import { secondWindSchema, useSecondWind } from './second-wind.service.js';
@@ -338,6 +338,12 @@ charactersRouter.post('/me/features/lay-on-hands/heal', authenticate, async (req
   const parsed = layOnHandsSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
   res.json(await useLayOnHands({ ...actorFrom(req), role: req.user!.role }, parsed.data));
+});
+
+charactersRouter.post('/me/features/lay-on-hands/purify', authenticate, async (req, res) => {
+  const parsed = layOnHandsPurifySchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
+  res.json(await purifyWithLayOnHands({ ...actorFrom(req), role: req.user!.role }, parsed.data));
 });
 
 /** Uso e concessão da Ação adicional são atômicos no servidor. */

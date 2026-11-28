@@ -76,3 +76,10 @@ de serviços permanece pendência operacional antes de qualquer restart.
 
 Commit/push autorizados pelo responsável em 28/11/2026. Esta autorização
 não inclui publicação ou restart; a sequência será registrada separadamente.
+
+Continuidade posterior: a neutralização por origem foi integrada localmente,
+com escopo e limites em `docs/maos-consagradas-neutralizacao.md`. Este relatório
+preserva o escopo da microentrega original; a sequência ainda não foi publicada.
+
+Commit funcional de cura: `02e9ba4`, enviado à main em 28/11/2026. Extensão de
+afecções e neutralização versionada separadamente; publicação continua pendente.

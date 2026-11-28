@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { fetchLayOnHandsOptions, healWithLayOnHands, type LayOnHandsOptions } from '../layOnHandsApi';
+import { fetchLayOnHandsOptions, healWithLayOnHands, purifyWithLayOnHands, type LayOnHandsOptions } from '../layOnHandsApi';
 import type { Character } from '../types';
 
 /** Mesma escolha variável na ficha e Hotbar; o servidor valida alvo e reserva. */
 export function LayOnHandsDialog({ onClose, onCharacter }: { onClose: () => void; onCharacter: (character: Character) => void }) {
   const [options, setOptions] = useState<LayOnHandsOptions | null>(null);
   const [selected, setSelected] = useState('');
+  const [mode, setMode] = useState<'heal' | 'purify'>('heal');
+  const [chosen, setChosen] = useState<string[]>([]);
   const [amount, setAmount] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +36,21 @@ export function LayOnHandsDialog({ onClose, onCharacter }: { onClose: () => void
     window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape);
   }, [onClose]);
   const target = options?.targets.find(t => key(t) === selected);
+  const cost = mode === 'heal' ? amount : chosen.length * 5;
+  const validChoice = mode === 'heal' ? Number.isInteger(amount) && amount > 0 : chosen.length > 0 && chosen.every(id => target?.afflictions?.some(origin => origin.id === id));
   async function heal() {
-    if (inFlight.current || !options || !target || target.reason || !options.canUse || !Number.isInteger(amount) || amount < 1 || amount > options.remaining) return;
+    if (inFlight.current || !options || !target || target.reason || !options.canUse || !validChoice || cost > options.remaining) return;
     inFlight.current = true; setBusy(true); setError(null);
     try {
-      const response = await healWithLayOnHands(options, target, amount);
-      onCharacter(response.character);
-      setResult(response.noEffect ? 'Sem efeito: esta criatura não é afetada por Mãos Consagradas.' : `${response.healed} PV restaurados. Reserva restante: ${response.remaining}.`);
+      if (mode === 'purify') {
+        const response = await purifyWithLayOnHands(options, target, chosen);
+        onCharacter(response.character);
+        setResult(response.noEffect ? `Sem efeito: esta criatura não é afetada por Mãos Consagradas. ${cost} pontos gastos; reserva restante: ${response.remaining}.` : `${response.purified} origem(ns) neutralizada(s). Reserva restante: ${response.remaining}.`);
+      } else {
+        const response = await healWithLayOnHands(options, target, amount);
+        onCharacter(response.character);
+        setResult(response.noEffect ? `Sem efeito: esta criatura não é afetada por Mãos Consagradas. ${cost} pontos gastos; reserva restante: ${response.remaining}.` : `${response.healed} PV restaurados. Reserva restante: ${response.remaining}.`);
+      }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível aplicar a cura. Feche e confira novamente.'); }
     finally { inFlight.current = false; setBusy(false); }
   }
@@ -48,24 +58,36 @@ export function LayOnHandsDialog({ onClose, onCharacter }: { onClose: () => void
     <div ref={box} className="modal" role="dialog" aria-modal="true" aria-label="Mãos Consagradas" tabIndex={-1} onClick={event => event.stopPropagation()}>
       <h2>Mãos Consagradas</h2>
       {result ? <p role="status">{result}</p> : <>
-        <p>Escolha um alvo ao alcance do toque e quantos pontos da reserva gastar.</p>
+        <p>Escolha um alvo ao alcance do toque e como usar a reserva.</p>
         {options ? <>
           <p>Reserva: {options.remaining} / {options.max}</p>
           {!options.canUse ? <p role="status">Indisponível: confira seu turno, sua condição e a reserva.</p> : null}
           <div className="lay-on-hands-fields">
-          <label className="field"><span>Alvo</span><select value={selected} disabled={busy} onChange={event => setSelected(event.target.value)}>
+          <label className="field"><span>Uso da reserva</span><select aria-label="Uso da reserva" disabled={busy} value={mode} onChange={event => { setMode(event.target.value as 'heal' | 'purify'); setChosen([]); }}>
+            <option value="heal">Curar pontos de vida</option><option value="purify">Neutralizar doenças e venenos</option>
+          </select></label>
+          <label className="field"><span>Alvo</span><select value={selected} disabled={busy} onChange={event => { setSelected(event.target.value); setChosen([]); }}>
             <option value="">— escolha —</option>
             {options.targets.map(t => <option key={key(t)} value={key(t)} disabled={!!t.reason}>{t.name}{t.reason ? ' — toque indisponível' : ''}</option>)}
           </select></label>
-          <label className="field"><span>Pontos de cura</span><input type="number" min={1} max={options.remaining} step={1} value={amount} disabled={busy} onChange={event => setAmount(Number(event.target.value))} /></label>
+          {mode === 'heal' ? <label className="field"><span>Pontos de cura</span><input type="number" min={1} max={options.remaining} step={1} value={amount} disabled={busy} onChange={event => setAmount(Number(event.target.value))} /></label> : null}
           </div>
-          <p className="section-note">Doenças e venenos continuam sob resolução do Mestre. Sem geometria confiável, apenas o autoalvo é automatizado.</p>
+          {mode === 'purify' ? <fieldset className="lay-on-hands-origins" disabled={busy}>
+            <legend>Origens tratáveis — 5 pontos cada</legend>
+            {(target?.afflictions ?? []).map(origin => <label className="check" key={origin.id}>
+              <input type="checkbox" checked={chosen.includes(origin.id)} onChange={event => setChosen(previous => event.target.checked ? [...previous, origin.id] : previous.filter(id => id !== origin.id))} />
+              <span>{origin.kind === 'poison' ? 'Veneno' : 'Doença'} — {origin.label}</span>
+            </label>)}
+            {!target?.afflictions?.length ? <p>Nenhuma origem tratável disponível. O Mestre pode registrar e publicar uma origem.</p> : null}
+            <p>Custo: {cost} pontos · Reserva: {options.remaining}</p>
+          </fieldset> : null}
+          <p className="section-note">Condições sem origem registrada não são neutralizadas. Sem geometria confiável, apenas o autoalvo é automatizado.</p>
         </> : !error ? <p role="status">Consultando reserva…</p> : null}
       </>}
       {error ? <p className="error" role="alert">{error}</p> : null}
       <div className="modal-actions">
         <button className="btn" disabled={busy} onClick={onClose}>{result ? 'Fechar' : 'Cancelar'}</button>
-        {!result ? <button className="btn btn-primary" disabled={busy || !options?.canUse || !target || !!target.reason || !Number.isInteger(amount) || amount < 1 || amount > (options?.remaining ?? 0)} onClick={() => void heal()}>{busy ? 'Aplicando…' : 'Aplicar cura'}</button> : null}
+        {!result ? <button className="btn btn-primary" disabled={busy || !options?.canUse || !target || !!target.reason || !validChoice || cost > (options?.remaining ?? 0)} onClick={() => void heal()}>{busy ? 'Aplicando…' : mode === 'heal' ? 'Aplicar cura' : 'Neutralizar origens'}</button> : null}
       </div>
     </div>
   </div>, document.body);

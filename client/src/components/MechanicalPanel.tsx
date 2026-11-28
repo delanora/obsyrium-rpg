@@ -45,7 +45,7 @@ export function MechanicalPanel({ entity, refreshVersion, effectsRefresh = 0, so
   const targetKey = `${entity.kind}:${entity.id}`;
   const targetRef = useRef(targetKey);
   targetRef.current = targetKey;
-  useEffect(() => { setCurrent(null); setSource(''); setSourceLabel(''); setError(''); }, [targetKey]);
+  useEffect(() => { setCurrent(null); setSource(''); setSourceLabel(''); setAfflictionLabel(''); setError(''); }, [targetKey]);
   const [current, setCurrent] = useState<MechanicalDto | null>(null);
   // EFEITOS GENÉRICOS (6.5A): estado PRÓPRIO, fora do `mechanicalState`. O
   // servidor filtra a privacidade; aqui só se exibe o que chegou.
@@ -75,6 +75,9 @@ export function MechanicalPanel({ entity, refreshVersion, effectsRefresh = 0, so
   const choices = sourceChoices.length ? sourceChoices : outsideSources;
   const [source, setSource] = useState('');
   const [sourceLabel, setSourceLabel] = useState('');
+  const [afflictionKind, setAfflictionKind] = useState<'poison' | 'disease'>('poison');
+  const [afflictionLabel, setAfflictionLabel] = useState('');
+  const [afflictionSymptom, setAfflictionSymptom] = useState('poisoned');
   const [level, setLevel] = useState('0');
   useEffect(() => setLevel(String(current?.state.exhaustionLevel ?? 0)), [current?.state.exhaustionLevel, targetKey]);
   // HISTÓRICO: aberto ao clicar numa etiqueta de condição (não há mais o
@@ -265,6 +268,28 @@ export function MechanicalPanel({ entity, refreshVersion, effectsRefresh = 0, so
     {showBadges && !hasConditions ? <p className="field-hint">Nenhuma condição ativa.</p> : null}
     {current.effects.exhaustionSummary.map(text => <p key={text} className="field-hint">{text}</p>)}
     {current.effects.assistedNotes.map(text => <p key={text} className="field-hint">{text}</p>)}
+    {(current.state.afflictions?.length ?? 0) > 0 || isMaster ? <details className="conditions-admin">
+      <summary>Doenças e venenos por origem</summary>
+      {(current.state.afflictions ?? []).map(origin => <div className="hp-controls" key={origin.id}>
+        <span>{origin.kind === 'poison' ? 'Veneno' : 'Doença'} — {origin.label}</span>
+        {isMaster ? <button className="btn btn-small" disabled={busy} onClick={() => void execute({ action: 'affliction-remove', afflictionId: origin.id })}>Encerrar esta origem</button> : null}
+        {isMaster ? <button className="btn btn-small" disabled={busy} onClick={() => void execute({ action: 'affliction-visibility', afflictionId: origin.id, visibility: origin.visibility === 'public' ? 'private' : 'public' })}>{origin.visibility === 'public' ? 'Tornar privada' : 'Publicar origem'}</button> : null}
+      </div>)}
+      {isMaster ? <>
+        <div className="hp-controls affliction-admin-form">
+          <select aria-label="Tipo de afecção" value={afflictionKind} onChange={event => { const kind = event.target.value as 'poison' | 'disease'; setAfflictionKind(kind); setAfflictionSymptom(kind === 'poison' ? 'poisoned' : ''); }}>
+            <option value="poison">Veneno</option><option value="disease">Doença</option>
+          </select>
+          <input aria-label="Nome da doença ou veneno" placeholder="Nome / origem" maxLength={80} value={afflictionLabel} onChange={event => setAfflictionLabel(event.target.value)} />
+          <select aria-label="Sintoma da afecção" value={afflictionSymptom} onChange={event => setAfflictionSymptom(event.target.value)}>
+            <option value="">Sem condição automática</option>
+            {Object.entries(current.effects.labels).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+          <button className="btn btn-small" disabled={busy || !afflictionLabel.trim()} onClick={() => void execute({ action: 'affliction-add', afflictionKind, label: afflictionLabel.trim(), symptoms: afflictionSymptom ? [afflictionSymptom] : [] })}>Registrar origem</button>
+        </div>
+        <p className="field-hint">Registre cada origem separadamente. Condições antigas e efeitos de magias não são reclassificados. Dano periódico e outros sintomas continuam assistidos.</p>
+      </> : null}
+    </details> : null}
     {concentrationControls}
     {/*
      * APLICAÇÃO AGUARDANDO SALVAGUARDA (6.5H): mostra a solicitação real ao

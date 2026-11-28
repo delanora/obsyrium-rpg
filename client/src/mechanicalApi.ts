@@ -21,7 +21,8 @@ export function standUp(input: {
 }
 
 export function mutateMechanicalState(current: MechanicalDto, input: {
-  action: 'apply' | 'remove' | 'exhaustion' | 'stand' | 'concentrate' | 'concentrate-end';
+  action: 'apply' | 'remove' | 'exhaustion' | 'stand' | 'concentrate' | 'concentrate-end' | 'affliction-add' | 'affliction-remove' | 'affliction-visibility';
+  afflictionKind?: 'poison' | 'disease'; afflictionId?: string; symptoms?: string[];
   condition?: string; instanceId?: string;
   sourceEntity?: MechanicalEntity; sourceLabel?: string; exhaustionLevel?: number; exhaustionDelta?: number;
   /** Concentração: nome do efeito, visibilidade e id da concentração encerrada. */
