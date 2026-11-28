@@ -138,3 +138,8 @@ export function useSecondWind(expectedVersion: number): Promise<{
     method: 'POST', body: { expectedVersion, operationId: newId() },
   });
 }
+
+/** Concede a Ação e consome o uso no servidor, sem quantidade enviada pelo cliente. */
+export function useActionSurge(expectedVersion: number): Promise<{ character: Character; remaining: number; replayed: boolean }> {
+  return api('/api/characters/me/features/action-surge', { method: 'POST', body: { expectedVersion, operationId: newId() } });
+}

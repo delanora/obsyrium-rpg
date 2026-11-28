@@ -28,6 +28,8 @@ const attackActionSchema = z.object({
 });
 export const turnEconomySchema = z.object({
   actionsGranted: z.number().int().nonnegative().default(0),
+  /** PHB 2014: no máximo um Surto por turno; reinicia em onTurnStart. */
+  actionSurgeUsed: z.boolean().default(false),
   actionsUsed: z.number().int().nonnegative().default(0),
   bonusActionUsed: z.boolean().default(false),
   reactionAvailable: z.boolean().default(true),
@@ -133,4 +135,11 @@ export function spellCastingEconomy(kind: SpellCastingTimeKind): EconomyKind | n
   if (kind === 'bonusAction') return 'bonus-action';
   if (kind === 'action' || kind === 'reaction') return kind;
   return null;
+}
+
+/** PHB 2014: uma Ação adicional, sem restaurar Bônus, Reação ou Movimento. */
+export function grantActionSurge(state: TurnEconomy): void {
+  if (state.actionSurgeUsed) throw new HttpError('Surto de Ação já utilizado neste turno.', 409, 'ACTION_SURGE_ALREADY_USED');
+  state.actionsGranted += 1;
+  state.actionSurgeUsed = true;
 }

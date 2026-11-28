@@ -26,7 +26,7 @@ import { useDiceRoller } from '../dice/useDiceRoller';
 import { useMusic } from '../music/useMusic';
 import { fetchTransferTargets } from '../coinsApi';
 import { fetchGameConfig } from '../gameApi';
-import { requestEldritchMaster, toggleFeature, useRacialFeature, useSecondWind } from '../featuresApi';
+import { requestEldritchMaster, toggleFeature, useRacialFeature, useSecondWind, useActionSurge } from '../featuresApi';
 import { moveInventoryItem, useInventoryItem } from '../inventoryApi';
 import { resultBreakdown } from '../dice/format';
 import { closePresentation } from '../presentationApi';
@@ -381,6 +381,11 @@ export function SheetPage({ user }: { user: SessionUser }) {
    * O cliente manda só o id do recurso e a versão; a ficha devolvida passa a ser
    * a da tela. NÃO executa dano/save/magia nesta fase.
    */
+  const actionSurgeAction = useCallback(async (expectedVersion: number) => {
+    const { character: saved } = await useActionSurge(expectedVersion);
+    setCharacter(prev => !prev || saved.version >= prev.version ? saved : prev);
+  }, []);
+
   const secondWindAction = useCallback(async (expectedVersion: number) => {
     const { character: saved } = await useSecondWind(expectedVersion);
     setCharacter(prev => !prev || saved.version >= prev.version ? saved : prev);
@@ -664,6 +669,7 @@ export function SheetPage({ user }: { user: SessionUser }) {
                   inventoryTargets={inventoryTargets}
                   onInventoryUseOn={useItemOn}
                   onSecondWind={secondWindAction}
+                  onActionSurge={actionSurgeAction}
                   onFeatureToggle={toggleFeatureAction}
                   onEldritchMaster={eldritchMasterAction}
                   onRacialUse={racialUseAction}

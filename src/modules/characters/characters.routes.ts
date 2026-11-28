@@ -1,3 +1,4 @@
+import { actionSurgeSchema, useActionSurge } from './action-surge.service.js';
 import { breathOptionsSchema, breathPreviewSchema, breathUseSchema, breathOptions, previewBreath, useBreath, assertBreathManualUseAllowed } from './dragonborn-breath.service.js';
 import { secondWindSchema, useSecondWind } from './second-wind.service.js';
 import { Router } from 'express';
@@ -326,6 +327,13 @@ charactersRouter.post('/me/breath-weapon/use', authenticate, async (req, res) =>
   const parsed = breathUseSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
   res.json(await useBreath({ ...actorFrom(req), role: req.user!.role }, parsed.data));
+});
+
+/** Uso e concessão da Ação adicional são atômicos no servidor. */
+charactersRouter.post('/me/features/action-surge', authenticate, async (req, res) => {
+  const parsed = actionSurgeSchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
+  res.json(await useActionSurge(actorFrom(req), parsed.data));
 });
 
 /** Cura, recurso e Ação Bônus são decididos e persistidos juntos no servidor. */

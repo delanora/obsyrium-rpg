@@ -20,6 +20,8 @@ import type { SheetSectionProps } from './common';
  * contador, para não duplicar o mesmo uso em dois lugares.
  */
 interface ResourcesSectionProps extends SheetSectionProps {
+  /** Executa a concessão autoritativa de uma Ação adicional. */
+  onActionSurge?: (expectedVersion: number) => void | Promise<void>;
   /** Executa Retomar o Fôlego; cura e custo são exclusivos do servidor. */
   onSecondWind?: (expectedVersion: number) => void | Promise<void>;
   /**
@@ -29,7 +31,7 @@ interface ResourcesSectionProps extends SheetSectionProps {
   onRacialUse?: (resourceId: string, expectedVersion: number) => void | Promise<void>;
 }
 
-export function ResourcesSection({ character, onRacialUse, onSecondWind }: ResourcesSectionProps) {
+export function ResourcesSection({ character, onRacialUse, onSecondWind, onActionSurge }: ResourcesSectionProps) {
   const { readOnly } = useSheetAccess();
   /** Recurso com requisição em andamento (bloqueia o duplo clique). */
   const [pending, setPending] = useState<string | null>(null);
@@ -41,13 +43,16 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind }: Resou
 
   const hasRaceGroup = groups.some((group) => group.origin === 'race');
 
+  const handlerFor = (resource: DisplayedResource) => resource.action?.kind === 'second-wind' ? onSecondWind : resource.action?.kind === 'action-surge' ? onActionSurge : onRacialUse;
+
   async function requestUse(resource: DisplayedResource): Promise<void> {
     if (pending !== null) return;
-    if (resource.action?.kind === 'second-wind' ? !onSecondWind : !onRacialUse) return;
+    if (!handlerFor(resource)) return;
     setPending(resource.id);
     setError(null);
     try {
       if (resource.action?.kind === 'second-wind') await onSecondWind?.(character.version);
+      else if (resource.action?.kind === 'action-surge') await onActionSurge?.(character.version);
       else await onRacialUse?.(resource.id, character.version);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível usar o recurso.');
@@ -105,7 +110,7 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind }: Resou
                       </span>
                     ) : null}
 
-                    {resource.action && (resource.action.kind === 'second-wind' ? onSecondWind : onRacialUse) ? (
+                    {resource.action && handlerFor(resource) ? (
                       <button
                         type="button"
                         className="btn btn-small btn-primary resource-action"

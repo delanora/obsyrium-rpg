@@ -14,9 +14,9 @@ import { ARTISAN_TOOL_OPTIONS } from './option-lists.js';
 // vem da subclasse, que ainda não está cadastrada).
 //
 // PENDENTES registrados nas características:
-//   • Fase 5 (combate por ação/reação/rolagem de dado): gastar Surto de Ação,
-//     Retomar o Fôlego e Indomável, e os ataques extras (Ataque Extra muda
+//   • Indomável e expansão dos ataques extras (Ataque Extra muda
 //     quantas vezes a ação de Ataque pode atacar).
+// Retomar o Fôlego e Surto de Ação possuem executores autoritativos próprios.
 //
 // SUBCLASSES: Campeão, Mestre da Batalha e Cavaleiro Arcano (arquétipo
 // escolhido no 3º nível).
@@ -53,13 +53,13 @@ const FIGHTER_FEATURES: ClassFeatureDefinition[] = [
       resource: { name: 'Retomar o Fôlego', recharge: 'short', max: 1 },
     },
   },
-  // PENDENTE (Fase 5): o Surto de Ação concede uma ação extra no turno.
+  // Executor próprio concede a Ação extra na economia canônica.
   {
     id: 'action-surge',
     name: 'Surto de Ação',
     level: 2,
     description:
-      'No seu turno, realize uma ação adicional (além da ação e da ação bônus). Um uso, recuperado num descanso curto ou longo — dois usos a partir do 17º nível.',
+      'No seu turno, realize uma ação adicional (além da ação e da ação bônus). Um uso, recuperado num descanso curto ou longo — dois usos a partir do 17º nível, mas apenas um por turno.',
     effect: {
       type: 'resource',
       id: 'action-surge',

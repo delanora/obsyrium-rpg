@@ -154,6 +154,11 @@ Arma de Sopro implementada e enviada à main (`5b7fee9`): área no grid, CD, sal
 racial autoritativos; 85 casos puros, 24 verificações HTTP/PostgreSQL, 28 regressões
 de áreas e Chromium com API simulada aprovados. Fora de combate permanece assistida.
 Push e SHA remoto confirmados; aguarda publicação autorizada. Ver `docs/arma-sopro-motor.md`.
+Surto de Ação implementado e validado: gasto e Ação extra atômicos, uma vez por
+turno, saldo derivado do nível de Guerreiro e botão na ficha. Passaram 24 provas
+HTTP/PostgreSQL, incluindo duas magias de Ação, e Chromium desktop/celular.
+Sem deploy; ver `docs/surto-acao-motor.md`. Mãos Consagradas e Inspiração seguem
+como próximas candidatas, com escopos independentes.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.
