@@ -280,7 +280,7 @@ export function CombatHotbar({
                           className="hotbar-picker-item"
                           onClick={() => {
                             onAssign?.(slot.index, {
-                              kind: 'attack',
+                              kind: choice.kind === 'feature' ? 'feature' : 'attack',
                               sourceId: choice.sourceId,
                             });
                             setPickerFor(null);

@@ -3,7 +3,7 @@ import { attackSchema, damageTypeListSchema } from '../shared/attacks.js';
 import { coinsSchema, coinAmountSchema, coinDeltaSchema } from '../shared/coins.js';
 import { MAX_CLASSES, effectiveSpellSlotUsed, getClassDefinition } from '../shared/classes.js';
 import { getTool } from '../shared/tools.js';
-import { HOTBAR_SLOT_COUNT } from '../shared/hotbar.js';
+import { HOTBAR_SLOT_COUNT, HOTBAR_FEATURE_IDS } from '../shared/hotbar.js';
 import { ITEM_RARITIES, campSupplySchema, itemDetailsSchema } from '../shared/item-details.js';
 import {
   ABILITY_KEYS,
@@ -595,14 +595,14 @@ const expectedVersionSchema = z.number().int().min(1);
  * PERSONALIZAÇÃO DA HOTBAR (6.6M.6.3.1) — preferência de INTERFACE.
  *
  * Cada posição guarda apenas a REFERÊNCIA a uma ação que já existe na ficha.
- * Só `kind: 'attack'` é aceito hoje (única categoria com execução comprovada na
- * Hotbar); rótulo, custo, bônus, dano e alcance continuam derivados da fonte
+ * Aceita ataques e recursos com executor registrado; rótulo, custo, bônus,
+ * dano e alcance continuam derivados da fonte
  * real, nunca enviados pelo cliente.
  */
 export const hotbarSlotRefSchema = z.object({
-  kind: z.literal('attack'),
+  kind: z.enum(['attack', 'feature']),
   sourceId: z.string().trim().min(1, 'Atalho sem origem.').max(120),
-});
+}).refine(ref => ref.kind === 'attack' || HOTBAR_FEATURE_IDS.some(id => id === ref.sourceId), 'Recurso sem executor na Hotbar.');
 
 /**
  * Salva as 48 posições da Hotbar do PRÓPRIO personagem (owner vem do token).

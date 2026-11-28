@@ -1,3 +1,4 @@
+import type { BreathOptions } from './breathWeaponApi';
 import { DragonbornBreathControl } from './DragonbornBreathControl';
 import { GridToolbarSlot } from '../components/GridToolbarSlot';
 import { GridHelp } from './GridHelp';
@@ -120,6 +121,7 @@ export interface GridTargeting {
 }
 
 export interface CombatGridProps {
+  breathHotbarRequest?: (BreathOptions & { requestId: number }) | null;
   areaAbilityRequest?: {id:number;multiattackId?:string;combatantId:string;definition:NonNullable<AreaPreviewRequest['ability']>['definition']}|null;
   /**
    * Estado AUTORITATIVO vindo do servidor (`Combat.spatial` + `Combatant.spatial`).
@@ -279,6 +281,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function CombatGrid({
   combat,
   areaAbilityRequest,
+  breathHotbarRequest,
   isMaster,
   relationReferenceId,
   onInspectToken,
@@ -444,6 +447,19 @@ export function CombatGrid({
     setMode('none');
     setAreaRequest({id:++areaRequestId.current,shape:areaAbilityRequest.definition.area.shape.kind,origin:{xFeet:(space.minXFeet+space.maxXFeet)/2,yFeet:(space.minYFeet+space.maxYFeet)/2},ability:{multiattackId:areaAbilityRequest.multiattackId,windowId:combat.legendaryWindow?.id,combatantId:areaAbilityRequest.combatantId,definition:areaAbilityRequest.definition},scope:areaSceneKey});
   },[areaAbilityRequest,isMaster,areaSceneKey,combat.combatants,onError]);
+
+  const breathHandled = useRef<number | null>(null);
+  useEffect(() => {
+    if (!breathHotbarRequest || breathHandled.current === breathHotbarRequest.requestId) return;
+    breathHandled.current = breathHotbarRequest.requestId;
+    const unit = combat.combatants.find(u => u.id === breathHotbarRequest.combatantId);
+    const space = unit?.spatial?.occupiedSpace;
+    if (!space || !breathHotbarRequest.definition.area) { onError('Posicione seu personagem no grid.'); return; }
+    setMode('none');
+    setAreaRequest({ id: ++areaRequestId.current, shape: breathHotbarRequest.definition.area.shape.kind,
+      origin: { xFeet: (space.minXFeet + space.maxXFeet)/2, yFeet: (space.minYFeet + space.maxYFeet)/2 },
+      ability: { racial: true, characterVersion: breathHotbarRequest.characterVersion, combatantId: unit.id, definition: breathHotbarRequest.definition }, scope: areaSceneKey });
+  }, [breathHotbarRequest, areaSceneKey, combat.combatants, onError]);
 
   const cellSizeFeet = scene.cellSizeFeet || BASE_CELL_SIZE_FEET;
   const geometry = { pixelsPerCell: DEFAULT_PIXELS_PER_CELL, cellSizeFeet };

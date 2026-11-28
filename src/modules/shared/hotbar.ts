@@ -15,14 +15,14 @@ import type { Prisma } from '@prisma/client';
  * - array de 48 posições (mesmo todas nulas) = configuração INTENCIONAL, que o
  *   preenchimento automático não pode mais repovoar.
  *
- * Hoje só existe `kind: 'attack'` porque é a única categoria com execução
- * comprovada na Hotbar. O formato fica aberto para magias/itens quando eles
- * tiverem fluxo real — sem atalho fictício nesta fase.
+ * Ataques e três recursos com executor próprio são referências aceitas.
+ * A preferência nunca autoriza a execução nem concede posse do recurso.
  */
 export const HOTBAR_SLOT_COUNT = 48;
 
 /** Categorias de atalho SUPORTADAS hoje. */
-export type HotbarSlotKind = 'attack';
+export const HOTBAR_FEATURE_IDS = ['second-wind', 'action-surge', 'breath-weapon'] as const;
+export type HotbarSlotKind = 'attack' | 'feature';
 
 /** Referência persistida de uma posição da Hotbar. */
 export interface HotbarSlotRef {
@@ -45,10 +45,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function parseHotbarRef(value: unknown): HotbarSlotRef | null {
   if (!isRecord(value)) return null;
-  if (value.kind !== 'attack') return null;
+  if (value.kind !== 'attack' && value.kind !== 'feature') return null;
   const sourceId = typeof value.sourceId === 'string' ? value.sourceId.trim() : '';
   if (!sourceId || sourceId.length > 120) return null;
-  return { kind: 'attack', sourceId };
+  if (value.kind === 'feature' && !HOTBAR_FEATURE_IDS.some(id => id === sourceId)) return null;
+  return { kind: value.kind, sourceId };
 }
 
 /**

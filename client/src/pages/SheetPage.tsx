@@ -542,6 +542,8 @@ export function SheetPage({ user }: { user: SessionUser }) {
                 // servidor junto da ficha; salvar devolve hotbar + versão novas
                 // para o próximo salvamento não conflitar.
                 characterHotbar={character?.hotbar?.slots ?? null}
+                resourceCharacter={character}
+                onResourceCharacterUpdated={saved => setCharacter(prev => !prev || saved.version >= prev.version ? saved : prev)}
                 characterVersion={character?.version ?? null}
                 onHotbarSaved={(hotbar, version) =>
                   setCharacter((previous) =>

@@ -233,7 +233,7 @@ export function selectionSurvivesFilter(
  * fonte real a cada leitura — nada disso é salvo na Hotbar.
  */
 export interface HotbarSlotRef {
-  kind: 'attack';
+  kind: 'attack' | 'feature';
   sourceId: string;
 }
 
@@ -307,23 +307,23 @@ export function resolveHotbarSlots({
       return {
         index: offset + 1,
         entry,
-        ref: entry ? { kind: 'attack' as const, sourceId: entry.sourceId } : null,
+        ref: entry ? { kind: entry.kind === 'feature' ? 'feature' as const : 'attack' as const, sourceId: entry.sourceId } : null,
         state: entry ? ('ready' as const) : ('empty' as const),
       };
     });
   }
 
-  const bySource = new Map(entries.map((entry) => [entry.sourceId, entry]));
+  const bySource = new Map(entries.map((entry) => [`${entry.kind}:${entry.sourceId}`, entry]));
   const attackNames = new Map(attacks.map((attack) => [attack.id, attack.name]));
 
   return Array.from({ length: HOTBAR_SLOTS }, (_, offset) => {
     const ref = layout[offset] ?? null;
     if (!ref) return { index: offset + 1, entry: null, ref: null, state: 'empty' as const };
 
-    const entry = bySource.get(ref.sourceId) ?? null;
+    const entry = bySource.get(`${ref.kind}:${ref.sourceId}`) ?? null;
     if (entry) return { index: offset + 1, entry, ref, state: 'ready' as const };
 
-    const name = attackNames.get(ref.sourceId);
+    const name = ref.kind === 'attack' ? attackNames.get(ref.sourceId) : undefined;
     if (name) {
       return { index: offset + 1, entry: null, ref, state: 'unavailable' as const, label: name };
     }
@@ -376,6 +376,7 @@ export function filterHotbarView(
  * da ação já gasta, não uma segunda Ação.
  */
 export interface HotbarTurnBudget {
+  actionSurgeUsed?: boolean;
   actionsGranted: number;
   actionsUsed: number;
   bonusActionUsed: boolean;
@@ -402,7 +403,7 @@ export function hotbarSlotSpent(
 
   switch (slot.entry.cost) {
     case 'action':
-      return !hotbarActionAvailable(economy);
+      return slot.entry.kind === 'feature' ? economy.actionsGranted <= economy.actionsUsed : !hotbarActionAvailable(economy);
     case 'bonus-action':
       return economy.bonusActionUsed;
     case 'reaction':
@@ -490,9 +491,9 @@ export function entriesOutsideLayout(
   const placed = new Set(
     layout
       .filter((ref): ref is HotbarSlotRef => Boolean(ref))
-      .map((ref) => ref.sourceId),
+      .map((ref) => `${ref.kind}:${ref.sourceId}`),
   );
-  return entries.filter((entry) => !placed.has(entry.sourceId));
+  return entries.filter((entry) => !placed.has(`${entry.kind}:${entry.sourceId}`));
 }
 
 /** Atalho contextual: não altera preferências salvas nem concede execução sem gatilho. */

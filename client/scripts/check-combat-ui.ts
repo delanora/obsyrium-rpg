@@ -7908,7 +7908,7 @@ check(
 
   check(
     'SC144) antes de rolar os slots ficam bloqueados e o CTA é a única ação',
-    trackerSource.includes('busy={busy || awaitingInitiative || dockDeathBlocked}') &&
+    trackerSource.includes('busy={busy || resourceBusy || awaitingInitiative || dockDeathBlocked}') &&
       trackerSource.includes(
         'Boolean(dockCombatant) && !ownTurn && !awaitingInitiative && !dockDeathBlocked;',
       ) &&
@@ -8877,7 +8877,7 @@ check(
   'SC174) a dock recebe o rótulo e a Hotbar é desabilitada pelo ciclo de morte',
   deathTrackerSource.includes('deathLabel={dockDeathLabel}') &&
     deathTrackerSource.includes('deathBlocked={dockDeathBlocked}') &&
-    deathTrackerSource.includes('busy={busy || awaitingInitiative || dockDeathBlocked}') &&
+    deathTrackerSource.includes('busy={busy || resourceBusy || awaitingInitiative || dockDeathBlocked}') &&
     deathTrackerSource.includes('economy={ownTurn && !dockDeathBlocked ? dockEconomy : null}') &&
     deathTrackerSource.includes('canAct: dockCombatant.conditionEffects.canAct && !dockDeathBlocked,') &&
     deathTrackerSource.includes('ownTurn: ownTurn && !dockDeathBlocked,') &&

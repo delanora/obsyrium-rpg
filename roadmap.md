@@ -159,6 +159,12 @@ turno, saldo derivado do nível de Guerreiro e botão na ficha. Passaram 24 prov
 HTTP/PostgreSQL, incluindo duas magias de Ação, e Chromium desktop/celular.
 Sem deploy; ver `docs/surto-acao-motor.md`. Mãos Consagradas e Inspiração seguem
 como próximas candidatas, com escopos independentes.
+Recursos na Hotbar: Retomar o Fôlego, Surto e Sopro entram automaticamente sem
+layout salvo; com personalização ficam em “Ver todas”/editor, preservando posições
+e vazios. Reutilizam executores existentes e a área do grid. 21 contratos, 18
+verificações HTTP/PostgreSQL e Chromium com API simulada aprovados. Build isolado;
+sem publicação. A suíte ampla mantém duas falhas anteriores reproduzidas na base
+(CB138/SC14); ver `docs/recursos-hotbar.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

@@ -884,7 +884,7 @@ export interface DeathUpdatedPayload {
  * da ação. Rótulo, custo, bônus e dano continuam derivados da fonte real.
  */
 export interface HotbarSlotRef {
-  kind: 'attack';
+  kind: 'attack' | 'feature';
   sourceId: string;
 }
 

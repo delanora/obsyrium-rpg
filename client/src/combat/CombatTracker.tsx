@@ -1,3 +1,5 @@
+import { resourceHotbarEntries, executeHotbarResource } from './resourceHotbar';
+import type { BreathOptions } from './grid/breathWeaponApi';
 import { actionShortcutSlots } from './actionShortcuts';
 import { cancelCombatTest } from './combatApi';
 import type { RollContext } from '../dice/useDiceRoller';
@@ -16,7 +18,7 @@ import { ApiError } from '../api';
 import { standUp as standUpRequest } from '../mechanicalApi';
 import { Icon, type IconName } from '../components/Icon';
 import { fetchDeath, rollNpcDeathSave } from '../deathApi';
-import type { Attack, CombatDto, CombatResolutionCardDto, ConcentrationSave, Creature, DeathDto, DeathState, InventoryItem, Item, MechanicalEntity, SessionUser, SpatialPosition } from '../types';
+import type { Character, Attack, CombatDto, CombatResolutionCardDto, ConcentrationSave, Creature, DeathDto, DeathState, InventoryItem, Item, MechanicalEntity, SessionUser, SpatialPosition } from '../types';
 import {
   declineSpellSaveCard,
   fetchResolutionRequests,
@@ -116,6 +118,8 @@ interface CombatTrackerProps {
   effectsRefresh?: number;
   /** Ataques do próprio personagem (fluxo do jogador). */
   characterAttacks?: Attack[];
+  resourceCharacter?: Character | null;
+  onResourceCharacterUpdated?: (character: Character) => void;
   /**
    * PERSONALIZAÇÃO DA HOTBAR (6.6M.6.3.1) — configuração salva do personagem
    * (`null` = nunca personalizada). Sem esta prop o editor NEM APARECE, que é
@@ -196,6 +200,8 @@ export function CombatTracker({
   turnAlert,
   effectsRefresh = 0,
   characterAttacks = [],
+  resourceCharacter,
+  onResourceCharacterUpdated,
   characterHotbar,
   characterVersion = null,
   onHotbarSaved,
@@ -318,6 +324,26 @@ export function CombatTracker({
   const [hotbarSaving, setHotbarSaving] = useState(false);
   const [hotbarError, setHotbarError] = useState<string | null>(null);
 
+  const [resourceBusy, setResourceBusy] = useState(false);
+  const resourceInFlight = useRef(false);
+  const [breathHotbarRequest, setBreathHotbarRequest] = useState<(BreathOptions & { requestId: number }) | null>(null);
+  const breathRequestSequence = useRef(0);
+  useEffect(() => { setBreathHotbarRequest(null); }, [combat.id]);
+  async function activateResource(sourceId: string) {
+    if (resourceInFlight.current || !resourceCharacter || isMaster) return;
+    setHotbarPick(null);
+    setTargetCombatantId(null);
+    setAttackRoll(null);
+    resourceInFlight.current = true;
+    setResourceBusy(true);
+    try {
+      const result = await executeHotbarResource(sourceId, resourceCharacter.version, combat.id);
+      if (result.character) onResourceCharacterUpdated?.(result.character);
+      if (result.breath) setBreathHotbarRequest({ ...result.breath, requestId: ++breathRequestSequence.current });
+    } catch (error) { onError(error instanceof Error ? error.message : 'Não foi possível usar o recurso.'); }
+    finally { resourceInFlight.current = false; setResourceBusy(false); }
+  }
+
   const myCombatant = combat.combatants.find((item) => item.ownerUserId === user.id) ?? null;
   const current = combat.combatants.find((item) => item.id === combat.currentCombatantId) ?? null;
   const isMyTurn = Boolean(!combat.legendaryPause && current && current.ownerUserId === user.id);
@@ -340,14 +366,13 @@ export function CombatTracker({
 
   /**
    * Entradas da Hotbar: MESMA fonte do painel de ataque (`characterAttacks`,
-   * filtrada por arma equipada dentro do adapter). Hoje só ataques — nenhuma
-   * feature/magia/item do jogador tem execução liberada, então não são
-   * inventados slots.
+   * filtrada por arma equipada dentro do adapter), mais recursos com executor
+   * próprio já implementado. Não concede posse ou efeito por preferência salva.
    */
-  const hotbarEntries = buildCombatHotbarEntries({
+  const hotbarEntries = [...buildCombatHotbarEntries({
     attacks: characterAttacks,
     inventory: characterInventory,
-  });
+  }), ...(!isMaster ? resourceHotbarEntries(resourceCharacter, myCombatant, isMyTurn) : [])];
   /**
    * PERSONALIZAÇÃO (6.6M.6.3.1): a configuração salva define a POSIÇÃO de cada
    * atalho; sem ela o preenchimento automático continua idêntico ao de antes.
@@ -1181,7 +1206,7 @@ export function CombatTracker({
               slots={actions.slots}
               // Antes da iniciativa os slots são APRESENTAÇÃO: `busy` os desabilita
               // (o miolo ainda recebe véu/desfoque e fica `inert` na dock).
-              busy={busy || awaitingInitiative || dockDeathBlocked}
+              busy={busy || resourceBusy || awaitingInitiative || dockDeathBlocked}
               // Economia do PRÓPRIO turno (vem do servidor): só escurece o que já
               // gastou Ação/Bônus/Reação. Nenhuma cobrança acontece aqui.
               economy={ownTurn && !dockDeathBlocked ? dockEconomy : null}
@@ -1191,6 +1216,7 @@ export function CombatTracker({
               // fecha — sem segundo estado de seleção e sem tocar em nada já
               // enviado ao servidor (a identidade é o `sourceId` do fluxo).
               onSelect={(entry) => {
+                if (entry.kind === 'feature') { void activateResource(entry.sourceId); return; }
                 if (entry.sourceId.startsWith('action:')) { activate(entry); return; }
                 if (entry.sourceId === 'context:opportunity') { document.querySelector<HTMLElement>('.reaction-panel')?.focus(); return; }
                 setHotbarPick((prev) => toggleHotbarPick(prev, entry.sourceId));
@@ -1615,6 +1641,7 @@ export function CombatTracker({
           <CombatGrid
             combat={combat}
             areaAbilityRequest={areaAbilityRequest}
+            breathHotbarRequest={breathHotbarRequest}
             onInspectToken={isMaster ? inspectToken : undefined}
             onEmptyContext={isMaster ? openAddMenu : undefined}
             isMaster={isMaster}
