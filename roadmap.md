@@ -133,7 +133,21 @@
 
 A **sequência abaixo é direcional**, não autorização para antecipar fases. Escolha **uma única microfase** por implementação, verificando antes os contratos reais no GitHub e atualizando o Roadmap compartilhado.
 
-### Prioridade atual — Refinar ataques de oportunidade
+### Prioridade atual — Retomar o motor jogável (27/11/2026)
+
+Por decisão do responsável, novas expansões do Fichário ficam adiadas; manutenção,
+regressões e segurança continuam cabíveis. Priorizar magias e recursos de classe
+e raça dentro e fora de combate, reaproveitando os motores autoritativos.
+A primeira triagem está em `docs/retomada-motor-jogavel.md`: quatro magias reais
+no registro central; recurso/contador não equivale a efeito executado. Próxima
+microentrega proposta: Curar Ferimentos sobre o resolvedor de cura existente;
+depois Retomar o Fôlego e Arma de Sopro, com escopos e provas independentes.
+Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
+detalhar a UI com o responsável quando chegar essa etapa. Nenhuma nova mecânica
+foi implementada ou publicada por esta revisão de prioridades.
+
+### Frente anterior — Ataques de oportunidade
+
 
 | Entrega | Estado | Resumo |
 |---|---|---|
