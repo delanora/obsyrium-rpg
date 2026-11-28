@@ -1,3 +1,4 @@
+import { decideEffectSaveInspiration } from '../effects/save-inspiration.js';
 import { decideRequestedTestInspiration, inspirationDecisionSchema } from './requested-test-inspiration.js';
 import { requestedTestSchema } from '../shared/requested-tests.js';
 import { requestCombatTest, cancelCombatTest } from './requested-tests.service.js';
@@ -132,6 +133,12 @@ combatRouter.post('/:combatId/tests/:requestId/inspiration', authenticate, async
   const parsed = inspirationDecisionSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }); return; }
   res.json(await decideRequestedTestInspiration(actorFrom(req), String(req.params.combatId), String(req.params.requestId), parsed.data));
+});
+
+combatRouter.post('/effect-saves/:pendingId/inspiration', authenticate, async (req, res) => {
+  const parsed = inspirationDecisionSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }); return; }
+  res.json(await decideEffectSaveInspiration({ ...actorFrom(req), displayName: req.user!.displayName }, String(req.params.pendingId), parsed.data));
 });
 
 combatRouter.get('/:combatId/resolution-requests', authenticate, async (req, res) => {

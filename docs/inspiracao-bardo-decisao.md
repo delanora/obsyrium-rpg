@@ -34,3 +34,5 @@ Rollback futuro precisa preservar o reconhecimento de `pending` com resultado pr
 - WIPs e artefatos protegidos conferidos por hashes/diff; nenhum WIP incorporado ao commit. A composição operacional de geografia opcional do espelho foi mantida apenas para validação.
 
 Fixtures próprias em cluster/schema descartáveis, porta 55439, e servidor próprio na porta 3309. Sem dados reais, migration, geração Prisma, publicação ou restart de produção. Roadmaps Git e Drive atualizados. Próxima fatia: integrar os demais resolvedores sem duplicar mecânica nem antecipar a decisão ao d20.
+
+Continuidade: `docs/inspiracao-bardo-salvaguardas-efeito.md` registra a integração seguinte, preservando o escopo e as provas históricas desta entrega.

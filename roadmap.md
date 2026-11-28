@@ -188,15 +188,21 @@ reserva e efeito atômicos. Dado por nível de Bardo, sem acúmulo entre fontes;
 duração pelo motor existente. Corrigido o mínimo de usos por Carisma negativo,
 preservando recursos declarados ilimitados. 55 verificações HTTP/PostgreSQL,
 23 contratos da Hotbar, Chromium desktop/celular e build isolado aprovados.
-Suíte ampla: 604 aprovadas e as duas falhas anteriores CB138/SC14. Consumo do
-dado após o d20, NPCs e concessão fora do grid continuam pendentes/assistidos.
+Suíte ampla: 604 aprovadas e as duas falhas anteriores CB138/SC14. O consumo
+evolui nas entregas abaixo; NPCs e concessão fora do grid seguem assistidos.
 Sem publicação; ver `docs/inspiracao-bardo-concessao.md`.
 Inspiração — consumo em testes solicitados: d20 provisório persistido, decisão
 exclusiva do dono no registro, consumo atômico ou continuação sem gasto. 32
 verificações HTTP/PostgreSQL, regressão da concessão (55), Chromium e build
-isolado aprovados. Sem migration/deploy. Ataques, salvaguardas de magias e testes
-livres continuam pendentes; rollback deve reconhecer as decisões provisórias.
+isolado aprovados. Sem migration/deploy. Os demais resolvedores evoluem abaixo;
+rollback deve reconhecer as decisões provisórias.
 Ver `docs/inspiracao-bardo-decisao.md`.
+Inspiração — salvaguardas de efeito: decisão inicial/repetida integrada ao motor
+existente, com checkpoint persistido, consumo compartilhado e barreira multi-alvo
+preservada. 35 verificações HTTP/PostgreSQL, regressões (32/55), Chromium e builds
+isolados aprovados. Sem schema/migration/deploy. Ataques, salvaguardas de dano,
+concentração e testes livres continuam pendentes. Ver
+`docs/inspiracao-bardo-salvaguardas-efeito.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

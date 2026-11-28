@@ -63,10 +63,11 @@ export function ResolutionCard({
   const [decisionError, setDecisionError] = useState<string | null>(null);
   const decision = card.inspirationDecision;
   async function decide(useInspiration: boolean) {
-    if (decisionFlight.current || !decision?.canDecide || !card.requestedTest) return;
+    if (decisionFlight.current || !decision?.canDecide || (!card.requestedTest && !decision.saveId)) return;
     decisionFlight.current = true; setDecisionBusy(true); setDecisionError(null);
     try {
-      await api(`/api/combat/${decision.combatId}/tests/${card.requestedTest.id}/inspiration`, { method: 'POST', body: { useInspiration, expectedTestVersion: card.requestedTest.version, expectedVersion: decision.characterVersion, operationId: useInspiration ? decisionIds.current.use : decisionIds.current.skip } });
+      const path = decision.saveId ? `/api/combat/effect-saves/${decision.saveId}/inspiration` : `/api/combat/${decision.combatId}/tests/${card.requestedTest!.id}/inspiration`;
+      await api(path, { method: 'POST', body: { useInspiration, expectedTestVersion: decision.version ?? card.requestedTest!.version, expectedVersion: decision.characterVersion, operationId: useInspiration ? decisionIds.current.use : decisionIds.current.skip } });
       notifyResolutionRequestsChanged();
     } catch (error) { setDecisionError(error instanceof Error ? error.message : 'Não foi possível concluir.'); notifyResolutionRequestsChanged(); }
     finally { decisionFlight.current = false; setDecisionBusy(false); }

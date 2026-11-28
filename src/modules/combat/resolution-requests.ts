@@ -1,3 +1,4 @@
+import { saveInspirationCheckpoint } from '../effects/save-inspiration.js';
 import type { InspirationRoll } from './requested-test-inspiration.js';
 import { requestedTestDefinition, type RequestedTestKind } from '../shared/requested-tests.js';
 import { prisma } from '../../config/prisma.js';
@@ -77,7 +78,7 @@ export interface CombatResolutionCountersDto {
 }
 
 export interface CombatResolutionCardDto {
-  inspirationDecision?: { combatId: string; total: number; natural: number; sides: number; characterVersion: number; canDecide: boolean };
+  inspirationDecision?: { saveId?: string; version?: number; combatId: string; total: number; natural: number; sides: number; characterVersion: number; canDecide: boolean };
   requestedTest?: { id: string; version: number; kind: RequestedTestKind; key: string; dc: number };
   /** Id determinístico do card (nunca aleatório: o mesmo pedido tem o mesmo id). */
   id: string;
@@ -279,7 +280,12 @@ export async function resolutionRequestsForCombat(
       actions.push({ kind: 'decline', actor: actor.role === 'MASTER' ? 'master' : 'owner', visibility: null });
     }
 
+    const inspiration = saveInspirationCheckpoint(row.resolutionSnapshot);
+    const owner = inspiration && target.entity.kind === 'character' ? await prisma.character.findUnique({where:{id:target.entity.id},select:{version:true,userId:true}}) : null;
     requests.push({
+      ...(inspiration ? { inspirationDecision: { saveId: row.id, version: inspiration.version, combatId: inspiration.combatId,
+        total: inspiration.roll.total, natural: inspiration.roll.dice.find(d=>d.sides===20&&!d.dropped)?.value ?? 0,
+        sides: inspiration.sides, characterVersion: owner?.version ?? 0, canDecide: owner?.userId === actor.userId } } : {}),
       id: `spell-save:${row.id}`,
       kind: row.creatureAreaUseId ? 'ability-saving-throw' : 'spell-saving-throw',
       status: 'pending',
@@ -290,12 +296,12 @@ export async function resolutionRequestsForCombat(
         ownerUserId: target.ownerUserId,
       },
       title: row.sourceLabel ?? spellDisplayName(spellId) ?? definitionLabel(row.definitionId),
-      shortDescription: prompt,
+      shortDescription: inspiration ? 'D20 rolado — decida sobre a Inspiração antes de aplicar o efeito.' : prompt,
       ability: row.ability as AbilityKey,
       phase: row.phase === 'ongoing' ? 'ongoing' : 'initial',
       optional: row.optional,
       canResolve: true,
-      actions,
+      actions: inspiration ? [] : actions,
       presentation: { tone: 'arcane', icon: 'sparkle' },
       counters: null,
       reference: { pendingId: row.id, entity: target.entity },

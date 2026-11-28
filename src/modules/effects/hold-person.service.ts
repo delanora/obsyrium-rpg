@@ -300,18 +300,22 @@ export async function resolvePendingEffectSave(
   pendingId: string,
   total: number,
   actorName = 'Sistema',
+  transaction?: Prisma.TransactionClient,
 ): Promise<HoldPersonResolution> {
-  const initial = await prisma.pendingEffectSave.findUnique({ where: { id: pendingId } });
+  const initial = await (transaction ?? prisma).pendingEffectSave.findUnique({ where: { id: pendingId } });
   if (!initial) throw new HttpError('Aplicação pendente não encontrada.', 404);
   if (initial.status !== 'pending') return replayedResolution(initial);
 
+  if (!transaction && (initial.resolutionSnapshot as { inspirationSave?: unknown } | null)?.inspirationSave) throw new HttpError('Decida sobre a Inspiração antes de concluir.', 409, 'INSPIRATION_DECISION_PENDING');
   const success = total >= initial.dc;
 
   try {
-    return await prisma.$transaction(async (db) => {
+    const apply = async (db: Prisma.TransactionClient) => {
+      await db.$queryRaw`SELECT id FROM pending_effect_saves WHERE id = ${pendingId} FOR UPDATE`;
       const row = await db.pendingEffectSave.findUnique({ where: { id: pendingId } });
       if (!row) throw new HttpError('Aplicação pendente não encontrada.', 404);
       if (row.status !== 'pending') return replayedResolution(row);
+      if (!transaction && (row.resolutionSnapshot as { inspirationSave?: unknown } | null)?.inspirationSave) throw new HttpError('Decida sobre a Inspiração antes de concluir.',409,'INSPIRATION_DECISION_PENDING');
 
       const caster = await loadEntity(
         { kind: row.casterEntityKind as MechanicalEntity['kind'], id: row.casterEntityId },
@@ -385,8 +389,10 @@ export async function resolvePendingEffectSave(
         label: definitionLabel(row.definitionId),
         dc: row.dc,
       } satisfies HoldPersonResolution;
-    });
+    };
+    return transaction ? await apply(transaction) : await prisma.$transaction(apply);
   } catch (error) {
+    if (transaction) throw error;
     // Entidade removida no meio do caminho: as pendências e o cast são
     // CANCELADOS; nenhum efeito aponta para algo inexistente.
     if (error instanceof HttpError && error.status === 404) {

@@ -3417,7 +3417,7 @@ export interface CombatResolutionActionDto {
 }
 
 export interface CombatResolutionCardDto {
-  inspirationDecision?: { combatId: string; total: number; natural: number; sides: number; characterVersion: number; canDecide: boolean };
+  inspirationDecision?: { saveId?: string; version?: number; combatId: string; total: number; natural: number; sides: number; characterVersion: number; canDecide: boolean };
   requestedTest?: { id: string; version: number; kind: 'skill' | 'ability' | 'save'; key: string; dc: number };
   id: string;
   kind: CombatResolutionKind;

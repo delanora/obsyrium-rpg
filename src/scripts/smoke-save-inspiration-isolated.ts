@@ -1,0 +1,61 @@
+/** Salvaguardas de efeito com Inspiração: cluster/schema descartáveis e fixtures próprias. */
+import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';import {writeFileSync} from 'node:fs';
+import {prisma} from '../config/prisma.js';import {signToken} from '../lib/jwt.js';import {resolvePendingEffectSave} from '../modules/effects/hold-person.service.js';
+const url=new URL(process.env.DATABASE_URL!);assert.equal(url.port,'55439');assert.equal(url.searchParams.get('schema'),'smoke_cure_wounds');
+const sentinel:any[]=await prisma.$queryRawUnsafe("SELECT current_setting('data_directory') AS directory,current_schema() AS schema");assert.equal(sentinel[0].directory,'/tmp/obsyrium-cura-pg');assert.equal(sentinel[0].schema,'smoke_cure_wounds');assert.equal(await prisma.user.count(),0);assert.equal(await prisma.combat.count(),0);
+const users:string[]=[],chars:string[]=[],combats:string[]=[],pendings:string[]=[],casts:string[]=[];let checks=0;const check=(label:string,ok:unknown)=>{assert.ok(ok,label);checks++;};
+try{
+ const make=async(role:'PLAYER'|'MASTER')=>{const user=await prisma.user.create({data:{username:'save_'+randomUUID(),passwordHash:'fixture',displayName:'Save Fixture',role}});users.push(user.id);const c=await prisma.character.create({data:{userId:user.id,name:'Save Fixture',hpCurrent:20,hpMax:20,classes:[{classKey:'fighter',level:1}],wisdom:10}});chars.push(c.id);return{user,c,token:signToken({sub:user.id,username:user.username,displayName:user.displayName,role})};};
+ const owner=await make('PLAYER'),source=await make('MASTER'),stranger=await make('PLAYER');
+ const combat=await prisma.combat.create({data:{status:'ACTIVE',currentIndex:0,round:1,turnSequence:1,combatants:{create:[{kind:'CHARACTER',characterId:owner.c.id,ownerUserId:owner.user.id,name:owner.c.name,initiative:20,dexterityMod:0},{kind:'CHARACTER',characterId:stranger.c.id,ownerUserId:stranger.user.id,name:stranger.c.name,initiative:10,dexterityMod:0}]}},include:{combatants:true}});combats.push(combat.id);
+ const http=async(path:string,body?:unknown,token=owner.token)=>{const r=await fetch('http://127.0.0.1:3309/api'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return{status:r.status,data:await r.json() as any};};
+ const inspire=async(sides=8)=>prisma.effectInstance.create({data:{definitionId:'feature.bardic-inspiration.d'+sides,label:'Inspiração Fixture',sourceType:'feature',sourceId:randomUUID(),sourceEntityKind:'character',sourceEntityId:source.c.id,sourceLabel:source.c.name,targetEntityKind:'character',targetEntityId:owner.c.id,createdBy:source.user.id,visibility:'public',status:'active',modifiers:[],conditions:[],turnTriggers:[]}});
+ const pending=async(dc=100,more:any={})=>{const p=await prisma.pendingEffectSave.create({data:{definitionId:'spell.hold-person',casterEntityKind:'character',casterEntityId:source.c.id,targetEntityKind:'character',targetEntityId:owner.c.id,ability:'wisdom',dc,operationId:randomUUID(),fingerprint:'fixture',createdBy:source.user.id,...more}});pendings.push(p.id);return p;};
+ const body=(p:any)=>({pendingEffectSaveId:p.id,clientId:randomUUID(),dice:[{sides:20}],kind:'save'});
+ const roll=(p:any)=>http('/dice/roll',body(p));
+ const choice=async(use=true)=>({useInspiration:use,expectedTestVersion:1,expectedVersion:(await prisma.character.findUniqueOrThrow({where:{id:owner.c.id}})).version,operationId:randomUUID()});
+ const decide=(p:any,b:unknown,token=owner.token)=>http(`/combat/effect-saves/${p.id}/inspiration`,b,token);
+ const reset=async()=>{await prisma.effectInstance.updateMany({where:{targetEntityId:{in:chars},status:'active'},data:{status:'ended',endedAt:new Date(),endReason:'manual'}});for(const id of chars)await prisma.character.update({where:{id},data:{mechanicalState:{},version:{increment:1}}});};
+ await inspire();const p=await pending();const firstBody=body(p);const first=await http('/dice/roll',firstBody);
+ check('d20 provisório',first.status===201&&first.data.roll.inspirationPending);
+ check('efeito ainda não aplicado',await prisma.effectInstance.count({where:{targetEntityId:owner.c.id,definitionId:'spell.hold-person',status:'active'}})===0);
+ check('pendência permanece aberta',(await prisma.pendingEffectSave.findUniqueOrThrow({where:{id:p.id}})).status==='pending');
+ const again=await http('/dice/roll',firstBody);assert.deepEqual(again.data.roll,first.data.roll);check('retry conserva d20',true);
+ check('mesma chave com payload alterado é recusada',(await http('/dice/roll',{...firstBody,advantage:true})).data.error==='IDEMPOTENCY_KEY_REUSED');
+ check('novo clientId não rerrola',(await roll(p)).status===409);
+ const cards=await http(`/combat/${combat.id}/resolution-requests`);const card=cards.data.requests.find((c:any)=>c.reference.pendingId===p.id);check('card reconstruído após reconexão',card.inspirationDecision.saveId===p.id&&card.inspirationDecision.canDecide&&card.actions.length===0);
+ if(process.env.SAVE_INSPIRATION_CARD_OUTPUT)writeFileSync(process.env.SAVE_INSPIRATION_CARD_OUTPUT,JSON.stringify(card));
+ const request=await choice();check('terceiro não decide',(await decide(p,request,stranger.token)).status===403);check('Mestre não decide',(await decide(p,request,source.token)).status===403);
+ check('valor forjado rejeitado',(await decide(p,{...request,value:8})).status===400);check('versão de ficha obsoleta',(await decide(p,{...request,expectedVersion:999})).status===409);check('versão de decisão obsoleta',(await decide(p,{...request,expectedTestVersion:0})).status===409);
+ await assert.rejects(resolvePendingEffectSave(p.id,999),e=>(e as any).code==='INSPIRATION_DECISION_PENDING');check('resolvedor normal não contorna decisão',true);
+ const final=await decide(p,request);check('decisão aceita',final.status===200&&!final.data.roll.inspirationPending);check('d8 acrescentado sem mudar d20',final.data.roll.total-first.data.roll.total>=1&&final.data.roll.total-first.data.roll.total<=8&&final.data.roll.dice[0].value===first.data.roll.dice[0].value);
+ check('efeito aplicado após decisão',await prisma.effectInstance.count({where:{targetEntityId:owner.c.id,definitionId:'spell.hold-person',status:'active'}})===1);
+ check('dado consumido',await prisma.effectInstance.count({where:{targetEntityId:owner.c.id,endReason:'consumed'}})===1);
+ const retry=await decide(p,request);check('replay sem reaplicar',retry.data.replayed&&retry.data.roll.total===final.data.roll.total);check('chave alterada rejeitada',(await decide(p,{...request,useInspiration:false})).data.error==='IDEMPOTENCY_KEY_REUSED');
+ // Ongoing: SAB não falha automaticamente por paralisia. Sucesso encerra só a origem.
+ const hold=await prisma.effectInstance.findFirstOrThrow({where:{targetEntityId:owner.c.id,definitionId:'spell.hold-person',status:'active'}});await inspire(6);const ongoing=await pending(0,{phase:'ongoing',optional:true,effectInstanceId:hold.id});await roll(ongoing);const continued=await decide(ongoing,await choice(false));
+ check('recusa preserva Inspiração',continued.status===200&&await prisma.effectInstance.count({where:{targetEntityId:owner.c.id,definitionId:'feature.bardic-inspiration.d6',status:'active'}})===1);
+ check('sucesso repetido encerra o efeito',(await prisma.effectInstance.findUniqueOrThrow({where:{id:hold.id}})).endReason==='repeat-save-success');
+ await reset();await inspire();const expired=await pending(0);await roll(expired);await prisma.effectInstance.updateMany({where:{targetEntityId:owner.c.id,status:'active'},data:{status:'ended',endReason:'duration-expired'}});
+ check('expiração não concede dado',(await decide(expired,await choice())).data.error==='INSPIRATION_UNAVAILABLE');check('expirado pode continuar',(await decide(expired,await choice(false))).status===200);
+ await reset();await inspire();const cancelled=await pending();await roll(cancelled);await prisma.pendingEffectSave.update({where:{id:cancelled.id},data:{status:'cancelled'}});check('cancelamento impede consumo',(await decide(cancelled,await choice())).status===409);
+ await reset();await inspire();const raced=await pending(0);await roll(raced);const raceBody=await choice();const race=await Promise.all([decide(raced,raceBody),decide(raced,raceBody)]);check('retry concorrente tem um replay',race.every(r=>r.status===200)&&race.filter(r=>r.data.replayed).length===1);
+ await reset();await inspire();const a=await pending(0),b=await pending(0);await roll(a);await roll(b);const ca=await choice(),cb=await choice();const r=await Promise.all([decide(a,ca),decide(b,cb)]);check('duas pendências disputam um dado',r.filter(x=>x.status===200).length===1&&r.filter(x=>x.status===409).length===1);
+ await reset();const plain=await pending(0);const normal=await http('/dice/roll',{pendingEffectSaveId:plain.id,dice:[{sides:20}],kind:'save'});check('sem inspiração mantém contrato sem clientId',normal.status===201&&!normal.data.roll.inspirationPending);
+ await reset();await inspire();
+ const cast=await prisma.spellCast.create({data:{spellId:'hold-person',casterEntityKind:'character',casterEntityId:source.c.id,requiresConcentration:true,status:'resolving',saveDc:100,operationId:randomUUID(),fingerprint:'fixture',createdBy:source.user.id}});casts.push(cast.id);
+ const multiA=await pending(100,{spellCastId:cast.id}),multiB=await pending(0,{spellCastId:cast.id,targetEntityId:stranger.c.id});
+ await roll(multiA);await http('/dice/roll',body(multiB),stranger.token);
+ check('barreira espera decisão de Inspiração',(await prisma.spellCast.findUniqueOrThrow({where:{id:cast.id}})).status==='resolving');
+ check('sem efeito antes de todos decidirem',await prisma.effectInstance.count({where:{sourceId:'hold-person',status:'active',targetEntityId:{in:chars}}})===0);
+ const multiDone=await decide(multiA,await choice());check('barreira finaliza após decisão',multiDone.status===200&&(await prisma.spellCast.findUniqueOrThrow({where:{id:cast.id}})).status==='resolved');
+ check('apenas falha recebe efeito',await prisma.effectInstance.count({where:{definitionId:'spell.hold-person',status:'active',targetEntityId:owner.c.id}})===1&&await prisma.effectInstance.count({where:{definitionId:'spell.hold-person',status:'active',targetEntityId:stranger.c.id}})===0);
+ check('concentração criada pelo motor existente',!!((await prisma.character.findUniqueOrThrow({where:{id:source.c.id}})).mechanicalState as any).concentration);
+ await reset();const rollbackEffect=await inspire();const badCast=await prisma.spellCast.create({data:{spellId:'fixture-incompativel',casterEntityKind:'character',casterEntityId:source.c.id,status:'resolving',operationId:randomUUID(),fingerprint:'fixture'}});casts.push(badCast.id);const bad=await pending(100,{spellCastId:badCast.id});await roll(bad);const badChoice=await choice();const failed=await decide(bad,badChoice);
+ check('erro de resolução reverte consumo',failed.status===409&&(await prisma.effectInstance.findUniqueOrThrow({where:{id:rollbackEffect.id}})).status==='active');
+ check('erro reverte ficha e preserva pendência',(await prisma.character.findUniqueOrThrow({where:{id:owner.c.id}})).version===badChoice.expectedVersion&&(await prisma.pendingEffectSave.findUniqueOrThrow({where:{id:bad.id}})).status==='pending');
+ await inspire();const ended=await pending();await roll(ended);await prisma.combat.update({where:{id:combat.id},data:{status:'ENDED'}});check('combate encerrado impede decisão',(await decide(ended,await choice())).status===409);
+ console.log(`${checks} verificações de Inspiração em salvaguardas de efeito aprovadas.`);
+}finally{
+ await prisma.pendingEffectSave.deleteMany({where:{id:{in:pendings}}});await prisma.effectInstance.deleteMany({where:{targetEntityId:{in:chars}}});await prisma.spellCast.deleteMany({where:{id:{in:casts}}});await prisma.combat.deleteMany({where:{id:{in:combats}}});await prisma.character.deleteMany({where:{id:{in:chars}}});await prisma.user.deleteMany({where:{id:{in:users}}});assert.equal(await prisma.user.count(),0);assert.equal(await prisma.combat.count(),0);await prisma.$disconnect();
+}

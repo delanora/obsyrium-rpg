@@ -1,3 +1,4 @@
+import { rollInspiredEffectSave } from '../effects/save-inspiration.js';
 import { describeRollModifiers } from './roll-modifier-view.js';
 import { dodgeBenefitForSave, tableRollMode } from './roll-mode.js';
 import { resolveCombatTest } from '../combat/requested-tests.service.js';
@@ -613,7 +614,7 @@ async function pendingCastResolutionKind(pending: {
     : null;
 }
 
-async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput): Promise<DiceRollDto> {
+async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput, previewOnly = false): Promise<DiceRollDto> {
   if (!input.pendingEffectSaveId) {
     throw new HttpError('Informe a salvaguarda pendente.', 400, 'VALIDATION_ERROR');
   }
@@ -621,6 +622,10 @@ async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput): P
     actor,
     input.pendingEffectSaveId,
   );
+  if (!previewOnly && !pending.creatureAreaUseId && (await pendingCastResolutionKind(pending)) !== 'save-damage') {
+    const deferred = await rollInspiredEffectSave(actor, input, () => rollPendingEffectSave(actor, input, true));
+    if (deferred) return deferred;
+  }
   const ability = pending.ability;
   const loaded = await loadEntity(targetEntity);
   // Salvaguarda de criatura/NPC: visibilidade escolhida pelo Mestre AO ROLAR.
@@ -682,6 +687,43 @@ async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput): P
   const kept = dice.reduce((sum, die) => (die.dropped ? sum : sum + die.value), 0);
   const total = mode.autoFail ? 0 : kept + bonus + effectDiceTotal;
 
+  const roll: DiceRollDto = {
+    modifierView: await describeRollModifiers({ entity: targetEntity, ability, kind: 'save', baseBonus, mods: effectMods, mode, state: loaded.state, selected: input.selectedEffectModifiers, cover: coverBonus, dodge }),
+    id: randomUUID(),
+    actorUserId: actor.userId,
+    clientId: input.clientId ?? null,
+    actorName: loaded.name,
+    kind: 'save',
+    ...(mode.autoFail ? { autoFail: true } : {}),
+    // 6.6H: a pendência CONTÍNUA é identificada como "no fim do turno" para a
+    // mesa não confundir com a salvaguarda inicial da mesma magia.
+    label:
+      pending.phase === 'ongoing'
+        ? `${pending.label} — Salvaguarda de ${ABILITY_LABELS[ability]} no fim do turno (CD ${pending.dc})`
+        : `${pending.label} — Salvaguarda de ${ABILITY_LABELS[ability]} (CD ${pending.dc})`,
+    dice,
+    bonus,
+    total,
+    advantage: mode.advantage,
+    disadvantage: mode.disadvantage,
+    ...(effectBonus !== 0 || effectDice.length > 0
+      ? {
+          effectModifiers: {
+            bonus: effectBonus,
+            dice: effectDice.map(({ sides, value, sign, label }) => ({ sides, value, sign, label })),
+            sources: rollModifierSourceLabels(effectMods),
+          },
+        }
+      : {}),
+    isPrivate: privateRoll,
+    ...(privateRoll ? { audience: 'masters' as const } : {}),
+    crit: dice.some((die) => die.sides === 20 && !die.dropped && die.value === 20),
+    lucky: false,
+    at: new Date().toISOString(),
+  };
+
+  if (previewOnly) return roll;
+
   // FASE 6.6I.2: o MESMO pipeline de salvaguarda serve a dois desfechos. A
   // magia declara qual é o dela; nada aqui conhece o nome da spell.
   const resolutionKind = await pendingCastResolutionKind(pending);
@@ -737,40 +779,6 @@ async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput): P
     ...(damageSummary ? { damage: damageSummary } : {}),
   });
 
-  const roll: DiceRollDto = {
-    modifierView: await describeRollModifiers({ entity: targetEntity, ability, kind: 'save', baseBonus, mods: effectMods, mode, state: loaded.state, selected: input.selectedEffectModifiers, cover: coverBonus, dodge }),
-    id: randomUUID(),
-    actorUserId: actor.userId,
-    clientId: input.clientId ?? null,
-    actorName: loaded.name,
-    kind: 'save',
-    ...(mode.autoFail ? { autoFail: true } : {}),
-    // 6.6H: a pendência CONTÍNUA é identificada como "no fim do turno" para a
-    // mesa não confundir com a salvaguarda inicial da mesma magia.
-    label:
-      pending.phase === 'ongoing'
-        ? `${pending.label} — Salvaguarda de ${ABILITY_LABELS[ability]} no fim do turno (CD ${pending.dc})`
-        : `${pending.label} — Salvaguarda de ${ABILITY_LABELS[ability]} (CD ${pending.dc})`,
-    dice,
-    bonus,
-    total,
-    advantage: mode.advantage,
-    disadvantage: mode.disadvantage,
-    ...(effectBonus !== 0 || effectDice.length > 0
-      ? {
-          effectModifiers: {
-            bonus: effectBonus,
-            dice: effectDice.map(({ sides, value, sign, label }) => ({ sides, value, sign, label })),
-            sources: rollModifierSourceLabels(effectMods),
-          },
-        }
-      : {}),
-    isPrivate: privateRoll,
-    ...(privateRoll ? { audience: 'masters' as const } : {}),
-    crit: dice.some((die) => die.sides === 20 && !die.dropped && die.value === 20),
-    lucky: false,
-    at: new Date().toISOString(),
-  };
 
   history = [roll, ...history].slice(0, HISTORY_LIMIT);
   publish(roll, actor);
