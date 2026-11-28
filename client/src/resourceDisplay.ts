@@ -24,7 +24,7 @@ export type ResourceOrigin = 'class' | 'race';
 
 /** Ação real associada ao recurso (quando existe). */
 export interface ResourceAction {
-  kind: 'racial-use' | 'second-wind' | 'action-surge' | 'lay-on-hands';
+  kind: 'racial-use' | 'second-wind' | 'action-surge' | 'lay-on-hands' | 'bardic-inspiration';
   /** Texto do botão (ex.: 'Usar Sopro', 'Marcar uso'). */
   label: string;
 }
@@ -118,7 +118,7 @@ function buildClassResources(character: Character): DisplayedResource[] {
     remaining: resource.remaining,
     unlimited: resource.unlimited,
     rechargeLabel: resource.unlimited ? '' : rechargeLabel(resource.recharge),
-    action: resource.id === 'second-wind' ? { kind: 'second-wind' as const, label: 'Retomar o Fôlego' } : resource.id === 'action-surge' ? { kind: 'action-surge' as const, label: 'Surto de Ação' } : resource.id === 'lay-on-hands' ? { kind: 'lay-on-hands' as const, label: 'Mãos Consagradas' } : null,
+    action: resource.id === 'second-wind' ? { kind: 'second-wind' as const, label: 'Retomar o Fôlego' } : resource.id === 'action-surge' ? { kind: 'action-surge' as const, label: 'Surto de Ação' } : resource.id === 'lay-on-hands' ? { kind: 'lay-on-hands' as const, label: 'Mãos Consagradas' } : resource.id === 'bardic-inspiration' ? { kind: 'bardic-inspiration' as const, label: 'Conceder inspiração' } : null,
   }));
 }
 

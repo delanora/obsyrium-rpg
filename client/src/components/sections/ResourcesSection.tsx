@@ -1,3 +1,4 @@
+import { BardicInspirationDialog } from '../BardicInspirationDialog';
 import { LayOnHandsDialog } from '../LayOnHandsDialog';
 import { useState, type CSSProperties } from 'react';
 import { buildResourceGroups, type DisplayedResource } from '../../resourceDisplay';
@@ -21,6 +22,7 @@ import type { SheetSectionProps } from './common';
  * contador, para não duplicar o mesmo uso em dois lugares.
  */
 interface ResourcesSectionProps extends SheetSectionProps {
+  onBardicInspirationUpdated?: (character: import('../../types').Character) => void;
   onLayOnHandsUpdated?: (character: import('../../types').Character) => void;
   /** Executa a concessão autoritativa de uma Ação adicional. */
   onActionSurge?: (expectedVersion: number) => void | Promise<void>;
@@ -33,7 +35,8 @@ interface ResourcesSectionProps extends SheetSectionProps {
   onRacialUse?: (resourceId: string, expectedVersion: number) => void | Promise<void>;
 }
 
-export function ResourcesSection({ character, onRacialUse, onSecondWind, onActionSurge, onLayOnHandsUpdated }: ResourcesSectionProps) {
+export function ResourcesSection({ character, onRacialUse, onSecondWind, onActionSurge, onLayOnHandsUpdated, onBardicInspirationUpdated }: ResourcesSectionProps) {
+  const [bardicInspirationOpen, setBardicInspirationOpen] = useState(false);
   const [layOnHandsOpen, setLayOnHandsOpen] = useState(false);
   const { readOnly } = useSheetAccess();
   /** Recurso com requisição em andamento (bloqueia o duplo clique). */
@@ -46,7 +49,7 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind, onActio
 
   const hasRaceGroup = groups.some((group) => group.origin === 'race');
 
-  const handlerFor = (resource: DisplayedResource) => resource.action?.kind === 'lay-on-hands' ? () => setLayOnHandsOpen(true) : resource.action?.kind === 'second-wind' ? onSecondWind : resource.action?.kind === 'action-surge' ? onActionSurge : onRacialUse;
+  const handlerFor = (resource: DisplayedResource) => resource.action?.kind === 'bardic-inspiration' ? () => setBardicInspirationOpen(true) : resource.action?.kind === 'lay-on-hands' ? () => setLayOnHandsOpen(true) : resource.action?.kind === 'second-wind' ? onSecondWind : resource.action?.kind === 'action-surge' ? onActionSurge : onRacialUse;
 
   async function requestUse(resource: DisplayedResource): Promise<void> {
     if (pending !== null) return;
@@ -54,7 +57,8 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind, onActio
     setPending(resource.id);
     setError(null);
     try {
-      if (resource.action?.kind === 'lay-on-hands') setLayOnHandsOpen(true);
+      if (resource.action?.kind === 'bardic-inspiration') setBardicInspirationOpen(true);
+      else if (resource.action?.kind === 'lay-on-hands') setLayOnHandsOpen(true);
       else if (resource.action?.kind === 'second-wind') await onSecondWind?.(character.version);
       else if (resource.action?.kind === 'action-surge') await onActionSurge?.(character.version);
       else await onRacialUse?.(resource.id, character.version);
@@ -68,6 +72,7 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind, onActio
   return (
     <Section title="Recursos do Personagem" icon="star" subtitle="Classe e raça">
       <div className="resource-groups">
+        {bardicInspirationOpen ? <BardicInspirationDialog onClose={() => setBardicInspirationOpen(false)} onCharacter={value => onBardicInspirationUpdated?.(value)} /> : null}
         {layOnHandsOpen ? <LayOnHandsDialog onClose={() => setLayOnHandsOpen(false)} onCharacter={value => onLayOnHandsUpdated?.(value)} /> : null}
         {groups.map((group) => (
           <section className="resource-group" key={group.origin}>

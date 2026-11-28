@@ -186,11 +186,13 @@ export function resourceMaxAtLevel(
   } else {
     value = resource.max ?? 0;
   }
+  // Só uma declaração ilimitada usa a sentinela; mod. de atributo −1 não é infinito.
+  const explicitlyUnlimited = value === -1 && resource.abilityMod === undefined;
   if (resource.abilityMod && abilities) {
     value += abilityModifier(abilities[resource.abilityMod]);
   }
   // Piso do recurso (1 + mod. de CAR nunca fica abaixo de 1).
-  if (resource.min !== undefined && value !== -1) value = Math.max(resource.min, value);
+  if (resource.min !== undefined && !explicitlyUnlimited) value = Math.max(resource.min, value);
   return value;
 }
 

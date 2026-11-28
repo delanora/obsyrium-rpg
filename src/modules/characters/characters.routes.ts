@@ -1,3 +1,4 @@
+import { bardicInspirationSchema, bardicInspirationOptions, grantBardicInspiration } from './bardic-inspiration.service.js';
 import { layOnHandsSchema, layOnHandsPurifySchema, layOnHandsOptions, useLayOnHands, purifyWithLayOnHands } from './lay-on-hands.service.js';
 import { actionSurgeSchema, useActionSurge } from './action-surge.service.js';
 import { breathOptionsSchema, breathPreviewSchema, breathUseSchema, breathOptions, previewBreath, useBreath, assertBreathManualUseAllowed } from './dragonborn-breath.service.js';
@@ -328,6 +329,16 @@ charactersRouter.post('/me/breath-weapon/use', authenticate, async (req, res) =>
   const parsed = breathUseSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
   res.json(await useBreath({ ...actorFrom(req), role: req.user!.role }, parsed.data));
+});
+
+/** Concessão da Inspiração: custo e efeito confirmados juntos. */
+charactersRouter.get('/me/features/bardic-inspiration/options', authenticate, async (req, res) => {
+  res.json(await bardicInspirationOptions(actorFrom(req)));
+});
+charactersRouter.post('/me/features/bardic-inspiration/grant', authenticate, async (req, res) => {
+  const parsed = bardicInspirationSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
+  res.json(await grantBardicInspiration(actorFrom(req), parsed.data));
 });
 
 /** Cura variável e reserva são confirmadas pelo servidor. */

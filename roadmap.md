@@ -183,6 +183,14 @@ privados seguem protegidos. 34 verificações HTTP/PostgreSQL, regressões de cu
 e administração (18), 23 contratos e Chromium aprovados. Build isolado; permanecem
 os limites de toque e conteúdo legado. Extensão versionada em `2a8eb37`, com push e remoto confirmados; publicação pendente. Ver
 `docs/maos-consagradas-neutralizacao.md`.
+Inspiração de Bardo: concessão implementada na ficha e Hotbar, com Ação Bônus,
+reserva e efeito atômicos. Dado por nível de Bardo, sem acúmulo entre fontes;
+duração pelo motor existente. Corrigido o mínimo de usos por Carisma negativo,
+preservando recursos declarados ilimitados. 55 verificações HTTP/PostgreSQL,
+23 contratos da Hotbar, Chromium desktop/celular e build isolado aprovados.
+Suíte ampla: 604 aprovadas e as duas falhas anteriores CB138/SC14. Consumo do
+dado após o d20, NPCs e concessão fora do grid continuam pendentes/assistidos.
+Sem publicação; ver `docs/inspiracao-bardo-concessao.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

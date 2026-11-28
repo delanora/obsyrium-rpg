@@ -673,6 +673,7 @@ export function SheetPage({ user }: { user: SessionUser }) {
                   onSecondWind={secondWindAction}
                   onActionSurge={actionSurgeAction}
                   onLayOnHandsUpdated={saved => setCharacter(prev => !prev || saved.version >= prev.version ? saved : prev)}
+                  onBardicInspirationUpdated={saved => setCharacter(prev => !prev || saved.version >= prev.version ? saved : prev)}
                   onFeatureToggle={toggleFeatureAction}
                   onEldritchMaster={eldritchMasterAction}
                   onRacialUse={racialUseAction}

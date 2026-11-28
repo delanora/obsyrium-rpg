@@ -1,3 +1,4 @@
+import { BARDIC_INSPIRATION_DEFINITIONS } from './bardic-inspiration.js';
 import type { Condition } from '../../shared/conditions.js';
 import type { EffectModifier } from '../effect-modifiers.js';
 import {
@@ -42,6 +43,7 @@ export interface EffectDefinition {
 }
 
 export const EFFECT_DEFINITIONS: Record<string, EffectDefinition> = {
+  ...BARDIC_INSPIRATION_DEFINITIONS,
   [BLESS_DEFINITION_ID]: {
     definitionId: BLESS_DEFINITION_ID,
     label: BLESS_LABEL,

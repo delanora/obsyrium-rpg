@@ -1,3 +1,4 @@
+import { BardicInspirationDialog } from '../components/BardicInspirationDialog';
 import { LayOnHandsDialog } from '../components/LayOnHandsDialog';
 import { resourceHotbarEntries, executeHotbarResource } from './resourceHotbar';
 import type { BreathOptions } from './grid/breathWeaponApi';
@@ -325,12 +326,13 @@ export function CombatTracker({
   const [hotbarSaving, setHotbarSaving] = useState(false);
   const [hotbarError, setHotbarError] = useState<string | null>(null);
 
+  const [bardicInspirationOpen, setBardicInspirationOpen] = useState(false);
   const [layOnHandsOpen, setLayOnHandsOpen] = useState(false);
   const [resourceBusy, setResourceBusy] = useState(false);
   const resourceInFlight = useRef(false);
   const [breathHotbarRequest, setBreathHotbarRequest] = useState<(BreathOptions & { requestId: number }) | null>(null);
   const breathRequestSequence = useRef(0);
-  useEffect(() => { setBreathHotbarRequest(null); setLayOnHandsOpen(false); }, [combat.id]);
+  useEffect(() => { setBreathHotbarRequest(null); setLayOnHandsOpen(false); setBardicInspirationOpen(false); }, [combat.id]);
   async function activateResource(sourceId: string) {
     if (resourceInFlight.current || !resourceCharacter || isMaster) return;
     setHotbarPick(null);
@@ -340,6 +342,7 @@ export function CombatTracker({
     setResourceBusy(true);
     try {
       const result = await executeHotbarResource(sourceId, resourceCharacter.version, combat.id);
+      if (result.bardicInspiration) setBardicInspirationOpen(true);
       if (result.layOnHands) setLayOnHandsOpen(true);
       if (result.character) onResourceCharacterUpdated?.(result.character);
       if (result.breath) setBreathHotbarRequest({ ...result.breath, requestId: ++breathRequestSequence.current });
@@ -1464,6 +1467,7 @@ export function CombatTracker({
   if (combat.status === 'PENDING_INITIATIVE') {
     return (
       <section className="combat-panel">
+      {bardicInspirationOpen ? <BardicInspirationDialog onClose={() => setBardicInspirationOpen(false)} onCharacter={value => onResourceCharacterUpdated?.(value)} /> : null}
       {layOnHandsOpen ? <LayOnHandsDialog onClose={() => setLayOnHandsOpen(false)} onCharacter={value => onResourceCharacterUpdated?.(value)} /> : null}
         <CombatIntro combatId={combat.id} />
         {tokenMenu}
@@ -1574,6 +1578,7 @@ export function CombatTracker({
   // --- Combate ativo ----------------------------------------------------------
   return (
     <section className="combat-panel">
+      {bardicInspirationOpen ? <BardicInspirationDialog onClose={() => setBardicInspirationOpen(false)} onCharacter={value => onResourceCharacterUpdated?.(value)} /> : null}
       {layOnHandsOpen ? <LayOnHandsDialog onClose={() => setLayOnHandsOpen(false)} onCharacter={value => onResourceCharacterUpdated?.(value)} /> : null}
       <CombatIntro combatId={combat.id} />
         {tokenMenu}

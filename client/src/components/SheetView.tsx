@@ -58,6 +58,7 @@ interface SheetViewProps {
    * Uso de um recurso RACIAL limitado (5.3E.1): o servidor deriva a posse, o
    * máximo e a recarga. NÃO executa dano/save/magia nesta fase.
    */
+  onBardicInspirationUpdated?: (character: Character) => void;
   onLayOnHandsUpdated?: (character: Character) => void;
   onActionSurge?: (expectedVersion: number) => void | Promise<void>;
   onSecondWind?: (expectedVersion: number) => void | Promise<void>;
@@ -162,6 +163,7 @@ export function SheetView({
   onSecondWind,
   onActionSurge,
   onLayOnHandsUpdated,
+  onBardicInspirationUpdated,
   extraCoins = false,
   exhaustionEnabled = true,
   effectsRefresh = 0,
@@ -226,6 +228,7 @@ export function SheetView({
             onSecondWind={onSecondWind}
             onActionSurge={onActionSurge}
             onLayOnHandsUpdated={onLayOnHandsUpdated}
+            onBardicInspirationUpdated={onBardicInspirationUpdated}
           />
           {/* Ciclo de morte (6.3): 0 PV, Testes contra a Morte, estabilização,
               oferta da Resistência Implacável e "aguardando o Mestre". */}

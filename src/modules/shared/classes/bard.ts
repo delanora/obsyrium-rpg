@@ -44,8 +44,7 @@ const BARD_FEATURES: ClassFeatureDefinition[] = [
       },
     ],
   },
-  // PENDENTE (Fase 5): a inspiração é gasta com uma ação bônus e o dado é
-  // rolado pela criatura inspirada — não há como automatizar isso agora.
+  // Concessão possui executor; consumo do dado após o d20 permanece assistido.
   {
     id: 'jack-of-all-trades',
     name: 'Pau para Toda Obra',

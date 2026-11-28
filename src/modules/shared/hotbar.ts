@@ -21,7 +21,7 @@ import type { Prisma } from '@prisma/client';
 export const HOTBAR_SLOT_COUNT = 48;
 
 /** Categorias de atalho SUPORTADAS hoje. */
-export const HOTBAR_FEATURE_IDS = ['second-wind', 'action-surge', 'breath-weapon', 'lay-on-hands'] as const;
+export const HOTBAR_FEATURE_IDS = ['second-wind', 'action-surge', 'breath-weapon', 'lay-on-hands', 'bardic-inspiration'] as const;
 export type HotbarSlotKind = 'attack' | 'feature';
 
 /** Referência persistida de uma posição da Hotbar. */
