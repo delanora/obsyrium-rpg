@@ -2,7 +2,8 @@
 
 ## Escopo
 
-Implementação local, ainda sem commit/push ou publicação. Curar Ferimentos
+Implementação versionada em `5b7fee97fa0cf889caf33d355523596246a748b0`,
+na main, com push e SHA remoto confirmados. Ainda sem publicação. Curar Ferimentos
 (`fee1dd5`) e Retomar o Fôlego (`acb8dcc`) continuam não publicados.
 
 O Draconato prepara sua área no grid do combate ativo. A definição vem da

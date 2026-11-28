@@ -150,10 +150,10 @@ Retomar o Fôlego implementado e enviado à main (`acb8dcc`): cura, uso e Ação
 pela ficha, 20 verificações HTTP/PostgreSQL isoladas e Chromium desktop/celular.
 Build frontend/backend isolado aprovado; push e sincronização remota confirmados.
 Sem deploy/restart; aguarda publicação autorizada. Ver `docs/retomar-folego-motor.md`.
-Arma de Sopro implementada localmente: área no grid, CD, salvaguardas, dano e uso
+Arma de Sopro implementada e enviada à main (`5b7fee9`): área no grid, CD, salvaguardas, dano e uso
 racial autoritativos; 85 casos puros, 24 verificações HTTP/PostgreSQL, 28 regressões
 de áreas e Chromium com API simulada aprovados. Fora de combate permanece assistida.
-Aguarda commit/push e publicação; ver `docs/arma-sopro-motor.md`.
+Push e SHA remoto confirmados; aguarda publicação autorizada. Ver `docs/arma-sopro-motor.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.
