@@ -118,6 +118,8 @@ export interface DeathSavePresentation {
 }
 
 export interface DiceRollDto {
+  /** D20 provisório: aguarda decisão antes de concluir o teste. */
+  inspirationPending?: boolean;
   modifierView?: import('../shared/roll-modifier-view.js').RollModifierView;
   deathSaveState?: { before: DeathSavePresentation; after: DeathSavePresentation };
   /** Falha automática de salvaguarda; não houve rolagem. */

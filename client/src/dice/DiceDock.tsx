@@ -216,6 +216,10 @@ export function DiceDock({ roller }: DiceDockProps) {
                     <div className={result.crit ? 'dice-total is-crit' : 'dice-total'}>
                       <span className="dice-total-value">{result.autoFail ? 'Falha automática' : result.total}</span>
                       <span className="dice-total-detail">{resultBreakdown(result)}</span>
+                      {result.inspirationPending ? <>
+                        <span className="dice-total-detail">Total provisório — decida sobre a Inspiração no registro de combate.</span>
+                        <button className="btn btn-small" onClick={close}>Continuar no registro</button>
+                      </> : null}
                       <span className="dice-total-tags">
                         {result.advantage ? <em>vantagem</em> : null}
                         {result.disadvantage ? <em>desvantagem</em> : null}

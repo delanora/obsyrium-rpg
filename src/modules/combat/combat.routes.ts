@@ -1,3 +1,4 @@
+import { decideRequestedTestInspiration, inspirationDecisionSchema } from './requested-test-inspiration.js';
 import { requestedTestSchema } from '../shared/requested-tests.js';
 import { requestCombatTest, cancelCombatTest } from './requested-tests.service.js';
 import { legendaryUseSchema, legendaryPassSchema, legendarySurpriseSchema } from './combat.schema.js';
@@ -125,6 +126,12 @@ combatRouter.post('/:combatId/tests/:requestId/cancel', authenticate, requireRol
   const parsed = combatOperationSchema.pick({ expectedVersion: true, operationId: true }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }); return; }
   res.json(await cancelCombatTest(actorFrom(req), String(req.params.combatId), String(req.params.requestId), parsed.data));
+});
+
+combatRouter.post('/:combatId/tests/:requestId/inspiration', authenticate, async (req, res) => {
+  const parsed = inspirationDecisionSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.issues }); return; }
+  res.json(await decideRequestedTestInspiration(actorFrom(req), String(req.params.combatId), String(req.params.requestId), parsed.data));
 });
 
 combatRouter.get('/:combatId/resolution-requests', authenticate, async (req, res) => {

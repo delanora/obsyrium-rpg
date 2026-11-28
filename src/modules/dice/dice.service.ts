@@ -780,7 +780,7 @@ async function rollPendingEffectSave(actor: DiceActor, input: TableRollInput): P
 export async function rollTableDice(actor: DiceActor, input: TableRollInput, deferPublication = false): Promise<DiceRollDto> {
   if (input.pendingCombatTestId) {
     const outcome = await resolveCombatTest(actor, input, canonical => rollTableDice(actor, canonical, true));
-    if (!outcome.replayed) { history = [outcome.roll, ...history].slice(0, HISTORY_LIMIT); publish(outcome.roll, actor); }
+    if (!outcome.replayed && !outcome.roll.inspirationPending) { history = [outcome.roll, ...history].slice(0, HISTORY_LIMIT); publish(outcome.roll, actor); }
     return outcome.roll;
   }
   const kind: DiceRollKind = input.kind ?? 'free';
@@ -1073,4 +1073,9 @@ export function recordHealingRoll(
   publish(roll, actor);
 
   return roll;
+}
+
+/** Publicação somente após a decisão persistida; não rola dados nem resolve testes. */
+export function publishFinalRequestedRoll(roll: DiceRollDto): void {
+  history = [roll, ...history].slice(0, HISTORY_LIMIT); publish(roll, { userId: roll.actorUserId });
 }

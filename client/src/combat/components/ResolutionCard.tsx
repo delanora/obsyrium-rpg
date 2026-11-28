@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { createOperationId } from '../../utils';
+import { notifyResolutionRequestsChanged } from '../resolutionApi';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api';
 import { Icon } from '../../components/Icon';
 import type {
@@ -55,6 +57,20 @@ export function ResolutionCard({
   onRollDeath,
   publicOnly = false,
 }: ResolutionCardProps) {
+  const decisionFlight = useRef(false);
+  const decisionIds = useRef({ use: createOperationId(), skip: createOperationId() });
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const decision = card.inspirationDecision;
+  async function decide(useInspiration: boolean) {
+    if (decisionFlight.current || !decision?.canDecide || !card.requestedTest) return;
+    decisionFlight.current = true; setDecisionBusy(true); setDecisionError(null);
+    try {
+      await api(`/api/combat/${decision.combatId}/tests/${card.requestedTest.id}/inspiration`, { method: 'POST', body: { useInspiration, expectedTestVersion: card.requestedTest.version, expectedVersion: decision.characterVersion, operationId: useInspiration ? decisionIds.current.use : decisionIds.current.skip } });
+      notifyResolutionRequestsChanged();
+    } catch (error) { setDecisionError(error instanceof Error ? error.message : 'Não foi possível concluir.'); notifyResolutionRequestsChanged(); }
+    finally { decisionFlight.current = false; setDecisionBusy(false); }
+  }
   const [options, setOptions] = useState<EffectOptionalModifierDto[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
 
@@ -67,7 +83,7 @@ export function ResolutionCard({
   useEffect(() => {
     let live = true;
     setSelected([]);
-    if (!isSpell || !entity || !ability) {
+    if (decision || !isSpell || !entity || !ability) {
       setOptions([]);
       return () => {
         live = false;
@@ -86,7 +102,7 @@ export function ResolutionCard({
     return () => {
       live = false;
     };
-  }, [isSpell, entity?.kind, entity?.id, ability, card.id]);
+  }, [!!decision, isSpell, entity?.kind, entity?.id, ability, card.id]);
 
   const rollActions = card.actions.filter((action) => action.kind === 'roll' && (!publicOnly || action.visibility !== 'private'));
   const canDecline = card.actions.some((action) => action.kind === 'decline');
@@ -149,6 +165,14 @@ export function ResolutionCard({
         </div>
       ) : null}
 
+      {decision ? <div className="resolution-card-options">
+        <p>D20: {decision.natural} · Total provisório: {decision.total}</p>
+        {decision.canDecide ? <>
+          <button className="btn btn-small" disabled={decisionBusy || busy} onClick={() => void decide(true)}>Usar Inspiração d{decision.sides}</button>{' '}
+          <button className="btn btn-small" disabled={decisionBusy || busy} onClick={() => void decide(false)}>Continuar sem usar</button>
+        </> : <p>Aguardando o jogador decidir.</p>}
+        {decisionError ? <p role="alert">{decisionError}</p> : null}
+      </div> : null}
       <div className="resolution-card-actions">
         {isSpell
           ? rollActions.map((action) => (

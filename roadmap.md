@@ -191,6 +191,12 @@ preservando recursos declarados ilimitados. 55 verificações HTTP/PostgreSQL,
 Suíte ampla: 604 aprovadas e as duas falhas anteriores CB138/SC14. Consumo do
 dado após o d20, NPCs e concessão fora do grid continuam pendentes/assistidos.
 Sem publicação; ver `docs/inspiracao-bardo-concessao.md`.
+Inspiração — consumo em testes solicitados: d20 provisório persistido, decisão
+exclusiva do dono no registro, consumo atômico ou continuação sem gasto. 32
+verificações HTTP/PostgreSQL, regressão da concessão (55), Chromium e build
+isolado aprovados. Sem migration/deploy. Ataques, salvaguardas de magias e testes
+livres continuam pendentes; rollback deve reconhecer as decisões provisórias.
+Ver `docs/inspiracao-bardo-decisao.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

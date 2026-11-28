@@ -1,3 +1,4 @@
+import { BARDIC_INSPIRATION_IDS } from '../effects/definitions/bardic-inspiration.js';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma.js';
@@ -54,11 +55,11 @@ export async function resolveCombatTest(
     const unit = request.combatant;
     const owner = unit.character?.userId ?? unit.ownerUserId;
     if (actor.role !== 'MASTER' && (!unit.character || owner !== actor.userId)) throw new HttpError('Este teste pertence a outro participante.', 403, 'FORBIDDEN');
-    if (request.status === 'resolved' && request.resolutionFingerprint === fingerprint && request.result)
+    if ((request.status === 'resolved' || request.status === 'pending') && request.resolutionFingerprint === fingerprint && request.result)
       return { roll: request.result as unknown as DiceRollDto, replayed: true };
-    if (request.status === 'resolved' && (request.result as unknown as DiceRollDto | null)?.clientId === input.clientId)
+    if (request.result && (request.result as unknown as DiceRollDto).clientId === input.clientId)
       throw new HttpError('Chave de rolagem reutilizada com outro payload.', 409, 'IDEMPOTENCY_KEY_REUSED');
-    if (request.status !== 'pending' || request.version !== input.expectedTestVersion || request.combat.status === 'ENDED')
+    if (request.result || request.status !== 'pending' || request.version !== input.expectedTestVersion || request.combat.status === 'ENDED')
       throw new HttpError('Solicitação já resolvida, cancelada ou desatualizada.', 409, 'CONFLICT');
     const definition = requestedTestDefinition(request.kind as RequestedTestKind, request.key);
     if (!definition) throw new HttpError('Teste inválido.', 409);
@@ -78,6 +79,20 @@ export async function resolveCombatTest(
       pendingConcentrationSaveId: undefined, entity, ability: definition.ability,
       kind: request.kind === 'save' ? 'save' : 'skill', skillKey: request.kind === 'skill' ? request.key : undefined, toolKey: undefined, dice: [{ sides: 20 }], bonus,
       private: privateRoll, label: `${definition.label} — CD ${request.dc}` });
+    // A rolagem fica persistida, sem decidir sucesso nem permitir um segundo d20.
+    const inspiration = unit.character && !result.autoFail && !result.isPrivate ? await db.effectInstance.findFirst({ where: {
+      targetEntityKind: 'character', targetEntityId: unit.character.id, status: 'active',
+      definitionId: { in: [...BARDIC_INSPIRATION_IDS] },
+    }, orderBy: { createdAt: 'asc' } }) : null;
+    if (inspiration) {
+      const snapshot = { ...result, inspirationPending: true, inspiration: {
+        effectId: inspiration.id, sides: Number(inspiration.definitionId!.split('.d')[1]),
+      } };
+      await db.combatTestRequest.update({ where: { id: request.id }, data: { version: { increment: 1 },
+        resolutionFingerprint: fingerprint, result: snapshot as unknown as Prisma.InputJsonValue } });
+      await db.combat.update({ where: { id: request.combatId }, data: { version: { increment: 1 } } });
+      return { roll: snapshot, replayed: false };
+    }
     await db.combatTestRequest.update({ where: { id: request.id }, data: { status: 'resolved', version: { increment: 1 }, resolutionFingerprint: fingerprint, result: result as unknown as Prisma.InputJsonValue } });
     await appendCombatJournal({ combatId: request.combatId, actorName: unit.name,
       message: `${definition.label}: ${result.total} vs CD ${request.dc} → ${!result.autoFail && result.total >= request.dc ? 'SUCESSO' : 'FALHA'}.`, action: 'requested-test', private: privateRoll }, db);

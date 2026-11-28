@@ -1,3 +1,4 @@
+import type { InspirationRoll } from './requested-test-inspiration.js';
 import { requestedTestDefinition, type RequestedTestKind } from '../shared/requested-tests.js';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../lib/http-error.js';
@@ -76,6 +77,7 @@ export interface CombatResolutionCountersDto {
 }
 
 export interface CombatResolutionCardDto {
+  inspirationDecision?: { combatId: string; total: number; natural: number; sides: number; characterVersion: number; canDecide: boolean };
   requestedTest?: { id: string; version: number; kind: RequestedTestKind; key: string; dc: number };
   /** Id determinístico do card (nunca aleatório: o mesmo pedido tem o mesmo id). */
   id: string;
@@ -353,11 +355,17 @@ export async function resolutionRequestsForCombat(
     const definition = requestedTestDefinition(request.kind as RequestedTestKind, request.key);
     if (!target || !definition) continue;
     const isCharacter = target.entity.kind === 'character';
-    requests.push({ id: `requested-test:${request.id}`, kind: 'requested-test', status: 'pending',
+    const pending = request.result as unknown as InspirationRoll | null;
+    const choice = pending?.inspirationPending && pending.inspiration;
+    const owner = isCharacter ? await prisma.character.findUnique({ where: { id: target.entity.id }, select: { version: true, userId: true } }) : null;
+    const canDecide = !!owner && owner.userId === actor.userId;
+    requests.push({ ...(choice ? { inspirationDecision: { combatId, total: pending!.total,
+      natural: pending!.dice.find(d => d.sides === 20 && !d.dropped)?.value ?? 0,
+      sides: choice.sides, characterVersion: owner?.version ?? 0, canDecide } } : {}), id: `requested-test:${request.id}`, kind: 'requested-test', status: 'pending',
       target: { ...target.entity, name: target.name, ownerUserId: target.ownerUserId },
-      title: definition.label, shortDescription: `Solicitado pelo Mestre — CD ${request.dc}`,
+      title: definition.label, shortDescription: choice ? 'D20 rolado — aguardando decisão de Inspiração antes de concluir.' : `Solicitado pelo Mestre — CD ${request.dc}`,
       ability: definition.ability, phase: null, optional: false, canResolve: true,
-      actions: [ { kind: 'roll', actor: actor.role === 'MASTER' ? 'master' : 'owner', visibility: isCharacter ? null : 'public' },
+      actions: choice ? (actor.role === 'MASTER' ? [{ kind: 'decline', actor: 'master', visibility: null }] : []) : [ { kind: 'roll', actor: actor.role === 'MASTER' ? 'master' : 'owner', visibility: isCharacter ? null : 'public' },
         ...(actor.role === 'MASTER' && !isCharacter ? [{ kind: 'roll' as const, actor: 'master' as const, visibility: 'private' as const }] : []),
         ...(actor.role === 'MASTER' ? [{ kind: 'decline' as const, actor: 'master' as const, visibility: null }] : []) ],
       presentation: { tone: 'arcane', icon: 'sparkle' }, counters: null,

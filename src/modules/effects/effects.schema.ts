@@ -43,6 +43,7 @@ export type EffectVisibility = z.infer<typeof effectVisibilitySchema>;
  * e NUNCA decide como a limpeza é feita.
  */
 export const effectEndReasonSchema = z.enum([
+  'consumed',
   'manual',
   'group',
   'concentration',

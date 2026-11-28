@@ -2985,6 +2985,8 @@ export interface DeathSavePresentation {
 }
 
 export interface DiceRollDto {
+  /** D20 provisório: aguarda decisão antes de concluir o teste. */
+  inspirationPending?: boolean;
   modifierView?: import('../../src/modules/shared/roll-modifier-view').RollModifierView;
   deathSaveState?: { before: DeathSavePresentation; after: DeathSavePresentation };
   autoFail?: boolean;
@@ -3270,6 +3272,7 @@ export type EffectSourceType = 'manual' | 'spell' | 'feature' | 'item' | 'condit
 export type EffectStatus = 'active' | 'ended';
 export type EffectVisibility = 'public' | 'private';
 export type EffectEndReason =
+  | 'consumed'
   | 'manual'
   | 'group'
   | 'concentration'
@@ -3414,6 +3417,7 @@ export interface CombatResolutionActionDto {
 }
 
 export interface CombatResolutionCardDto {
+  inspirationDecision?: { combatId: string; total: number; natural: number; sides: number; characterVersion: number; canDecide: boolean };
   requestedTest?: { id: string; version: number; kind: 'skill' | 'ability' | 'save'; key: string; dc: number };
   id: string;
   kind: CombatResolutionKind;

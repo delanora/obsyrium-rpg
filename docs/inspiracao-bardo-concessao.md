@@ -34,3 +34,5 @@ Nenhum dado real foi utilizado como fixture. Cluster próprio na porta 55439 e s
 ## Próximo passo
 
 Conectar o consumo ao momento correto de ataque, teste e salvaguarda. Não antecipar um bônus antes da rolagem nem duplicar os motores existentes. Atualizações registradas no roadmap Git e na aba Roadmap do Codex do Aventureiro.
+
+Atualização: o consumo em testes solicitados pelo Mestre está descrito em `docs/inspiracao-bardo-decisao.md`. Os demais resolvedores continuam pendentes; o escopo e a validação acima preservam o histórico desta primeira entrega.
