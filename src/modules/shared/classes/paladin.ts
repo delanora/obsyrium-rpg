@@ -46,7 +46,7 @@ const PALADIN_FEATURES: ClassFeatureDefinition[] = [
       },
     },
   },
-  // PENDENTE (Fase 5): gastar pontos da reserva de cura é uma ação no turno.
+  // Cura variável possui executor; doenças/venenos continuam assistidos.
   {
     id: 'lay-on-hands',
     name: 'Mãos Consagradas',

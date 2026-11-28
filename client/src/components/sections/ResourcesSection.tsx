@@ -1,3 +1,4 @@
+import { LayOnHandsDialog } from '../LayOnHandsDialog';
 import { useState, type CSSProperties } from 'react';
 import { buildResourceGroups, type DisplayedResource } from '../../resourceDisplay';
 import { useSheetAccess } from '../../readonly';
@@ -20,6 +21,7 @@ import type { SheetSectionProps } from './common';
  * contador, para não duplicar o mesmo uso em dois lugares.
  */
 interface ResourcesSectionProps extends SheetSectionProps {
+  onLayOnHandsUpdated?: (character: import('../../types').Character) => void;
   /** Executa a concessão autoritativa de uma Ação adicional. */
   onActionSurge?: (expectedVersion: number) => void | Promise<void>;
   /** Executa Retomar o Fôlego; cura e custo são exclusivos do servidor. */
@@ -31,7 +33,8 @@ interface ResourcesSectionProps extends SheetSectionProps {
   onRacialUse?: (resourceId: string, expectedVersion: number) => void | Promise<void>;
 }
 
-export function ResourcesSection({ character, onRacialUse, onSecondWind, onActionSurge }: ResourcesSectionProps) {
+export function ResourcesSection({ character, onRacialUse, onSecondWind, onActionSurge, onLayOnHandsUpdated }: ResourcesSectionProps) {
+  const [layOnHandsOpen, setLayOnHandsOpen] = useState(false);
   const { readOnly } = useSheetAccess();
   /** Recurso com requisição em andamento (bloqueia o duplo clique). */
   const [pending, setPending] = useState<string | null>(null);
@@ -43,7 +46,7 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind, onActio
 
   const hasRaceGroup = groups.some((group) => group.origin === 'race');
 
-  const handlerFor = (resource: DisplayedResource) => resource.action?.kind === 'second-wind' ? onSecondWind : resource.action?.kind === 'action-surge' ? onActionSurge : onRacialUse;
+  const handlerFor = (resource: DisplayedResource) => resource.action?.kind === 'lay-on-hands' ? () => setLayOnHandsOpen(true) : resource.action?.kind === 'second-wind' ? onSecondWind : resource.action?.kind === 'action-surge' ? onActionSurge : onRacialUse;
 
   async function requestUse(resource: DisplayedResource): Promise<void> {
     if (pending !== null) return;
@@ -51,7 +54,8 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind, onActio
     setPending(resource.id);
     setError(null);
     try {
-      if (resource.action?.kind === 'second-wind') await onSecondWind?.(character.version);
+      if (resource.action?.kind === 'lay-on-hands') setLayOnHandsOpen(true);
+      else if (resource.action?.kind === 'second-wind') await onSecondWind?.(character.version);
       else if (resource.action?.kind === 'action-surge') await onActionSurge?.(character.version);
       else await onRacialUse?.(resource.id, character.version);
     } catch (err) {
@@ -64,6 +68,7 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind, onActio
   return (
     <Section title="Recursos do Personagem" icon="star" subtitle="Classe e raça">
       <div className="resource-groups">
+        {layOnHandsOpen ? <LayOnHandsDialog onClose={() => setLayOnHandsOpen(false)} onCharacter={value => onLayOnHandsUpdated?.(value)} /> : null}
         {groups.map((group) => (
           <section className="resource-group" key={group.origin}>
             {/* Hierarquia por título/divisor leve — sem caixa dentro de caixa. */}

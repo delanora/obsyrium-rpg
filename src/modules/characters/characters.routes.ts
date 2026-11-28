@@ -1,3 +1,4 @@
+import { layOnHandsSchema, layOnHandsOptions, useLayOnHands } from './lay-on-hands.service.js';
 import { actionSurgeSchema, useActionSurge } from './action-surge.service.js';
 import { breathOptionsSchema, breathPreviewSchema, breathUseSchema, breathOptions, previewBreath, useBreath, assertBreathManualUseAllowed } from './dragonborn-breath.service.js';
 import { secondWindSchema, useSecondWind } from './second-wind.service.js';
@@ -327,6 +328,16 @@ charactersRouter.post('/me/breath-weapon/use', authenticate, async (req, res) =>
   const parsed = breathUseSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
   res.json(await useBreath({ ...actorFrom(req), role: req.user!.role }, parsed.data));
+});
+
+/** Cura variável e reserva são confirmadas pelo servidor. */
+charactersRouter.get('/me/features/lay-on-hands/options', authenticate, async (req, res) => {
+  res.json(await layOnHandsOptions({ ...actorFrom(req), role: req.user!.role }));
+});
+charactersRouter.post('/me/features/lay-on-hands/heal', authenticate, async (req, res) => {
+  const parsed = layOnHandsSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
+  res.json(await useLayOnHands({ ...actorFrom(req), role: req.user!.role }, parsed.data));
 });
 
 /** Uso e concessão da Ação adicional são atômicos no servidor. */

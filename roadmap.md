@@ -157,14 +157,20 @@ Push e SHA remoto confirmados; aguarda publicação autorizada. Ver `docs/arma-s
 Surto de Ação implementado e validado: gasto e Ação extra atômicos, uma vez por
 turno, saldo derivado do nível de Guerreiro e botão na ficha. Passaram 24 provas
 HTTP/PostgreSQL, incluindo duas magias de Ação, e Chromium desktop/celular.
-Sem deploy; ver `docs/surto-acao-motor.md`. Mãos Consagradas e Inspiração seguem
-como próximas candidatas, com escopos independentes.
+Sem deploy; ver `docs/surto-acao-motor.md`. Inspiração segue como candidata,
+com escopo independente.
 Recursos na Hotbar: Retomar o Fôlego, Surto e Sopro entram automaticamente sem
 layout salvo; com personalização ficam em “Ver todas”/editor, preservando posições
 e vazios. Reutilizam executores existentes e a área do grid. 21 contratos, 18
 verificações HTTP/PostgreSQL e Chromium com API simulada aprovados. Build isolado;
 sem publicação. A suíte ampla mantém duas falhas anteriores reproduzidas na base
 (CB138/SC14); ver `docs/recursos-hotbar.md`.
+Mãos Consagradas: primeira entrega de cura variável, com reserva, toque e Ação
+atômicos, diálogo na ficha e Hotbar. 36 verificações HTTP/PostgreSQL, 24 regressões
+de Surto, 22 contratos da Hotbar e Chromium aprovados; build isolado. Fora de combate,
+autoalvo; terceiros sem geometria confiável permanecem assistidos. Doenças/venenos
+não automatizados. Commit/push autorizados em 28/11/2026; sem publicação.
+Ver `docs/maos-consagradas-cura.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

@@ -58,6 +58,7 @@ interface SheetViewProps {
    * Uso de um recurso RACIAL limitado (5.3E.1): o servidor deriva a posse, o
    * máximo e a recarga. NÃO executa dano/save/magia nesta fase.
    */
+  onLayOnHandsUpdated?: (character: Character) => void;
   onActionSurge?: (expectedVersion: number) => void | Promise<void>;
   onSecondWind?: (expectedVersion: number) => void | Promise<void>;
   onRacialUse?: (resourceId: string, expectedVersion: number) => void | Promise<void>;
@@ -160,6 +161,7 @@ export function SheetView({
   onRacialUse,
   onSecondWind,
   onActionSurge,
+  onLayOnHandsUpdated,
   extraCoins = false,
   exhaustionEnabled = true,
   effectsRefresh = 0,
@@ -223,6 +225,7 @@ export function SheetView({
             onRacialUse={onRacialUse}
             onSecondWind={onSecondWind}
             onActionSurge={onActionSurge}
+            onLayOnHandsUpdated={onLayOnHandsUpdated}
           />
           {/* Ciclo de morte (6.3): 0 PV, Testes contra a Morte, estabilização,
               oferta da Resistência Implacável e "aguardando o Mestre". */}

@@ -18082,3 +18082,6 @@ body:has(.app-shell.has-ongoing-combat) .roll-log-fab:is(:hover, :focus-visible)
 
 /* Preparação local do Sopro: a geometria e os atingidos pertencem ao servidor. */
 .grid-breath-control { position: absolute; right: .5rem; bottom: .5rem; z-index: 6; }
+
+/* Escolha variável da reserva, compartilhada pela ficha e Hotbar. */
+.lay-on-hands-fields { display: grid; gap: var(--space-2); }

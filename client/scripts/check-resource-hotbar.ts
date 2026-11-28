@@ -33,7 +33,7 @@ character.hpCurrent=0;check('zero PV bloqueia',resourceHotbarEntries(character,o
 const collision=resolveHotbarSlots({entries:resourceHotbarEntries(character,own,true),attacks:[],layout:[{kind:'attack',sourceId:'action-surge'}]});check('referência de ataque não executa recurso homônimo',collision[0].state==='missing');
 const e:any={kind:'feature',cost:'action',sourceId:'breath-weapon'};
 check('ataque extra pendente não autoriza sopro sem ação',hotbarSlotSpent({entry:e} as any,{...economy,actionsUsed:1,attackAction:{attacksMade:1,attacksAllowed:2}}));
-for(const id of ['second-wind','action-surge','breath-weapon'])check('referência permitida no schema e parser',!!parseHotbarRef({kind:'feature',sourceId:id})&&hotbarSlotRefSchema.safeParse({kind:'feature',sourceId:id}).success);
+for(const id of ['second-wind','action-surge','breath-weapon','lay-on-hands'])check('referência permitida no schema e parser',!!parseHotbarRef({kind:'feature',sourceId:id})&&hotbarSlotRefSchema.safeParse({kind:'feature',sourceId:id}).success);
 check('recurso desconhecido é recusado',!parseHotbarRef({kind:'feature',sourceId:'inventado'})&&!hotbarSlotRefSchema.safeParse({kind:'feature',sourceId:'inventado'}).success);
 check('categorias diferentes não colidem',dedupeHotbarSlots([{kind:'attack',sourceId:'action-surge'},{kind:'feature',sourceId:'action-surge'}]).filter(Boolean).length===2);
 check('roundtrip automático preserva tipo',layoutOfSlots(auto)[0]?.kind==='feature');
