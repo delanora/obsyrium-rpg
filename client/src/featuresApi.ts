@@ -125,3 +125,16 @@ export async function toggleFeature(
     body: { toggleId, active, expectedVersion },
   });
 }
+
+/** Cura e gasto são atômicos no servidor; o cliente não envia dado nem nível. */
+export function useSecondWind(expectedVersion: number): Promise<{
+  character: Character;
+  roll: { dice: number; bonus: number; total: number };
+  healed: number;
+  remaining: number;
+  replayed: boolean;
+}> {
+  return api('/api/characters/me/features/second-wind', {
+    method: 'POST', body: { expectedVersion, operationId: newId() },
+  });
+}

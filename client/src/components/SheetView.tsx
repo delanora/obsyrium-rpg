@@ -58,6 +58,7 @@ interface SheetViewProps {
    * Uso de um recurso RACIAL limitado (5.3E.1): o servidor deriva a posse, o
    * máximo e a recarga. NÃO executa dano/save/magia nesta fase.
    */
+  onSecondWind?: (expectedVersion: number) => void | Promise<void>;
   onRacialUse?: (resourceId: string, expectedVersion: number) => void | Promise<void>;
   /**
    * Abre a janela de dados com o d20 do Teste contra a Morte (Fase 6.3). O
@@ -156,6 +157,7 @@ export function SheetView({
   onFeatureToggle,
   onEldritchMaster,
   onRacialUse,
+  onSecondWind,
   extraCoins = false,
   exhaustionEnabled = true,
   effectsRefresh = 0,
@@ -217,6 +219,7 @@ export function SheetView({
             character={character}
             update={update}
             onRacialUse={onRacialUse}
+            onSecondWind={onSecondWind}
           />
           {/* Ciclo de morte (6.3): 0 PV, Testes contra a Morte, estabilização,
               oferta da Resistência Implacável e "aguardando o Mestre". */}

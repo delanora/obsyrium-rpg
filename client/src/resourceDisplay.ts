@@ -24,7 +24,7 @@ export type ResourceOrigin = 'class' | 'race';
 
 /** Ação real associada ao recurso (quando existe). */
 export interface ResourceAction {
-  kind: 'racial-use';
+  kind: 'racial-use' | 'second-wind';
   /** Texto do botão (ex.: 'Usar Sopro', 'Marcar uso'). */
   label: string;
 }
@@ -118,7 +118,7 @@ function buildClassResources(character: Character): DisplayedResource[] {
     remaining: resource.remaining,
     unlimited: resource.unlimited,
     rechargeLabel: resource.unlimited ? '' : rechargeLabel(resource.recharge),
-    action: null,
+    action: resource.id === 'second-wind' ? { kind: 'second-wind' as const, label: 'Retomar o Fôlego' } : null,
   }));
 }
 

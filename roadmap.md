@@ -146,8 +146,11 @@ Palavra Curativa e build backend isolado aprovado na composição operacional.
 Commit funcional `fee1dd53b41bf3e475813086002c71b7bc3704c5`, enviado e confirmado
 em main/origin/main. Ainda não publicados; ver `docs/curar-ferimentos-motor.md`.
 Registro sincronizado com a aba Roadmap do Codex do Aventureiro em 27/11/2026.
-Depois, Retomar o
-Fôlego e Arma de Sopro, com escopos e provas independentes.
+Retomar o Fôlego implementado localmente: cura, uso e Ação Bônus atômicos, acesso
+pela ficha, 20 verificações HTTP/PostgreSQL isoladas e Chromium desktop/celular.
+Build frontend/backend isolado aprovado; aguarda commit/push e publicação
+autorizados. Ver `docs/retomar-folego-motor.md`. Próxima microetapa: Arma de Sopro,
+com escopo e provas próprios.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

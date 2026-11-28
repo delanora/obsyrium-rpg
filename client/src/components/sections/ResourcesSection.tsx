@@ -14,12 +14,14 @@ import type { SheetSectionProps } from './common';
  * humana — o jogador responde "o que tenho, quantos usos, de onde vem, quando
  * recupera" num só lugar, sem ids técnicos.
  *
- * Só aparecem BOTÕES quando existe uma ação real implementada (hoje: a Arma de
+ * Só aparecem BOTÕES quando existe uma ação real implementada (incluindo Retomar o Fôlego e a Arma de
  * Sopro e a Resistência Implacável, ambas server-authoritative). As magias
  * raciais limitadas continuam acionadas na aba Magias — o card aqui só mostra o
  * contador, para não duplicar o mesmo uso em dois lugares.
  */
 interface ResourcesSectionProps extends SheetSectionProps {
+  /** Executa Retomar o Fôlego; cura e custo são exclusivos do servidor. */
+  onSecondWind?: (expectedVersion: number) => void | Promise<void>;
   /**
    * Uso de um recurso RACIAL limitado no SERVIDOR (5.3E.1/5.3E.2): o servidor
    * deriva a posse, o máximo e a recarga. Sem esta prop os recursos só aparecem.
@@ -27,9 +29,9 @@ interface ResourcesSectionProps extends SheetSectionProps {
   onRacialUse?: (resourceId: string, expectedVersion: number) => void | Promise<void>;
 }
 
-export function ResourcesSection({ character, onRacialUse }: ResourcesSectionProps) {
+export function ResourcesSection({ character, onRacialUse, onSecondWind }: ResourcesSectionProps) {
   const { readOnly } = useSheetAccess();
-  /** Recurso racial com requisição em andamento (bloqueia o duplo clique). */
+  /** Recurso com requisição em andamento (bloqueia o duplo clique). */
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,11 +42,13 @@ export function ResourcesSection({ character, onRacialUse }: ResourcesSectionPro
   const hasRaceGroup = groups.some((group) => group.origin === 'race');
 
   async function requestUse(resource: DisplayedResource): Promise<void> {
-    if (!onRacialUse || pending !== null) return;
+    if (pending !== null) return;
+    if (resource.action?.kind === 'second-wind' ? !onSecondWind : !onRacialUse) return;
     setPending(resource.id);
     setError(null);
     try {
-      await onRacialUse(resource.id, character.version);
+      if (resource.action?.kind === 'second-wind') await onSecondWind?.(character.version);
+      else await onRacialUse?.(resource.id, character.version);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível usar o recurso.');
     } finally {
@@ -101,7 +105,7 @@ export function ResourcesSection({ character, onRacialUse }: ResourcesSectionPro
                       </span>
                     ) : null}
 
-                    {resource.action && onRacialUse ? (
+                    {resource.action && (resource.action.kind === 'second-wind' ? onSecondWind : onRacialUse) ? (
                       <button
                         type="button"
                         className="btn btn-small btn-primary resource-action"
