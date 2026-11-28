@@ -138,12 +138,15 @@ A **sequência abaixo é direcional**, não autorização para antecipar fases. 
 Por decisão do responsável, novas expansões do Fichário ficam adiadas; manutenção,
 regressões e segurança continuam cabíveis. Priorizar magias e recursos de classe
 e raça dentro e fora de combate, reaproveitando os motores autoritativos.
-A primeira triagem está em `docs/retomada-motor-jogavel.md`: quatro magias reais
-no registro central; recurso/contador não equivale a efeito executado. Curar
-Ferimentos e alcance de Toque implementados localmente sobre o resolvedor de cura
+A primeira triagem está em `docs/retomada-motor-jogavel.md`: a base anterior tinha
+quatro magias reais no registro central; recurso/contador não equivale a efeito
+executado. Curar Ferimentos e alcance de Toque implementados sobre o resolvedor de cura
 existente, com 24 verificações de contrato, 12 HTTP/PostgreSQL, 32 regressões de
 Palavra Curativa e build backend isolado aprovado na composição operacional.
-Ainda não publicados; ver `docs/curar-ferimentos-motor.md`. Depois, Retomar o
+Commit funcional `fee1dd53b41bf3e475813086002c71b7bc3704c5`, enviado e confirmado
+em main/origin/main. Ainda não publicados; ver `docs/curar-ferimentos-motor.md`.
+Registro sincronizado com a aba Roadmap do Codex do Aventureiro em 27/11/2026.
+Depois, Retomar o
 Fôlego e Arma de Sopro, com escopos e provas independentes.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual

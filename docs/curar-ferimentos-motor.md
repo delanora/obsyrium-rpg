@@ -1,6 +1,9 @@
 # Curar Ferimentos — primeira ampliação da retomada jogável
 
-Implementação local em 27/11/2026. Ainda não publicada.
+Implementação de 27/11/2026, commit funcional
+`fee1dd53b41bf3e475813086002c71b7bc3704c5`, enviado à main e conferido no remoto
+canônico. Ainda não publicada. Registro sincronizado com roadmap.md e com a aba
+Roadmap do Codex do Aventureiro no Drive, preservando o status de aceite pendente.
 
 ## Regra e integração
 
