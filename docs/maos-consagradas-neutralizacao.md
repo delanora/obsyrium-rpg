@@ -90,3 +90,7 @@ O rollback futuro precisa preservar o normalizador de afecções e sua visibilid
 Backend antigo pode descartar o campo novo ao regravar; não apagar preferências
 nem restaurar indiscriminadamente o banco. Procedimento compatível deve ser
 preparado e validado antes de eventual publicação autorizada.
+
+Versionamento confirmado em 28/11/2026: cura `02e9ba48389228224c22db6212910bef2ef744f5`
+e extensão `2a8eb3725db701cd11bc1356a5a05c3049ace98c`, ambos enviados à main.
+Os fontes versionados correspondem ao espelho validado; publicação não executada.

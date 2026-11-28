@@ -181,7 +181,7 @@ Neutralização de Mãos Consagradas integrada localmente: seleção por origem,
 pontos cada, uma Ação e commit atômico. Mestre publica diagnósticos para terceiros;
 privados seguem protegidos. 34 verificações HTTP/PostgreSQL, regressões de cura (36)
 e administração (18), 23 contratos e Chromium aprovados. Build isolado; permanecem
-os limites de toque e conteúdo legado. Extensão versionada nesta sequência autorizada; publicação pendente. Ver
+os limites de toque e conteúdo legado. Extensão versionada em `2a8eb37`, com push e remoto confirmados; publicação pendente. Ver
 `docs/maos-consagradas-neutralizacao.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
