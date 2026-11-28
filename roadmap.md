@@ -139,12 +139,15 @@ Por decisão do responsável, novas expansões do Fichário ficam adiadas; manut
 regressões e segurança continuam cabíveis. Priorizar magias e recursos de classe
 e raça dentro e fora de combate, reaproveitando os motores autoritativos.
 A primeira triagem está em `docs/retomada-motor-jogavel.md`: quatro magias reais
-no registro central; recurso/contador não equivale a efeito executado. Próxima
-microentrega proposta: Curar Ferimentos sobre o resolvedor de cura existente;
-depois Retomar o Fôlego e Arma de Sopro, com escopos e provas independentes.
+no registro central; recurso/contador não equivale a efeito executado. Curar
+Ferimentos e alcance de Toque implementados localmente sobre o resolvedor de cura
+existente, com 24 verificações de contrato, 12 HTTP/PostgreSQL, 32 regressões de
+Palavra Curativa e build backend isolado aprovado na composição operacional.
+Ainda não publicados; ver `docs/curar-ferimentos-motor.md`. Depois, Retomar o
+Fôlego e Arma de Sopro, com escopos e provas independentes.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
-detalhar a UI com o responsável quando chegar essa etapa. Nenhuma nova mecânica
-foi implementada ou publicada por esta revisão de prioridades.
+detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
+não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.
 
 ### Frente anterior — Ataques de oportunidade
 

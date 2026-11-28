@@ -1,3 +1,4 @@
+import { CURE_WOUNDS_DEFINITION, CURE_WOUNDS_LABEL, CURE_WOUNDS_SPELL_ID } from './cure-wounds.js';
 import { BLESS_DEFINITION_ID, BLESS_SPELL_ID } from '../../effects/definitions/bless.js';
 import {
   HOLD_PERSON_DEFINITION_ID,
@@ -63,6 +64,7 @@ import {
  * A CD de magia continua fora daqui: vem do perfil de conjuração do caster.
  */
 export const SPELL_EXECUTION_DEFINITIONS: Record<string, SpellExecutionDefinition> = {
+  [CURE_WOUNDS_SPELL_ID]: CURE_WOUNDS_DEFINITION,
   [BLESS_SPELL_ID]: {
     spellId: BLESS_SPELL_ID,
     requiresConcentration: true,
@@ -194,6 +196,7 @@ export const SPELL_EXECUTION_DEFINITIONS: Record<string, SpellExecutionDefinitio
 
 /** Nome exibível da magia executável (a apresentação nunca decide regra). */
 export function spellDisplayLabel(spellId: string): string | null {
+  if (spellId === CURE_WOUNDS_SPELL_ID) return CURE_WOUNDS_LABEL;
   if (spellId === SACRED_FLAME_SPELL_ID) return SACRED_FLAME_LABEL;
   if (spellId === HEALING_WORD_SPELL_ID) return HEALING_WORD_LABEL;
   return null;

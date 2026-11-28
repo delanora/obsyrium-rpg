@@ -60,8 +60,9 @@ executa dano, salvaguarda ou magia. Logo, Arma de Sopro não está mecanicamente
 concluída apenas porque seu botão consome um uso.
 
 As áreas de criaturas já têm motor próprio; isso não prova que o Sopro de um
-personagem draconato passe por esse motor. Resistência Implacável e magias raciais
-também exigem integração própria antes de serem anunciadas como automáticas.
+personagem draconato passe por esse motor. Resistência Implacável já possui oferta própria no ciclo de morte (ver
+`shared/death.ts` e `death.service`); requer revisão desse fluxo, não implementação
+do zero. Magias raciais precisam de conferência do vínculo com o motor de conjuração.
 Passivas raciais podem alimentar o DTO; devem ser auditadas separadamente dos
 recursos acionáveis. Raças personalizadas existentes mantêm suas regras próprias,
 sem apresentá-las como PHB 2014 nem alterar suas regras por esta retomada.

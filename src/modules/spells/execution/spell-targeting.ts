@@ -28,7 +28,8 @@ export type SpellGroupConstraint = { kind: 'mutual-distance'; feet: number };
 /** Alcance. `self` existe para crescer sem inventar geometria. */
 export type SpellRangeDefinition =
   | { kind: 'distance'; feet: number }
-  | { kind: 'self' };
+  | { kind: 'self' }
+  | { kind: 'touch' };
 
 /**
  * Quantidade de alvos em função do espaço usado.
@@ -105,6 +106,9 @@ export function maximumTargets(
 export function targetingRangeFeet(
   targeting: ExplicitSpellTargetingDefinition,
 ): number | null {
+  // Adjudicação do grid: toque exige o próprio alvo ou adjacência (5 pés).
+  // Reach de arma não amplia toque; alterações mágicas de alcance exigem regra própria.
+  if (targeting.range.kind === 'touch') return 5;
   return targeting.range.kind === 'distance' ? targeting.range.feet : null;
 }
 
