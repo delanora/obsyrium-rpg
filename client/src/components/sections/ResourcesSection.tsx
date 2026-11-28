@@ -133,8 +133,9 @@ export function ResourcesSection({ character, onRacialUse, onSecondWind }: Resou
 
       {hasRaceGroup ? (
         <p className="section-note">
-          Dano, alcance, CD e salvaguarda dos recursos raciais são resolvidos manualmente nesta
-          fase — o sistema controla a disponibilidade e o consumo.
+          {character.raceId === 'dragonborn'
+            ? 'Em combate, prepare a Arma de Sopro no grid. Fora de combate, a resolução continua assistida pelo Mestre.'
+            : 'Dano, alcance, CD e salvaguarda dos demais recursos raciais continuam assistidos pelo Mestre.'}
         </p>
       ) : null}
       {error ? <p className="form-error">{error}</p> : null}

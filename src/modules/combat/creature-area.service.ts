@@ -43,6 +43,17 @@ export function creatureAreaPlan(
       400,
       'CREATURE_AREA_REQUIRED',
     );
+  return abilityAreaPlan(combat, unit, ability, placement);
+}
+
+/** Plano comum de uma habilidade: o chamador valida a posse e deriva a definição. */
+export function abilityAreaPlan(
+  combat: CombatSourced,
+  unit: CombatantSourced,
+  ability: CreatureAbility,
+  placement: CreatureAreaPlacement,
+) {
+  if (!ability.area || ability.execution !== 'area-save-damage') throw new HttpError('Definição de área indisponível.', 400, 'AREA_DEFINITION_REQUIRED');
   const index = combatSpatialIndex(combat),
     source = index.bodies.get(`combatant:${unit.id}`);
   const box = source && occupiedSpaceOf(source.position, source.size);
@@ -122,7 +133,19 @@ export async function beginCreatureAreaUse(
   ability: CreatureAbility,
   placement: CreatureAreaPlacement,
 ) {
-  const plan = creatureAreaPlan(combat, unit.id, ability.id, placement);
+  return beginAreaAbilityUse(db, combat, unit, ability, placement,
+    creatureAreaPlan(combat, unit.id, ability.id, placement));
+}
+
+/** Mesma barreira, dano e salvaguardas para habilidades derivadas de personagem. */
+export async function beginAreaAbilityUse(
+  db: Prisma.TransactionClient,
+  combat: CombatSourced,
+  unit: CombatantSourced,
+  ability: CreatureAbility,
+  placement: CreatureAreaPlacement,
+  plan = abilityAreaPlan(combat, unit, ability, placement),
+) {
   const area = ability.area!;
   if (placement.definitionFingerprint !== plan.reading.definitionFingerprint)
     throw new HttpError(

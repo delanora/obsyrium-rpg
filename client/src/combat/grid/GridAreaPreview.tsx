@@ -1,3 +1,4 @@
+import { queryBreathArea, executeBreath } from './breathWeaponApi';
 import { GridAreaShape } from './GridAreaShape';
 import { useShareAreaVisual } from './areaVisual';
 import { ApiError } from '../../api';
@@ -208,7 +209,7 @@ export function GridAreaPreview({
       : saved;
   const sharingError=useShareAreaVisual(assessmentContext?.combatId,
     `${assessmentContext?.casterCombatantId}:${request?.id}`,
-    marker?.ability && !disabled && assessmentContext?.casterCombatantId===marker.ability.combatantId ? {combatantId:marker.ability.combatantId,abilityId:marker.ability.definition.id,origin:marker.center,angle:marker.angle}:null);
+    marker?.ability && !marker.ability.racial && !disabled && assessmentContext?.casterCombatantId===marker.ability.combatantId ? {combatantId:marker.ability.combatantId,abilityId:marker.ability.definition.id,origin:marker.center,angle:marker.angle}:null);
 
   const decisionKey = `${assessmentContext?.combatId}:${assessmentContext?.version}:${JSON.stringify(saved)}`;
   const decisions =
@@ -251,7 +252,9 @@ export function GridAreaPreview({
       angle: saved.angle,
     };
     const reading = saved.ability
-      ? queryCreatureArea(
+      ? saved.ability.racial
+        ? queryBreathArea(assessmentContext.combatId, { origin: input.origin, angle: input.angle, decisions })
+        : queryCreatureArea(
           assessmentContext.combatId,
           saved.ability.combatantId,
           saved.ability.definition.id,
@@ -342,7 +345,12 @@ export function GridAreaPreview({
         operationId: intention.operationId,
         confirmed: true,
       };
-      const combat=legendary?await useLegendaryAction(intention.combat,{...input,windowId:windowId!}):await useCreatureAbility(intention.combat,input);
+      const combat = intention.context.racial
+        ? (await executeBreath({ combatId: intention.combat.id, expectedCombatVersion: intention.combat.version,
+            expectedVersion: intention.context.characterVersion!, operationId: intention.operationId,
+            placement: { origin: intention.placement.origin, angle: intention.placement.angle,
+              decisions: intention.placement.decisions, definitionFingerprint: intention.placement.definitionFingerprint } })).combat
+        : legendary ? await useLegendaryAction(intention.combat,{...input,windowId:windowId!}) : await useCreatureAbility(intention.combat,input);
       pendingUse.current = null;
       setUncertain(false);
       setSaved(null);
@@ -617,7 +625,7 @@ export function GridAreaPreview({
                           row.affected === 'pass' ? 'is-hit' : 'is-uncertain'
                         }
                       >
-                        {saved?.ability&&row.affected==='pass'?<label><input type="checkbox" aria-label={`Incluir ${row.name}`} disabled={executing||uncertain} checked={!(excludedTargets.key===decisionKey&&excludedTargets.ids.includes(row.targetKey))} onChange={event=>setExcludedTargets(previous=>({key:decisionKey,ids:event.target.checked?(previous.key===decisionKey?previous.ids:[]).filter(id=>id!==row.targetKey):[...(previous.key===decisionKey?previous.ids:[]),row.targetKey]}))}/> {row.name}</label>:row.name} ·{' '}
+                        {saved?.ability&&!saved.ability.racial&&row.affected==='pass'?<label><input type="checkbox" aria-label={`Incluir ${row.name}`} disabled={executing||uncertain} checked={!(excludedTargets.key===decisionKey&&excludedTargets.ids.includes(row.targetKey))} onChange={event=>setExcludedTargets(previous=>({key:decisionKey,ids:event.target.checked?(previous.key===decisionKey?previous.ids:[]).filter(id=>id!==row.targetKey):[...(previous.key===decisionKey?previous.ids:[]),row.targetKey]}))}/> {row.name}</label>:row.name} ·{' '}
 
                         {row.affected === 'pass'
                           ? row.decisionSource === 'master-confirmed'

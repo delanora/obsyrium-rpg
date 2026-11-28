@@ -1,3 +1,4 @@
+import { breathOptionsSchema, breathPreviewSchema, breathUseSchema, breathOptions, previewBreath, useBreath, assertBreathManualUseAllowed } from './dragonborn-breath.service.js';
 import { secondWindSchema, useSecondWind } from './second-wind.service.js';
 import { Router } from 'express';
 import { authenticate, requireRole } from '../auth/auth.middleware.js';
@@ -310,6 +311,23 @@ charactersRouter.post('/me/inventory/use', authenticate, async (req, res) => {
  * trava a ficha (409 ANTES de rolar) e `operationId` impede que um reenvio role
  * ou consuma de novo. O endpoint gasta EXATAMENTE um dado do tipo escolhido.
  */
+/** Área, uso racial e Ação são confirmados pelo servidor. */
+charactersRouter.get('/me/breath-weapon/options', authenticate, async (req, res) => {
+  const parsed = breathOptionsSchema.safeParse(req.query);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
+  res.json(await breathOptions({ ...actorFrom(req), role: req.user!.role }, parsed.data.combatId));
+});
+charactersRouter.post('/me/breath-weapon/preview', authenticate, async (req, res) => {
+  const parsed = breathPreviewSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
+  res.json(await previewBreath({ ...actorFrom(req), role: req.user!.role }, parsed.data));
+});
+charactersRouter.post('/me/breath-weapon/use', authenticate, async (req, res) => {
+  const parsed = breathUseSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: 'VALIDATION_ERROR', issues: parsed.error.flatten() }); return; }
+  res.json(await useBreath({ ...actorFrom(req), role: req.user!.role }, parsed.data));
+});
+
 /** Cura, recurso e Ação Bônus são decididos e persistidos juntos no servidor. */
 charactersRouter.post('/me/features/second-wind', authenticate, async (req, res) => {
   const parsed = secondWindSchema.safeParse(req.body ?? {});
@@ -405,6 +423,7 @@ charactersRouter.post('/me/racial-features/use', authenticate, async (req, res) 
     return;
   }
 
+  if (parsed.data.resourceId === 'breath-weapon') await assertBreathManualUseAllowed(actorFrom(req));
   res.json(await useRacialFeature(actorFrom(req), parsed.data));
 });
 

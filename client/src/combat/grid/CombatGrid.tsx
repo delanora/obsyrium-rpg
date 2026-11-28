@@ -1,3 +1,4 @@
+import { DragonbornBreathControl } from './DragonbornBreathControl';
 import { GridToolbarSlot } from '../components/GridToolbarSlot';
 import { GridHelp } from './GridHelp';
 import { GridSharedAreas } from './GridSharedAreas';
@@ -2309,8 +2310,19 @@ export function CombatGrid({
           </div>
 
           {!isMaster ? <GridSharedAreas key={`shared:${areaSceneKey}`} combat={combat} camera={camera} geometry={geometry}/> : null}
+          <DragonbornBreathControl combatId={combat.id} combatVersion={combat.version}
+            disabled={locked || gridPhase !== 'ready' || combat.status !== 'ACTIVE' || mode === 'placement' || targetingActive || movementBusy || !!draft || !!grabGesture || rulerActive}
+            onError={onError}
+            onPrepare={options => {
+              const unit = combat.combatants.find(u => u.id === options.combatantId);
+              const space = unit?.spatial?.occupiedSpace;
+              if (!space || !options.definition.area) { onError('Posicione seu personagem no grid.'); return; }
+              setAreaRequest({ id: ++areaRequestId.current, shape: options.definition.area.shape.kind,
+                origin: { xFeet: (space.minXFeet + space.maxXFeet)/2, yFeet: (space.minYFeet + space.maxYFeet)/2 },
+                ability: { racial: true, characterVersion: options.characterVersion, combatantId: options.combatantId, definition: options.definition }, scope: areaSceneKey });
+            }} />
           <GridAreaPreview
-            assessmentContext={isMaster ? {combatId:combat.id,version:combat.version,casterCombatantId:combat.currentCombatantId??undefined} : null}
+            assessmentContext={isMaster || areaRequest?.ability?.racial ? {combatId:combat.id,version:combat.version,casterCombatantId:areaRequest?.ability?.racial ? areaRequest.ability.combatantId : combat.currentCombatantId??undefined} : null}
             onTargets={setAreaReadings}
             onCombatChange={onCombatChange}
             key={areaSceneKey}

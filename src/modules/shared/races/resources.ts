@@ -71,8 +71,8 @@ const DRAGONBORN: RacialResourceDefinition[] = [
     actionLabel: 'Usar Sopro',
     traitId: 'breath-weapon',
     notes:
-      'PHB 2014: recarrega num descanso curto ou longo. Dano, área, CD e salvaguarda ' +
-      'são resolvidos manualmente nesta fase (motor da Fase 6).',
+      'PHB 2014: recarrega num descanso curto ou longo. Em combate, prepare a área no grid; ' +
+      'fora de combate a resolução continua assistida pelo Mestre.',
   },
 ];
 

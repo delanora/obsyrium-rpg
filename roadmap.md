@@ -149,8 +149,11 @@ Registro sincronizado com a aba Roadmap do Codex do Aventureiro em 27/11/2026.
 Retomar o Fôlego implementado e enviado à main (`acb8dcc`): cura, uso e Ação Bônus atômicos, acesso
 pela ficha, 20 verificações HTTP/PostgreSQL isoladas e Chromium desktop/celular.
 Build frontend/backend isolado aprovado; push e sincronização remota confirmados.
-Sem deploy/restart; aguarda publicação autorizada. Ver `docs/retomar-folego-motor.md`. Próxima microetapa: Arma de Sopro,
-com escopo e provas próprios.
+Sem deploy/restart; aguarda publicação autorizada. Ver `docs/retomar-folego-motor.md`.
+Arma de Sopro implementada localmente: área no grid, CD, salvaguardas, dano e uso
+racial autoritativos; 85 casos puros, 24 verificações HTTP/PostgreSQL, 28 regressões
+de áreas e Chromium com API simulada aprovados. Fora de combate permanece assistida.
+Aguarda commit/push e publicação; ver `docs/arma-sopro-motor.md`.
 Grimório do jogador (preparo, conjuração e páginas animadas) permanece planejado;
 detalhar a UI com o responsável quando chegar essa etapa. O grimório visual
 não foi iniciado; a nova mecânica ainda aguarda revisão e publicação autorizada.

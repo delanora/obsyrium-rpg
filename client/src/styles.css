@@ -18079,3 +18079,6 @@ body:has(.app-shell.has-ongoing-combat) .roll-log-fab:is(:hover, :focus-visible)
   width: 4.5rem; height: 4.5rem;
   border: 0; border-radius: 0; background: none; box-shadow: none;
 }
+
+/* Preparação local do Sopro: a geometria e os atingidos pertencem ao servidor. */
+.grid-breath-control { position: absolute; right: .5rem; bottom: .5rem; z-index: 6; }
