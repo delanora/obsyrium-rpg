@@ -1,6 +1,8 @@
 # Retomar o Fôlego — motor e acesso pela ficha
 
-Implementação local em 27/11/2026, ainda não publicada.
+Implementação de 27/11/2026, commit funcional
+`acb8dccdced4bd656128b8e34d257a877938a6f9`, enviado à main e conferido no remoto
+canônico. Roadmap.md e Roadmap do Drive sincronizados; ainda não publicada.
 
 ## Comportamento
 
@@ -62,7 +64,8 @@ hash contra o manifest operacional anterior.
 
 ## Estado e continuidade
 
-Aguardam commit/push e publicação autorizados; não há aceite manual de produção.
+Commit/push concluídos e remoto conferido. Aguarda publicação autorizada; não há
+aceite manual de produção.
 O serviço operacional duplicado continua pendência separada antes de restart.
 Curar Ferimentos segue versionado em `fee1dd5`, ainda não publicado; esta entrega
 não muda seu status. Próxima microetapa planejada: Arma de Sopro racial, com área,
